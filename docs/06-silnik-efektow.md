@@ -58,7 +58,7 @@ pixel 29 ms, disco 24, mosaic 32, duotone 43, dither 58 (Bayer 8×8; bayer8 + sz
 
 ## 5. Decyzje i znane rozbieżności
 
-1. **Characters: jasny = gęsty znak** (tekst jasny na ciemnym tle; `invert` odwraca). Opis w pliku 02 mówi „ciemne = gęste znaki” (konwencja ciemny na jasnym). **Do rozstrzygnięcia przez użytkownika;** `effects.json` kopiuje opis z pliku 02 i jest w tym punkcie sprzeczny z silnikiem.
+1. **Characters: jasny = gęsty znak** (tekst jasny na ciemnym tle; `invert` odwraca). **Rozstrzygnięte przez użytkownika** (brief 00, sekcja 3). Opis w pliku 02 i w `effects.json` poprawiono zgodnie z silnikiem (brief 00, sekcja 4). Automatyczne odwracanie dla jasnego tła: opcja na później.
 2. **Kontrast:** nasza definicja, neutralny = 0 (zakres −100…100). Docs oryginału mają sprzeczne dane (plik 01, sekcja 10).
 3. **Paleta Dither:** dokładne kolory znamy tylko dla Game Boy (docs). Pozostałe to publiczne standardy (PICO-8, C64, CGA) lub nasze projekty (`proj`); `src/data/palettes.ts` ma pole `source`. Paleta LEGO to przybliżenie 24 kolorów, nie „official LEGO Art colour set”.
 4. **Braille:** rozmiar to rozstaw kropek (`dotPitch`), komórka = 2×4 kropki, dzięki czemu siatka skaluje się dokładnie; domyślnie rozpraszanie Bayera na kropkach (bez niego tarcza o jasności 0,35 znikała).
