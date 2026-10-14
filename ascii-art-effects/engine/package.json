@@ -1,0 +1,13 @@
+{
+  "name": "ascii-art-effects-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ASCII Art Effects: silnik efektów obrazkowych (v1). Czysty TypeScript na buforach RGBA, bez DOM.",
+  "scripts": {
+    "check": "node scripts/check-engine.ts",
+    "sheet": "node scripts/contact-sheet.ts",
+    "bench": "node scripts/bench.ts"
+  },
+  "devDependencies": { "@napi-rs/canvas": "^0.1.80" }
+}
