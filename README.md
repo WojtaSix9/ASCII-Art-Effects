@@ -31,3 +31,7 @@ npm run fixtures                    # odśwież oczekiwane skróty z Node po zmi
 ```
 
 Stronę `/dev/engine` można też otworzyć ręcznie w dowolnej przeglądarce (np. Safari na iPhonie), żeby sprawdzić silnik na danym urządzeniu.
+
+## Deploy (Vercel)
+
+`vercel.json` w katalogu głównym ustawia wszystko: instalację i build w `app/`, katalog wyjściowy `app/dist`, przekierowanie wszystkich tras na `index.html` (routing po stronie klienta) i długi cache dla `/assets/*`. W Vercelu: **Add New → Project → Import** tego repozytorium, bez zmiany ustawień (Root Directory zostaje pusty). Po wdrożeniu test silnika na danym urządzeniu: `/dev/engine`.
