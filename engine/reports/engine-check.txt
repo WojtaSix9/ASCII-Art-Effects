@@ -79,3 +79,8 @@ OK   Color tint: opacity 100 + multiply czerni czerwony kanal gdy tint = #00ffff
 OK   effects.json: 91 efektow, 10 kategorii, unikalne id, faza 1 = 18
 OK   effects.json: status ready <=> efekt jest w silniku, kategoria zgodna z definicja silnika
 OK   effects.json: 18 efektow Fazy 1 = 18 efektow w silniku
+OK   Braille rysowany: 256 znakow x 3 rozmiary, kropka widoczna <=> bit ustawiony
+OK   Znaki rysowane: gestosc nierosnaca wzdluz rampy (braille: liczba kropek; dots, geometric: pole tuszu przy 12x20 i 24x40)
+OK   Pary lustrzane ▲▼ i △▽: identyczne pole tuszu  [0.00%, 0.00%]
+OK   isDrawnGlyph: Braille U+2800-28FF i ●◕◑◔○∙◆◼▲▼◇△▽; nie A, ·, █, Σ, ﾊ
+OK   Characters + preset braille: render bez czcionki (dostawca kanwy rzuca wyjatkiem, nie jest wolany)

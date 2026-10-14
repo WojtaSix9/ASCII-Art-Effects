@@ -63,11 +63,11 @@ try {
   for (const c of rep.checks) { if (!c.ok) failed++; log(`${c.ok ? 'OK  ' : 'FAIL'} ${c.name}${c.info ? `  [${c.info}]` : ''}`); }
   if (errors.length) { failed++; log(`FAIL błędy w konsoli: ${errors.join(' | ')}`); } else log('OK   brak błędów w konsoli');
   log('');
-  log('== Pokrycie znaków presetów przez Geist Mono 400 (w Workerze, OffscreenCanvas) ==');
-  log('preset      Geist Mono / razem   zastępcza       brak (tofu)');
+  log('== Źródło znaków w presetach (Worker, OffscreenCanvas) ==');
+  log('preset      kod  Geist  NotoMono  NotoJP  urządzenie  brak');
   for (const r of rep.coverage!.rows) {
-    const n = [...r.geist].length + [...r.fallback].length + [...r.missing].length;
-    log(`${r.preset.padEnd(11)} ${String([...r.geist].length).padStart(2)} / ${String(n).padEnd(11)} ${r.fallback.padEnd(15)} ${r.missing}`);
+    const n = (k: string) => String(Object.values(r.chars).filter((v) => v === k).length).padStart(3);
+    log(`${r.preset.padEnd(11)} ${n('drawn')}  ${n('Geist Mono')}    ${n('Noto Sans Mono')}     ${n('Noto Sans JP')}      ${n('fallback')}     ${n('missing')}`);
   }
   log('');
   log('== Czas w obie strony (pixel, zlecenie → Worker → ImageData → kanwa) ==');

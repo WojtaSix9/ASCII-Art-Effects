@@ -1,12 +1,12 @@
 /// <reference lib="webworker" />
 // Silnik efektów w Web Workerze. Glify: OffscreenCanvas + Geist Mono załadowany w Workerze przed pierwszym renderem
 // (inaczej cache masek w canvasGlyphs zapamiętałby znaki z czcionki zastępczej).
-import { render, EFFECTS, POSTFX, CHARSETS, canvasGlyphs } from '../../../engine/src/index.ts';
-import type { GlyphProvider, Img } from '../../../engine/src/index.ts';
+import { render, EFFECTS, POSTFX, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph } from '../../../engine/src/index.ts';
+import type { GlyphProvider, Img, RenderState } from '../../../engine/src/index.ts';
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
-import { loadGlyphFont, GLYPH_STACK } from './fonts.ts';
-import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes } from './protocol.ts';
+import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK } from './fonts.ts';
+import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource } from './protocol.ts';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope & { fonts?: FontFaceSet; gc?: () => void };
 let glyphs: GlyphProvider | null = null;
@@ -19,15 +19,24 @@ const toWire = (i: Img): WireImg => ({ w: i.w, h: i.h, buffer: i.data.buffer as 
 function init(): Promise<InitRes> {
   return (ready ??= (async () => {
     const workerFonts = !!scope.fonts;
-    const fonts = workerFonts ? await loadGlyphFont(scope.fonts!) : { family: 'Geist Mono', faces: 0, loaded: 0, ms: 0 };
+    const f = workerFonts ? await loadGlyphFonts(scope.fonts!) : { fonts: [], ms: 0 };
     glyphs = canvasGlyphs((w, h) => new OffscreenCanvas(w, h), GLYPH_STACK);
-    return { fonts, workerFonts, offscreen: typeof OffscreenCanvas === 'function' };
+    return { fonts: f.fonts, fontMs: f.ms, workerFonts, offscreen: typeof OffscreenCanvas === 'function' };
   })());
 }
 
-// Klasyfikacja znaku: czy rysuje go Geist Mono, czcionka zastępcza urządzenia, czy nic (tofu / pusto).
-// Porównanie masek: "Geist Mono" vs nieistniejąca rodzina (obie bez rodziny ogólnej, więc mają tę samą ścieżkę zastępczą).
-// Jeśli maski są identyczne, Geist Mono znaku nie ma. Tofu: maska równa masce znaku z obszaru prywatnego U+10FFFD.
+// Znaki rampy Characters dla danego stanu (do pobrania potrzebnych podzbiorów czcionek przed renderem).
+const CHAR_DEFAULTS = Object.fromEntries(getEffect('characters').params.map((p) => [p.id, p.default]));
+function rampText(state: RenderState) {
+  if (state.style.id !== 'characters') return '';
+  const p = { ...CHAR_DEFAULTS, ...state.style.params };
+  return p.charSet === 'custom' ? String(p.chars) : CHARSETS[p.charSet]?.ramp ?? '';
+}
+const ensure = (text: string) => (scope.fonts ? ensureGlyphs(scope.fonts, text) : Promise.resolve());
+
+// Klasyfikacja znaku: rysowany kodem, która czcionka ze stosu go ma, czcionka zastępcza urządzenia albo nic (tofu / pusto).
+// Porównanie masek: dana rodzina vs nieistniejąca rodzina (obie bez rodziny ogólnej, więc mają tę samą ścieżkę zastępczą).
+// Jeśli maski są identyczne, rodzina znaku nie ma. Tofu: maska równa masce znaku z obszaru prywatnego U+10FFFD.
 const S = 64;
 const ctx = new OffscreenCanvas(S, S).getContext('2d', { willReadFrequently: true })!;
 function mask(ch: string, family: string) {
@@ -39,10 +48,11 @@ function mask(ch: string, family: string) {
 }
 const same = (a: Uint8Array, b: Uint8Array) => a.every((v, i) => v === b[i]);
 const empty = (a: Uint8Array) => a.every((v) => v === 0);
-function classify(ch: string): 'geist' | 'fallback' | 'missing' {
+function classify(ch: string): GlyphSource {
+  if (isDrawnGlyph(ch)) return 'drawn';
   const absent = '"__no_such_font__"';
   const fb = mask(ch, absent);
-  if (!same(mask(ch, '"Geist Mono"'), fb)) return 'geist';
+  for (const f of GLYPH_FONTS) if (!same(mask(ch, `"${f.family}"`), fb)) return f.family;
   return empty(fb) || same(fb, mask('\u{10FFFD}', absent)) ? 'missing' : 'fallback';
 }
 
@@ -65,17 +75,17 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
     case 'testImage': source = testImage(req.w, req.h); return { data: { w: source.w, h: source.h } };
     case 'render': {
       if (!source) throw new Error('no source image');
+      await ensure(rampText(req.state));
       const t = performance.now(); const r = render(source, req.state, { scale: req.scale ?? 1, glyphs });
       const ms = performance.now() - t;
       const img = r.img.data.buffer === source.data.buffer ? { ...r.img, data: new Uint8ClampedArray(r.img.data) } : r.img;
       return { data: { img: toWire(img), info: r.info, ms }, transfer: [img.data.buffer as ArrayBuffer] };
     }
     case 'coverage': {
-      const rows = Object.entries(CHARSETS).map(([preset, cs]) => {
-        const r = { preset, geist: '', fallback: '', missing: '' };
-        for (const ch of new Set(cs.ramp)) if (ch !== ' ') r[classify(ch)] += ch;
-        return r;
-      });
+      await ensure(Object.values(CHARSETS).map((c) => c.ramp).join(''));
+      const rows = Object.entries(CHARSETS).map(([preset, cs]) => ({
+        preset, chars: Object.fromEntries([...new Set(cs.ramp)].filter((ch) => ch !== ' ').map((ch) => [ch, classify(ch)])),
+      }));
       return { data: { rows, controls: { latinA: classify('A'), privateUse: classify('\u{10FFFD}') } } satisfies CoverageRes };
     }
     case 'hashes': {

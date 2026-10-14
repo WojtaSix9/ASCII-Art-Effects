@@ -4,7 +4,7 @@ import { EngineClient } from '../engine/client.ts';
 import type { CoverageRes, BenchRes, HeapRes, InitRes } from '../engine/protocol.ts';
 import { EFFECTS } from '../../../engine/src/index.ts';
 import expectedHashes from './fixtures/engine-hashes.json';
-import expectedCoverage from './fixtures/geist-mono-coverage.json';
+import expectedCoverage from './fixtures/glyph-coverage.json';
 
 type Check = { name: string; ok: boolean; info?: string };
 export type EngineReport = {
@@ -43,7 +43,9 @@ export function mountDevEngine(main: HTMLElement): () => void {
     const init = report.init = await client.init();
     check('Worker (module) uruchomiony, OffscreenCanvas dostępny', init.offscreen);
     check('FontFaceSet w Workerze (self.fonts)', init.workerFonts, init.workerFonts ? '' : 'brak: znaki Characters rysuje czcionka zastępcza');
-    check(`Geist Mono w Workerze: ${init.fonts.loaded}/${init.fonts.faces} podzbiorów`, init.fonts.faces > 0 && init.fonts.loaded === init.fonts.faces, `${init.fonts.ms} ms`);
+    const [geist, ...lazy] = init.fonts;
+    check(`Geist Mono w Workerze: ${geist?.loaded}/${geist?.faces} podzbiorów wczytanych od razu`, !!geist && geist.faces > 0 && geist.loaded === geist.faces, `${init.fontMs} ms`);
+    check('Noto Sans Mono (greek) i Noto Sans JP zarejestrowane, pobierane na żądanie', lazy.length === 2 && lazy.every((f) => f.faces > 0), lazy.map((f) => `${f.family}: ${f.faces}`).join(', '));
 
     // 2. Te same bajty co w Node (efekty bez czcionki)
     const got = await client.call<Record<string, string>>({ type: 'hashes' });
@@ -53,13 +55,18 @@ export function mountDevEngine(main: HTMLElement): () => void {
 
     // 3. Pokrycie znaków presetów
     const cov = report.coverage = await client.call<CoverageRes>({ type: 'coverage' });
-    check('Metoda pokrycia: kontrola „A” = Geist Mono', cov.controls.latinA === 'geist', cov.controls.latinA);
-    check('Metoda pokrycia: kontrola U+10FFFD ≠ Geist Mono', cov.controls.privateUse !== 'geist', cov.controls.privateUse);
-    const expCov = expectedCoverage as Record<string, { covered: string; missing: string }>;
-    const mismatch = cov.rows.filter((r) => expCov[r.preset]?.covered !== r.geist);
-    check('Pokrycie wg przeglądarki = pokrycie wg tablic cmap czcionki (wzorzec)', mismatch.length === 0, mismatch.map((r) => r.preset).join(', '));
-    show('coverage', `<h2 class="label">/ pokrycie znaków (Geist Mono 400)</h2><table class="dev-table"><thead><tr><th>Preset</th><th>Geist Mono</th><th>czcionka zastępcza</th><th>brak (tofu)</th></tr></thead><tbody>${
-      cov.rows.map((r) => `<tr><td>${r.preset}</td><td>${esc(r.geist)}</td><td>${esc(r.fallback)}</td><td>${esc(r.missing)}</td></tr>`).join('')}</tbody></table>`);
+    check('Metoda pokrycia: kontrola „A” = Geist Mono', cov.controls.latinA === 'Geist Mono', cov.controls.latinA);
+    check('Metoda pokrycia: kontrola U+10FFFD = brak (tofu)', cov.controls.privateUse === 'missing' || cov.controls.privateUse === 'fallback', cov.controls.privateUse);
+    const expCov = expectedCoverage as Record<string, Record<string, string>>;
+    const all = cov.rows.flatMap((r) => Object.entries(r.chars).map(([ch, src]) => ({ preset: r.preset, ch, src })));
+    const device = all.filter((c) => c.src === 'fallback' || c.src === 'missing');
+    check(`Każdy znak 16 presetów rysuje kod albo czcionka z npm (bez czcionek urządzenia): ${all.length - device.length}/${all.length}`, device.length === 0, device.map((c) => `${c.preset}:${c.ch}`).join(' '));
+    const wrong = all.filter((c) => c.src !== 'drawn' && expCov[c.preset]?.[c.ch] !== c.src);
+    check('Źródło znaków z czcionek zgodne z tablicami cmap (wzorzec)', wrong.length === 0, wrong.map((c) => `${c.preset}:${c.ch}=${c.src}≠${expCov[c.preset]?.[c.ch]}`).join(' '));
+    const SRC = ['drawn', 'Geist Mono', 'Noto Sans Mono', 'Noto Sans JP', 'fallback', 'missing'] as const;
+    const LBL = ['rysowane kodem', 'Geist Mono', 'Noto Sans Mono', 'Noto Sans JP', 'czcionka urządzenia', 'brak (tofu)'];
+    show('coverage', `<h2 class="label">/ źródło znaków w presetach</h2><table class="dev-table"><thead><tr><th>Preset</th>${LBL.map((l) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${
+      cov.rows.map((r) => `<tr><td>${r.preset}</td>${SRC.map((k) => `<td>${esc(Object.entries(r.chars).filter(([, v]) => v === k).map(([c]) => c).join(''))}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
 
     // 4. Tryb "najnowszy wygrywa"
     await client.call({ type: 'testImage', w: 600, h: 400 });
@@ -85,6 +92,18 @@ export function mountDevEngine(main: HTMLElement): () => void {
     }
     show('rt', `<h2 class="label">/ czas w obie strony (pixel, średnia z 5)</h2><table class="dev-table"><tbody>${report.roundTrip.map((r) =>
       `<tr><td>${r.size}</td><td>render w Workerze ${r.workerMs.toFixed(1)} ms</td><td>razem z transferem i kanwą ${r.totalMs.toFixed(1)} ms</td></tr>`).join('')}</tbody></table>`);
+
+    // 5b. Świeży Worker: pierwszy render Katakana i Math musi już mieć czcionki (maski znaków są zapamiętywane na stałe)
+    const digest = async (im: ImageData) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', im.data))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    for (const preset of ['katakana', 'math']) {
+      const state = { style: { id: 'characters', params: { charSet: preset } } };
+      const fresh = new EngineClient();
+      try {
+        await fresh.call({ type: 'testImage', w: 240, h: 160 }); const a = (await fresh.render(state))!;
+        await client.call({ type: 'testImage', w: 240, h: 160 }); const b = (await client.render(state))!;
+        check(`Świeży Worker: pierwszy render „${preset}” = render po wczytaniu czcionek`, (await digest(a.image)) === (await digest(b.image)));
+      } finally { fresh.terminate(); }
+    }
 
     // 6. Podgląd presetów znaków (ocena wzrokowa: tofu, krzywe znaki)
     await client.call({ type: 'testImage', w: 360, h: 240 });

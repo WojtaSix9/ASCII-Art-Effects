@@ -166,5 +166,40 @@ const SRC = testImage(300, 200);
   ok('effects.json: status ready <=> efekt jest w silniku, kategoria zgodna z definicja silnika', ready.length === EFFECTS.length && EFFECTS.every((e) => { const j = J.find((x) => x.id === e.id); return j && j.status === 'ready' && j.category === e.category && j.engine === e.engine; }), EFFECTS.filter((e) => { const j = J.find((x) => x.id === e.id); return !(j && j.category === e.category && j.engine === e.engine); }).map((e) => e.id).join(','));
   ok('effects.json: 18 efektow Fazy 1 = 18 efektow w silniku', EFFECTS.every((e) => J.find((x) => x.id === e.id)?.phase === 1));
 }
+// 13. Znaki rysowane kodem (Braille, Dots, Geometric): bez czcionki, zgodne z rampą gęstości
+{
+  const { drawnGlyphMask, isDrawnGlyph, CHARSETS: CS } = await import('../src/index.ts');
+  const { brailleDot } = await import('../src/core/glyphs-drawn.ts');
+  const SIZES: [number, number][] = [[6, 10], [12, 20], [24, 40]];   // komorka Characters przy cellSize 10 i skali 1, 2, 4
+  // a) Braille: kropka widoczna w srodku dokladnie dla ustawionych bitow, dla wszystkich 256 znakow
+  let bad: string[] = [];
+  for (const [w, h] of SIZES) for (let bits = 0; bits < 256; bits++) {
+    const m = drawnGlyphMask(String.fromCodePoint(0x2800 + bits), w, h)!; const { xs, ys } = brailleDot(w, h);
+    const order: [number, number][] = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
+    order.forEach(([c, r], i) => { const v = m[Math.floor(ys[r]) * w + Math.floor(xs[c])]; if ((v >= 128) !== !!(bits & (1 << i))) bad.push(`${w}x${h}:${bits}.${i}`); });
+  }
+  ok('Braille rysowany: 256 znakow x 3 rozmiary, kropka widoczna <=> bit ustawiony', bad.length === 0, bad.slice(0, 5).join(','));
+  // b) pole tuszu nierosnace wzdluz rampy (rampy sa uporzadkowane wg gestosci, plik 01 sekcja 4)
+  const ink = (ch: string, w: number, h: number) => drawnGlyphMask(ch, w, h)!.reduce((a, v) => a + v, 0);
+  const mono: string[] = [];
+  // Braille: wlasnosc to liczba kropek (rowne liczby kropek roznia sie polem tylko przez probkowanie siatki).
+  const dots = (c: string) => { let n = c.codePointAt(0)! - 0x2800, k = 0; while (n) { k += n & 1; n >>= 1; } return k; };
+  const br = [...CS.braille.ramp].filter(isDrawnGlyph).map(dots);
+  for (let i = 1; i < br.length; i++) if (br[i] > br[i - 1]) mono.push(`braille: liczba kropek rosnie na pozycji ${i}`);
+  for (const id of ['dots', 'geometric']) for (const [w, h] of SIZES.slice(1)) {
+    const drawn = [...CS[id].ramp].filter(isDrawnGlyph); const a = drawn.map((c) => ink(c, w, h));
+    // Bez tolerancji: pary lustrzane (▲▼, △▽) maja w pomiarze identyczne pole (0,00%, ponizej), wiec rownosc jest dopuszczalna, wzrost nie.
+    for (let i = 1; i < a.length; i++) if (a[i] > a[i - 1]) mono.push(`${id} ${w}x${h}: ${drawn[i - 1]}=${a[i - 1]} < ${drawn[i]}=${a[i]}`);
+  }
+  ok('Znaki rysowane: gestosc nierosnaca wzdluz rampy (braille: liczba kropek; dots, geometric: pole tuszu przy 12x20 i 24x40)', mono.length === 0, mono.join('; '));
+  const pairs = [['▲', '▼'], ['△', '▽']].map(([x, y]) => Math.abs(ink(x, 24, 40) - ink(y, 24, 40)) / ink(x, 24, 40));
+  ok('Pary lustrzane ▲▼ i △▽: identyczne pole tuszu', pairs.every((d) => d === 0), pairs.map((d) => (d * 100).toFixed(2) + '%').join(', '));
+  // c) zbior znakow rysowanych: dokladnie Braille + brakujace w Geist Mono znaki Dots i Geometric
+  const expect = '●◕◑◔○∙◆◼▲▼◇△▽';
+  ok('isDrawnGlyph: Braille U+2800-28FF i ●◕◑◔○∙◆◼▲▼◇△▽; nie A, ·, █, Σ, ﾊ', [...expect].every(isDrawnGlyph) && isDrawnGlyph('⠀') && isDrawnGlyph('⣿') && !['A', '·', '.', '█', 'Σ', 'ﾊ', '@'].some(isDrawnGlyph));
+  // d) Characters z presetem braille nie dotyka czcionki: kanwa, ktora rzuca wyjatkiem, nie jest wolana
+  const noFont = canvasGlyphs(() => { throw new Error('font canvas used'); }, 'x');
+  ok('Characters + preset braille: render bez czcionki (dostawca kanwy rzuca wyjatkiem, nie jest wolany)', !throws(() => render(SRC, { style: { id: 'characters', params: { charSet: 'braille' } } }, { glyphs: noFont })));
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

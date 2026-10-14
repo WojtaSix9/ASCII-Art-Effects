@@ -13,10 +13,12 @@ export type Req =
   | { type: 'bench'; w: number; h: number; runs: number }             // dev: czasy efektów i post FX
   | { type: 'gc' };                                                   // dev: wymuszenie GC (tylko z --js-flags=--expose-gc)
 
-export type InitRes = { fonts: { family: string; faces: number; loaded: number; ms: number }; workerFonts: boolean; offscreen: boolean };
+export type InitRes = { fonts: { family: string; faces: number; loaded: number }[]; fontMs: number; workerFonts: boolean; offscreen: boolean };
 export type RenderRes = { img: WireImg; info: EffectInfo; ms: number };
-export type CoverageRow = { preset: string; geist: string; fallback: string; missing: string };
-export type CoverageRes = { rows: CoverageRow[]; controls: { latinA: string; privateUse: string } };
+/** Źródło znaku: rysowany kodem, jedna z czcionek (kolejność stosu), czcionka zastępcza urządzenia albo nic (tofu). */
+export type GlyphSource = 'drawn' | 'Geist Mono' | 'Noto Sans Mono' | 'Noto Sans JP' | 'fallback' | 'missing';
+export type CoverageRow = { preset: string; chars: Record<string, GlyphSource> };
+export type CoverageRes = { rows: CoverageRow[]; controls: { latinA: GlyphSource; privateUse: GlyphSource } };
 export type BenchRes = { w: number; h: number; runs: number; rows: { name: string; ms: number }[] };
 export type HeapRes = { usedJSHeapSize: number | null };
 
