@@ -1,0 +1,85 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.skip-link {
+  position: absolute; left: 8px; top: -100px;
+  background: var(--text); color: var(--bg); padding: 8px 12px; z-index: 10;
+}
+.skip-link:focus { top: 8px; }
+
+/* Nawigacja (05, sekcja 3) */
+.nav {
+  height: var(--nav-h);
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--line-nav);
+  background: var(--bg);
+}
+.nav__brand {
+  justify-self: start; display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-weight: 600; font-size: 15px; text-decoration: none;
+}
+.nav__logo { font-family: var(--font-mono); letter-spacing: -0.05em; }
+.nav__links { display: flex; gap: 32px; list-style: none; margin: 0; padding: 0; }
+.nav__links a {
+  color: var(--text-nav); text-decoration: none; font-size: 14px;
+}
+.nav__links a:hover, .nav__links a[aria-current="page"] { color: var(--text); }
+.nav__links a[aria-current="page"] { text-decoration: underline; text-underline-offset: 6px; }
+
+/* Przycisk z grubszą lewą i prawą krawędzią (05, sekcja 3, zrzut) */
+.btn-outline {
+  justify-self: end;
+  display: inline-block; padding: 8px 16px;
+  background: var(--bg); color: var(--text);
+  border: solid var(--text); border-width: 1px 3px;
+  font-family: var(--font-mono); font-size: 13px; text-decoration: none; text-transform: uppercase;
+}
+.btn-outline:hover { background: var(--text); color: var(--bg); }
+
+/* Strony (szkielet) */
+.page { max-width: 1200px; margin: 0 auto; padding: 64px 24px; color: var(--text-2); }
+.page:focus { outline: none; }
+.label {
+  font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.page h1 {
+  font-family: var(--font-mono); font-weight: 500; font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.15; margin: 12px 0 16px; color: var(--text);
+}
+.page p { max-width: 60ch; }
+
+/* Edytor: własny pasek górny (05, sekcja 8.1) */
+.ed-top {
+  height: var(--ed-top-h); display: flex; align-items: center; gap: 16px; padding: 0 16px;
+  background: var(--ed-top); border-bottom: 1px solid var(--ed-top-line);
+}
+.ed-body { min-height: calc(100vh - var(--ed-top-h)); background: var(--ed-panel); }
+.ed-body .page { color: var(--ed-value); }
+
+@media (max-width: 700px) {
+  /* Wąsko: logo i przycisk w pierwszym wierszu, linki w drugim (proj?; pełne widoki wąskie to krok 8). */
+  .nav { height: auto; min-height: var(--nav-h); grid-template-columns: 1fr auto; row-gap: 8px; padding: 12px 16px; }
+  .nav nav { grid-column: 1 / -1; grid-row: 2; }
+  .nav__links { gap: 24px; }
+  .page { padding: 40px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

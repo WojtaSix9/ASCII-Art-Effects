@@ -1,0 +1,42 @@
+/* Tokeny wizualne z docs/05-ui-dla-claude-code.md, sekcja 2 (pomiar ze zrzutów).
+   Kolory tekstu podniesione do kontrastu >= 4,5:1 tam, gdzie oryginał był niżej (--muted, --ed-value).
+   Kontrast sprawdza scripts/check-tokens.ts. */
+:root {
+  /* 2.1 Strona */
+  --bg: #040406;
+  --line: #1a1a1c;
+  --line-nav: #1d1b1c;
+  --text: #ffffff;
+  --text-2: #cacaca;
+  --text-nav: #d4d4d4;
+  --text-3: #b2b2b2;
+  --muted: #8f8f8f;
+  --chip: #1c1d1f;
+
+  /* 2.2 Edytor */
+  --ed-top: #000000;
+  --ed-top-line: #1b1b1b;
+  --ed-panel: #0a0a0a;
+  --ed-rail: #0f0f0f;
+  --ed-sep: #111111;
+  --ed-sep-strong: #232323;
+  --ed-field: #111111;
+  --ed-tab-active: #141414;
+  --ed-toolbar: #0e0e10;
+  --ed-track: #232323;
+  --ed-fill: #f5f5f5;
+  --ed-label: #858585;
+  --ed-section: #8d8d8d;
+  --ed-value: #9a9a9a;
+
+  /* 2.3 Typografia (proj?: Geist Mono + Geist z @fontsource) */
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-sans: "Geist", system-ui, sans-serif;
+
+  /* Wymiary z pomiaru */
+  --nav-h: 65px;
+  --ed-top-h: 52px;
+
+  /* Focus (proj): biały obrys 2 px */
+  --focus: #ffffff;
+}
