@@ -1,23 +1,29 @@
 # ASCII Art Effects
 
-Repozytorium projektu efektów ASCII Art.
+Narzędzie w przeglądarce do nakładania efektów ASCII i pikselowych na zdjęcia (v1: eksport PNG). Działa bez serwera.
 
-## Gdzie wgrać pliki
+## Układ repozytorium
 
-Wrzuć materiały do folderu `input/` — w podfolderze, który najlepiej pasuje:
-
-| Folder | Co tu wrzucić |
+| Katalog | Zawartość |
 |---|---|
-| `input/assets/` | Pliki źródłowe do przetworzenia: obrazy, wideo, GIF-y, fonty |
-| `input/reference/` | Przykłady / inspiracje: jak efekt ma wyglądać (screeny, nagrania, linki w pliku `.txt`) |
-| `input/docs/` | Opis zadania, specyfikacja, notatki, wymagania (`.md`, `.txt`, `.pdf`) |
-| `output/` | Tu będą trafiać wyniki — nie musisz nic wgrywać |
+| `docs/` | Specyfikacja. Zacznij od `00-brief-dla-claude-code.md`. `docs/v2/`: moduł scen (wersja 2). `docs/archive/`: nieaktualne wersje. |
+| `engine/` | Silnik efektów: czysty TypeScript na buforach RGBA, bez DOM. Osobny pakiet z testami w Node (opis: `docs/06-silnik-efektow.md`). |
+| `app/` | Strona (Vite + TypeScript, bez frameworka UI). Silnik będzie importowany wprost z `../engine/src` (krok 2). |
+| `LICENSES/`, `THIRD_PARTY_NOTICES.md` | Licencje zależności dołączanych do buildu (czcionki). |
 
-## Jak wgrać pliki przez przeglądarkę
+## Polecenia
 
-1. Otwórz repozytorium na GitHubie i przełącz gałąź na `claude/happy-bell-5qulv1`.
-2. Wejdź do wybranego folderu (np. `input/assets`).
-3. Kliknij **Add file → Upload files**, przeciągnij pliki i kliknij **Commit changes**.
+Wymaga Node 22 (uruchamia pliki `.ts` bezpośrednio).
 
-Limity GitHuba: do 25 MB na plik przy wgrywaniu przez przeglądarkę, do 100 MB przez `git push`.
-Większe pliki (np. długie wideo) lepiej skompresować albo podać link w `input/docs/`.
+```sh
+# silnik
+cd engine && npm install
+node scripts/check-engine.ts        # testy silnika (raport: reports/engine-check.txt)
+
+# strona
+cd app && npm install
+npm run dev                         # http://localhost:5173
+npm run build                       # sprawdzenie typów + build do app/dist
+npm run check:tokens                # kontrast tokenów kolorów (WCAG)
+npm run smoke                       # test w Chromium (Playwright) na zbudowanej wersji; najpierw npm run build
+```

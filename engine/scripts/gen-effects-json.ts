@@ -1,9 +1,9 @@
-// Generuje src/data/effects.json (91 efektow) z docs/02-katalog-efektow.md + faz z sekcji 12 + statusu implementacji (src/registry.ts).
+// Generuje src/data/effects.json (91 efektow) z ../docs/02-katalog-efektow.md + faz z sekcji 12 + statusu implementacji (src/registry.ts).
 // Uruchomienie: node scripts/gen-effects-json.ts   Raport: reports/effects-json.txt
 import { readFileSync, writeFileSync } from 'node:fs';
 import { EFFECTS } from '../src/index.ts';
 
-const md = readFileSync('docs/02-katalog-efektow.md', 'utf8');
+const md = readFileSync('../docs/02-katalog-efektow.md', 'utf8');
 const CATS = ['ASCII & Text', 'Pixels & Blocks', 'Print & Paper', 'Geometric', 'Distort', 'Blur & Focus', 'Glitch & Signal', 'Light & Colour', 'Glass', 'Material & Texture'];
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 // Fazy z sekcji 12 pliku 02. Nazwy w katalogu bywaja inne niz w liscie faz (CRT = CRT Screen, Aberration = Aberration, Block = Block).
