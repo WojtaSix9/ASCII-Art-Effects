@@ -1,12 +1,14 @@
 import type { Page } from '../router.ts';
+import { heroHtml, mountHero } from '../home/hero.ts';
+import { editorHtml, mountEditor } from '../editor/editor.ts';
 
 // Szkielet (krok 1). Treści BRAK: do napisania i zatwierdzenia w kolejnych krokach (05, sekcje 5–8).
 const stub = (label: string, heading: string, note: string) => () =>
   `<p class="label">${label}</p><h1 tabindex="-1">${heading}</h1><p>${note}</p>`;
 
 export const home: Page = {
-  title: 'ASCII Art Effects', layout: 'site',
-  render: stub('/start', 'ASCII Art Effects', 'Strona główna: hero z suwakiem przed/po i kafelki efektów powstaną w kroku 3.'),
+  title: 'ASCII Art Effects', layout: 'site', mainClass: 'page-home',
+  render: heroHtml, mount: (main) => mountHero(main),
 };
 export const effects: Page = {
   title: 'Efekty · ASCII Art Effects', layout: 'site',
@@ -17,12 +19,8 @@ export const howTo: Page = {
   render: stub('/jak-używać', 'Jak używać', 'Instrukcja powstanie w kroku 8.'),
 };
 export const editor: Page = {
-  title: 'Edytor · ASCII Art Effects', layout: 'editor',
-  render: (url) => {
-    const style = url.searchParams.get('style');
-    const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-    return stub('/edytor', 'Edytor', `Edytor powstanie w kroku 5.${style ? ` Wybrany styl: <code>${esc(style)}</code>.` : ''}`)();
-  },
+  title: 'Edytor · ASCII Art Effects', layout: 'editor', mainClass: 'page-editor',
+  render: editorHtml, mount: (main, url) => mountEditor(main, url),
 };
 export const notFound: Page = {
   title: 'Nie znaleziono · ASCII Art Effects', layout: 'site',

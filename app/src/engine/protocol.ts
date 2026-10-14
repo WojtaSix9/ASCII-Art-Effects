@@ -1,10 +1,11 @@
 // Komunikaty między stroną a Workerem silnika. Obrazy przechodzą jako ArrayBuffer (transfer, bez kopii).
-import type { RenderState, EffectInfo } from '../../../engine/src/index.ts';
+import type { RenderState, EffectInfo, ParamDef } from '../../../engine/src/index.ts';
 
 export type WireImg = { w: number; h: number; buffer: ArrayBuffer };
 
 export type Req =
   | { type: 'init' }
+  | { type: 'defs' }                                                 // definicje efektów (parametry do budowy panelu)
   | { type: 'setSource'; img: WireImg }
   | { type: 'render'; state: RenderState; scale?: number }
   | { type: 'testImage'; w: number; h: number }                       // dev: syntetyczny obraz testowy jako źródło
@@ -14,6 +15,7 @@ export type Req =
   | { type: 'gc' };                                                   // dev: wymuszenie GC (tylko z --js-flags=--expose-gc)
 
 export type InitRes = { fonts: { family: string; faces: number; loaded: number }[]; fontMs: number; workerFonts: boolean; offscreen: boolean };
+export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[] };
 export type RenderRes = { img: WireImg; info: EffectInfo; ms: number };
 /** Źródło znaku: rysowany kodem, jedna z czcionek (kolejność stosu), czcionka zastępcza urządzenia albo nic (tofu). */
 export type GlyphSource = 'drawn' | 'Geist Mono' | 'Noto Sans Mono' | 'Noto Sans JP' | 'fallback' | 'missing';

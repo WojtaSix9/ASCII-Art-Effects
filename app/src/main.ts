@@ -46,7 +46,7 @@ let cleanup: void | (() => void);
 startRouter(routes, notFound, (page, url) => {
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const chrome = page.layout === 'editor' ? editorTop() : siteNav(path);
-  const body = `<main id="main" class="page">${page.render(url)}</main>`;
+  const body = `<main id="main" class="${page.mainClass ?? 'page'}">${page.render(url)}</main>`;
   app.innerHTML = `<a class="skip-link" href="#main">Przejdź do treści</a>${chrome}${
     page.layout === 'editor' ? `<div class="ed-body">${body}</div>` : body}`;
   document.title = page.title;

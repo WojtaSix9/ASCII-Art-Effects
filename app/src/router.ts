@@ -1,6 +1,8 @@
 // Minimalny router po stronie klienta (History API), bez zależności.
 export type Page = {
   title: string; layout: 'site' | 'editor'; render: (url: URL) => string;
+  /** Klasa <main> zamiast domyślnej `page` (wąska kolumna z marginesami). */
+  mainClass?: string;
   /** Wywoływane po wstawieniu HTML strony; zwrócona funkcja sprząta przy opuszczeniu strony. */
   mount?: (main: HTMLElement, url: URL) => void | (() => void);
 };

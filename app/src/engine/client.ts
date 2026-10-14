@@ -2,7 +2,7 @@
 // czeka co najwyżej jedno zlecenie (ostatnie); wcześniejsze oczekujące kończą się wynikiem null.
 // Dzięki temu suwak nie tworzy kolejki renderów.
 import type { RenderState } from '../../../engine/src/index.ts';
-import type { Req, Reply, InitRes, RenderRes } from './protocol.ts';
+import type { Req, Reply, InitRes, RenderRes, EffectMeta } from './protocol.ts';
 
 type Pending = { resolve: (v: any) => void; reject: (e: Error) => void };
 export type RenderOut = { image: ImageData; info: RenderRes['info']; workerMs: number };
@@ -32,6 +32,10 @@ export class EngineClient {
 
   init() { return this.call<InitRes>({ type: 'init' }); }
 
+  private defsP: Promise<EffectMeta[]> | null = null;
+  /** Definicje 18 gotowych efektów z silnika (jedno zapytanie na Worker). */
+  defs() { return (this.defsP ??= this.call<EffectMeta[]>({ type: 'defs' })); }
+
   /** Ustawia obraz źródłowy (bufor jest przekazywany Workerowi, więc ImageData po wywołaniu jest puste). */
   setSource(img: ImageData) {
     const buffer = img.data.buffer as ArrayBuffer;
@@ -59,3 +63,7 @@ export class EngineClient {
 
   terminate() { this.worker.terminate(); }
 }
+
+let shared: EngineClient | null = null;
+/** Wspólny Worker dla stron (hero, edytor): czcionki ładują się raz, przejścia między stronami są szybsze. */
+export const sharedEngine = () => (shared ??= new EngineClient());

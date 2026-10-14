@@ -22,14 +22,14 @@ try {
   page.on('pageerror', (e) => errors.push(String(e)));
 
   const ROUTES = [
-    { path: '/', h1: 'ASCII Art Effects', title: 'ASCII Art Effects', layout: 'site', current: null },
+    { path: '/', h1: 'Zdjęcie jako ASCII, piksele i druk', title: 'ASCII Art Effects', layout: 'site', current: null },
     { path: '/effects', h1: 'Efekty', title: 'Efekty · ASCII Art Effects', layout: 'site', current: 'Efekty' },
     { path: '/how-to', h1: 'Jak używać', title: 'Jak używać · ASCII Art Effects', layout: 'site', current: 'Jak używać' },
     { path: '/editor', h1: 'Edytor', title: 'Edytor · ASCII Art Effects', layout: 'editor', current: null },
   ];
   for (const r of ROUTES) {
     const resp = await page.goto(BASE + r.path, { waitUntil: 'networkidle' });
-    const h1 = await page.locator('h1').textContent();
+    const h1 = (await page.locator('h1').textContent())?.replace(/\s+/g, ' ');
     const title = await page.title();
     const hasNav = await page.locator('header.nav').count(), hasEd = await page.locator('header.ed-top').count();
     const cur = await page.locator('a[aria-current="page"]').allTextContents();
@@ -66,20 +66,23 @@ try {
   // Nawigacja po stronie klienta: bez przeładowania, fokus na h1, wstecz
   await page.goto(BASE + '/', { waitUntil: 'networkidle' });
   await page.evaluate(() => { (window as any).__noReload = true; });
-  await page.getByRole('link', { name: 'Efekty' }).click();
+  await page.getByRole('link', { name: 'Efekty', exact: true }).click();
   const nav1 = await page.evaluate(() => ({ p: location.pathname, keep: (window as any).__noReload === true, focus: document.activeElement?.tagName, title: document.title }));
   t('SPA: klik „Efekty” → /effects bez przeładowania, fokus na h1', nav1.p === '/effects' && nav1.keep && nav1.focus === 'H1' && nav1.title.startsWith('Efekty'), JSON.stringify(nav1));
   await page.getByRole('link', { name: 'Otwórz edytor' }).click();
   t('SPA: „Otwórz edytor” → /editor', await page.evaluate(() => location.pathname) === '/editor');
   await page.goBack(); await page.goBack();
-  const back = await page.evaluate(() => ({ p: location.pathname, h1: document.querySelector('h1')?.textContent, keep: (window as any).__noReload === true }));
-  t('SPA: wstecz ×2 → / bez przeładowania', back.p === '/' && back.h1 === 'ASCII Art Effects' && back.keep, JSON.stringify(back));
+  const back = await page.evaluate(() => ({ p: location.pathname, h1: document.querySelector('h1')?.textContent?.replace(/\s+/g, ' '), keep: (window as any).__noReload === true }));
+  t('SPA: wstecz ×2 → / bez przeładowania', back.p === '/' && back.h1 === 'Zdjęcie jako ASCII, piksele i druk' && back.keep, JSON.stringify(back));
 
   // Parametr ?style= i ucieczka HTML
-  await page.goto(BASE + '/editor?style=dither', { waitUntil: 'networkidle' });
-  t('/editor?style=dither przekazuje styl', (await page.locator('main code').textContent()) === 'dither');
-  await page.goto(BASE + '/editor?style=' + encodeURIComponent('<img src=x onerror=alert(1)>'), { waitUntil: 'networkidle' });
-  t('/editor?style=<img…> jest escapowany', (await page.locator('main img').count()) === 0 && (await page.locator('main code').textContent()) === '<img src=x onerror=alert(1)>');
+  await page.goto(BASE + '/editor?style=dither');
+  await page.waitForSelector('[data-stage][data-rendered="dither"]', { timeout: 60_000 });
+  t('/editor?style=dither wybiera Dither', (await page.inputValue('[data-style]')) === 'dither');
+  const xss = '<img src=x onerror=alert(1)>';
+  await page.goto(BASE + '/editor?style=' + encodeURIComponent(xss));
+  await page.waitForSelector('[data-stage][data-rendered="characters"]', { timeout: 60_000 });
+  t('/editor?style=<img…> trafia do komunikatu jako tekst, bez elementu img', (await page.locator('main img').count()) === 0 && !!(await page.textContent('[data-note]'))?.includes(xss));
 
   // Nieznana trasa i ukośnik końcowy
   await page.goto(BASE + '/nie-ma-takiej', { waitUntil: 'networkidle' });

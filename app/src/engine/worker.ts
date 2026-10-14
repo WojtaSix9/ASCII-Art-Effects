@@ -6,7 +6,7 @@ import type { GlyphProvider, Img, RenderState } from '../../../engine/src/index.
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
 import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK } from './fonts.ts';
-import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource } from './protocol.ts';
+import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta } from './protocol.ts';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope & { fonts?: FontFaceSet; gc?: () => void };
 let glyphs: GlyphProvider | null = null;
@@ -71,6 +71,7 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
   if (req.type === 'init') return { data: await init() };
   await init();
   switch (req.type) {
+    case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params })) satisfies EffectMeta[] };
     case 'setSource': source = toImg(req.img); return { data: { w: source.w, h: source.h } };
     case 'testImage': source = testImage(req.w, req.h); return { data: { w: source.w, h: source.h } };
     case 'render': {
