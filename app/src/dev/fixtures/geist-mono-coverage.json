@@ -1,0 +1,66 @@
+{
+  "standard": {
+    "covered": "@#S08Xx+=-;:.",
+    "missing": ""
+  },
+  "classic": {
+    "covered": "@%#*+=-:.",
+    "missing": ""
+  },
+  "ink": {
+    "covered": "@&$%#?*+~:.",
+    "missing": ""
+  },
+  "minimal": {
+    "covered": "█▄▀",
+    "missing": ""
+  },
+  "blocks": {
+    "covered": "█▓▒░",
+    "missing": ""
+  },
+  "bars": {
+    "covered": "█▇▆▅▄▃▂▁",
+    "missing": ""
+  },
+  "quadrants": {
+    "covered": "█▛▙▟▜▚▞▘▝",
+    "missing": ""
+  },
+  "braille": {
+    "covered": "",
+    "missing": "⣿⣷⣦⣤⣠⣄⡄⠆⠄⠂"
+  },
+  "numeric": {
+    "covered": "8069453271.",
+    "missing": ""
+  },
+  "binary": {
+    "covered": "10",
+    "missing": ""
+  },
+  "hacker": {
+    "covered": "@#10Xx*+-.",
+    "missing": ""
+  },
+  "alpha": {
+    "covered": "WMBHAXKOQwvcr:.",
+    "missing": ""
+  },
+  "dots": {
+    "covered": "·.",
+    "missing": "●◕◑◔○∙"
+  },
+  "geometric": {
+    "covered": "█·.",
+    "missing": "◆◼▲▼◇△▽"
+  },
+  "math": {
+    "covered": "#×÷+·.",
+    "missing": "ΣΔΨΩ"
+  },
+  "katakana": {
+    "covered": "",
+    "missing": "ﾊﾐﾋﾂｳｼﾅﾓﾆｻﾜｵﾘｱﾎﾃﾏｹﾒｰ･"
+  }
+}

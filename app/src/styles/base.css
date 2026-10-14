@@ -83,3 +83,19 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* /dev/engine */
+.dev h2 { margin: 40px 0 12px; }
+.dev-list { list-style: none; padding: 0; font-family: var(--font-mono); font-size: 13px; }
+.dev-list li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+.dev-list span { color: var(--muted); }
+.dev .ok, .dev-list .ok { color: var(--text-2); }
+.dev .fail, .dev-list .fail { color: #ff8a80; }
+.dev-table { border-collapse: collapse; font-family: var(--font-mono); font-size: 13px; }
+.dev-table th, .dev-table td { text-align: left; padding: 4px 16px 4px 0; border-bottom: 1px solid var(--line); }
+.dev-table th { color: var(--muted); font-weight: 400; }
+.dev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.dev-grid canvas { width: 100%; height: auto; display: block; }
+.dev-grid figure { margin: 0; }
+.dev-grid figcaption { font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding-top: 4px; }
+.dev button.btn-outline, .page button.btn-outline { cursor: pointer; margin-right: 8px; }

@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 73 efekty Faz 2–3; post FX Character Bloom, Character Chroma, Halftone (post); Lights; warstwa tekstu; Levels i Curves; Photo Filter i Gradient Map w zakładce Color; animacje; integracja z przeglądarką (Worker, OffscreenCanvas, webfont); **jakikolwiek test w przeglądarce**; ocena na prawdziwych zdjęciach.
+**Nie ma (`BRAK`):** 73 efekty Faz 2–3; post FX Character Bloom, Character Chroma, Halftone (post); Lights; warstwa tekstu; Levels i Curves; Photo Filter i Gradient Map w zakładce Color; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -76,3 +76,15 @@ pixel 29 ms, disco 24, mosaic 32, duotone 43, dither 58 (Bayer 8×8; bayer8 + sz
 4. **Brakujące elementy Fazy 1:** Character Bloom i Chroma (per glif), post-halftone, Lights, warstwa tekstu, Photo Filter.
 5. **Faza 2 i 3** wg pliku 02 (do dopracowania przez Claude Code, zgodnie z decyzją użytkownika); każdy efekt z definicją `params`, testem własności i wpisem w `effects.json` (`status: ready`).
 6. **Eksport PNG:** limity kanwy (Safari/iOS), skala 1–4×, zgodność z podglądem.
+
+## 7. Stan w przeglądarce (krok 2 briefu 00, 14 X 2026)
+
+Kod: `app/src/engine/` (Worker, klient), strona testowa `/dev/engine`, wynik: `app/reports/browser-engine.txt`. Uruchomienie: `cd app && npm run build && npm run test:engine`.
+
+- **Worker:** silnik działa w module Web Worker; maski znaków przez `OffscreenCanvas`; Geist Mono 400 (wszystkie podzbiory z `@fontsource/geist-mono`) ładowany w Workerze przez `FontFace` **przed** pierwszym renderem, bo `canvasGlyphs` zapamiętuje maski na stałe (`proj`).
+- **Klient:** tryb „najnowszy wygrywa” (przy zajętym Workerze czeka najwyżej jedno, ostatnie zlecenie). `test`: 10 szybkich zleceń → 2 rendery.
+- **Zgodność z Node (`test`, Chromium 141 headless):** 32 z 32 przypadków bajt w bajt (17 efektów bez czcionki, 13 post FX, Color, Dither). Characters pominięty: zależy od czcionki i rasteryzera.
+- **Pokrycie znaków Geist Mono (`test`):** 11 z 16 presetów w pełni; Braille 0/10, Katakana 0/21, Geometric 3/10, Dots 2/8, Math 6/10 (brak ΣΔΨΩ). Wynik z przeglądarki zgodny z tablicami cmap czcionki (`app/scripts/font-cmap.py`). Brakujące znaki rysuje czcionka zastępcza urządzenia, więc w tych 5 presetach eksport zależy od urządzenia. Forensic nie ma rampy (sekcja 5 nie dotyczy).
+- **Czas (`test`, 1600×1067, mediana z 3, ta sama maszyna co pomiar Node):** w Chromium zwykle podobnie lub szybciej niż w Node (stosunek od 0,4× gradientmap do 1,8× disco). Ponad 100 ms w obu przebiegach: 10 z 18 efektów i 6 z 13 post FX; najwolniejsze halftone ok. 570–600 ms, bloom ok. 540–570, blur ok. 475, hexmosaic 240–300. Między przebiegami czasy różnią się do 2× (piaskownica), więc to rzędy wielkości. Narzut Worker → kanwa: 0,5–2 ms.
+- **Pamięć (`test`):** 216 renderów (18 efektów × skala 1 i 2) przez pełną ścieżkę do kanwy: RSS Chromium po pierwszej partii ok. 533–537 MB i dalej płasko (±4 MB). Bez oznak przecieku. Sterty Workera Chromium nie udostępnia (`performance.memory` brak w Workerze).
+- **`BRAK`:** Safari i Firefox (w szczególności `self.fonts` w Workerze i `OffscreenCanvas` 2D), urządzenia mobilne, pomiar przy rozdzielczości podglądu w edytorze.

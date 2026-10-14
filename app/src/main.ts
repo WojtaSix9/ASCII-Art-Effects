@@ -11,7 +11,21 @@ import './styles/base.css';
 import { startRouter, type Page } from './router.ts';
 import { home, effects, howTo, editor, notFound } from './pages/pages.ts';
 
-const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/editor': editor };
+// Strona deweloperska ładowana na żądanie, żeby silnik i dane testowe nie trafiały do głównego pakietu.
+const devEngine: Page = {
+  title: 'Test silnika · ASCII Art Effects', layout: 'site',
+  render: () => '<p class="label">/dev</p><h1 tabindex="-1">Test silnika w przeglądarce</h1><p>Ładowanie…</p>',
+  mount(main) {
+    let stop: (() => void) | undefined; let gone = false;
+    import('./dev/dev-engine.ts').then((m) => {
+      if (gone) return;
+      main.innerHTML = m.devEngineHtml(); stop = m.mountDevEngine(main);
+    });
+    return () => { gone = true; stop?.(); };
+  },
+};
+
+const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/editor': editor, '/dev/engine': devEngine };
 
 const brand = `<a class="nav__brand" href="/"><span class="nav__logo" aria-hidden="true">▚▞</span>ASCII Art Effects</a>`;
 
@@ -27,6 +41,7 @@ const editorTop = () => `<header class="ed-top">${brand}</header>`;
 
 const app = document.getElementById('app')!;
 let first = true;
+let cleanup: void | (() => void);
 
 startRouter(routes, notFound, (page, url) => {
   const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -35,6 +50,7 @@ startRouter(routes, notFound, (page, url) => {
   app.innerHTML = `<a class="skip-link" href="#main">Przejdź do treści</a>${chrome}${
     page.layout === 'editor' ? `<div class="ed-body">${body}</div>` : body}`;
   document.title = page.title;
+  cleanup?.(); cleanup = page.mount?.(app.querySelector('main')!, url);
   // Po nawigacji w aplikacji przenosimy fokus na nagłówek, żeby czytnik ekranu ogłosił nową stronę.
   if (!first) (app.querySelector('h1') as HTMLElement | null)?.focus();
   first = false;

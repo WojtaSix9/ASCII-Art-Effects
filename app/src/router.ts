@@ -1,5 +1,9 @@
 // Minimalny router po stronie klienta (History API), bez zależności.
-export type Page = { title: string; layout: 'site' | 'editor'; render: (url: URL) => string };
+export type Page = {
+  title: string; layout: 'site' | 'editor'; render: (url: URL) => string;
+  /** Wywoływane po wstawieniu HTML strony; zwrócona funkcja sprząta przy opuszczeniu strony. */
+  mount?: (main: HTMLElement, url: URL) => void | (() => void);
+};
 
 export function startRouter(routes: Record<string, Page>, notFound: Page, mount: (page: Page, url: URL) => void) {
   const go = () => {
