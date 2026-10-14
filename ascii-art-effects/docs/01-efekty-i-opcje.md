@@ -104,7 +104,7 @@ Waves `waves` · Oil Paint `oilpaint` · Watercolor `watercolor` · Chrome `chro
 
 ## 4. Zestawy znaków (17)
 
-Kolejność: od najciemniejszego, końcowa spacja to najjaśniejszy krok (bez niej nie da się narysować pustej komórki).
+Kolejność: od najgęstszego znaku do najrzadszego (kolejność **gęstości** pokrycia komórki, nie jasności); końcowa spacja to pusta komórka (bez niej nie da się narysować pustej komórki). To, który koniec rampy dostają jasne partie obrazu, zależy od konwencji: w naszym silniku domyślnie jasny ton = gęsty znak (jasny tekst na ciemnym tle), `invert` odwraca (brief 00, sekcja 3; `engine/src/effects/grid.ts`, `charAt`).
 
 | Preset | Grupa | Ramp |
 |---|---|---|

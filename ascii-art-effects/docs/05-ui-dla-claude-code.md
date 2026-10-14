@@ -1,5 +1,7 @@
 # UI: ASCII Art Effects (wersja 1)
 
+**Stan silnika: patrz 06; sekcja 1 i krok 3 w sekcji 11 są nieaktualne.**
+
 Stan na 13 X 2026. Uzupełnia `00-brief-dla-claude-code.md` i **zmienia jego zakres** (sekcja 1 poniżej). Dane wizualne pochodzą z 4 zrzutów ascii-magic.com dostarczonych przez użytkownika (pełna strona, hero, sekcja stylów, edytor).
 
 Oznaczenia: `pomiar` = wartość odczytana z pikseli zrzutu, `zrzut` = widoczne na zrzucie, bez pomiaru, `proj` = nasza decyzja, `proj?` = propozycja do potwierdzenia, `BRAK` = nie ma na zrzutach, trzeba zdecydować lub zmierzyć w przeglądarce.

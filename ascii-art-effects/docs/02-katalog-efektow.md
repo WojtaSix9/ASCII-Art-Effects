@@ -40,7 +40,7 @@ Każdy efekt ma 3 poziomy opcji:
 ## 1. ASCII i tekst (6)
 
 - **Characters** `characters` · GRID · S · docs
-  Każda komórka dostaje znak ze skali tonalnej wg jasności (ciemne = gęste znaki).
+  Każda komórka dostaje znak ze skali tonalnej wg jasności (jasne = gęste znaki: domyślnie jasny tekst na ciemnym tle; `invert` odwraca).
   Opcje: `[W]`, `charSet` (preset lub własny ciąg, 17 presetów z pliku 01), `colorMode` (mono / z obrazu), `edgeEmphasis`, `font`.
 - **ASCII Studio** `asciiStudio` · GRID · M · docs
   Obraz złożony z zaprojektowanych kształtów lub znaków, kolorowanych przez paletę, domyślnie na czarnym tle.

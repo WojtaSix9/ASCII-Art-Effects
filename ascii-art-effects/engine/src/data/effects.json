@@ -7,7 +7,7 @@
     "engine": "GRID",
     "complexity": "S",
     "source": "docs",
-    "description": "Każda komórka dostaje znak ze skali tonalnej wg jasności (ciemne = gęste znaki).",
+    "description": "Każda komórka dostaje znak ze skali tonalnej wg jasności (jasne = gęste znaki: domyślnie jasny tekst na ciemnym tle; `invert` odwraca).",
     "phase": 1,
     "phaseAssigned": true,
     "status": "ready"
