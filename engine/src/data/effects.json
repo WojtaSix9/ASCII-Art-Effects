@@ -855,7 +855,7 @@
     "description": "Efekt 3D z czerwono-cyjanowych kanałów przesuniętych wg głębokości (z jasności).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "gradientmap",
@@ -881,7 +881,7 @@
     "description": "Rozszczepienie światła jak w pryzmacie: tęczowe smugi i dyspersja przy krawędziach.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "dreamdust",
@@ -894,7 +894,7 @@
     "description": "Marzycielska poświata z unoszącym się pyłem, bokeh i iskrami.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "lightwind",
@@ -907,7 +907,7 @@
     "description": "Kierunkowe smugi światła ciągnące się z jasnych obszarów (god rays).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "starburst",
@@ -920,7 +920,7 @@
     "description": "Lustrzane sektory wokół środka.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "warpbloom",
@@ -933,7 +933,7 @@
     "description": "Falowe odkształcenie połączone z poświatą.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "duotone",

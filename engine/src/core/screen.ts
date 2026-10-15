@@ -46,3 +46,10 @@ export function dilate(m: Float32Array, w: number, h: number, r: number): Float3
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let v = 0; for (let k = Math.max(0, y - r); k <= Math.min(h - 1, y + r); k++) v = Math.max(v, t[k * w + x]); o[y * w + x] = v; }
   return o;
 }
+
+/** Próbka dwuliniowa kanału c w punkcie (x, y) w pikselach (środek piksela = +0,5); brzegi powielane. */
+export function bil(d: Uint8ClampedArray | Float32Array, w: number, h: number, x: number, y: number, c: number) {
+  x = clamp(x - 0.5, 0, w - 1); y = clamp(y - 0.5, 0, h - 1); const x0 = x | 0, y0 = y | 0, tx = x - x0, ty = y - y0, x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1);
+  const a = d[(y0 * w + x0) * 4 + c], b = d[(y0 * w + x1) * 4 + c], e = d[(y1 * w + x0) * 4 + c], f = d[(y1 * w + x1) * 4 + c];
+  return (a + (b - a) * tx) * (1 - ty) + (e + (f - e) * tx) * ty;
+}

@@ -90,7 +90,9 @@ try {
     await page.goto(BASE + '/editor?style=dots'); await rendered(page, 'dots');
     t('edytor: ?style=dots → wybrany Dots', (await page.inputValue('[data-style]')) === 'dots');
     // Dla każdego gotowego efektu: liczba kontrolek = liczba parametrów; render bez błędu
-    const ids = await page.$$eval('[data-style] option', (o) => o.map((x) => (x as HTMLOptionElement).value));
+    // ONLY=id1,id2: sprawdź w edytorze tylko te efekty (nowe lub zmienione); bez ONLY wszystkie
+    const allIds = await page.$$eval('[data-style] option', (o) => o.map((x) => (x as HTMLOptionElement).value));
+    const only = process.env.ONLY?.split(',').filter(Boolean); const ids = only ? allIds.filter((id) => only.includes(id)) : allIds;
     const counts: string[] = [];
     for (const id of ids) {
       await page.selectOption('[data-style]', id); await rendered(page, id);
@@ -99,7 +101,7 @@ try {
       counts.push(`${id}:${c.controls}/${exp}`);
       if (c.controls !== exp || c.url !== id || c.note) counts.push(`!${id} kontrolek=${c.controls} oczekiwane=${exp} url=${c.url} note=${c.note}`);
     }
-    t(`edytor: ${ids.length} efektów; kontrolek tyle co parametrów w silniku, render bez błędu, URL ?style= nadąża`, ids.length === EFFECTS.length && ids.length === READY.length && !counts.some((c) => c.startsWith('!')), counts.join(' '));
+    t(`edytor: ${ids.length} z ${allIds.length} efektów${only ? ' (ONLY)' : ''}; kontrolek tyle co parametrów w silniku, render bez błędu, URL ?style= nadąża`, allIds.length === EFFECTS.length && allIds.length === READY.length && (!only || ids.length === only.length) && !counts.some((c) => c.startsWith('!')), counts.join(' '));
 
     // Zmiana parametru zmienia obraz; powrót do wartości daje identyczny obraz (podpięcie + determinizm)
     await page.selectOption('[data-style]', 'characters'); await rendered(page, 'characters');

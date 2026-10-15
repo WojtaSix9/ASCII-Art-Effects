@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 43 efekty Fazy 3 (Faza 2 kompletna po kroku 9; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 37 efektów Fazy 3 (stan po kroku 9, partia 7; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -529,3 +529,39 @@ Podgląd liczy się w rozdzielczości ekranu, więc zwykle kilka razy mniej piks
 **Czas testów**
 - Pełne testy aplikacji trwają ok. 10–12 minut, bo test UI renderuje w edytorze każdy z 48 efektów.
 - Przy 91 efektach będzie to ok. 20 minut. Do rozważenia: w teście UI tylko efekty zmienione od ostatniego przebiegu albo próbka.
+
+## 20. Krok 9, partia 7 (Faza 3): światło i kolor (15 X 2026)
+
+**Decyzja użytkownika (15 X 2026):** robimy kolejne efekty; testy tylko tam, gdzie coś się zmieniło, a działających części nie testujemy ponownie.
+
+Na tej podstawie:
+- przyjmuję moje propozycje z katalogu dla niejednoznacznych nazw (`proj?`);
+- efekty `STATE` liczę deterministycznie z seeda;
+- `app/scripts/ui-check.ts` ma filtr `ONLY=id1,id2` (sprawdza w edytorze tylko podane efekty);
+- testy edytora, smoke i dostępności uruchamiam tylko po zmianie UI.
+
+**Stan:** 54 z 91 efektów gotowych. Zostało 37 (Faza 3).
+
+**Efekty** (`engine/src/effects/light.ts`, wszystkie `proj`)
+- **Anaglyph 3D:** głębia z jasności (albo odwróconej jasności, albo gradientu pionowego). R z widoku przesuniętego o +sep·d/2, G i B o −sep·d/2. Kolor albo szarość.
+- **Prism:** 7 próbek wzdłuż kąta ważonych barwami widma. Wagi kanału są znormalizowane, więc płaski obszar się nie zmienia, a na krawędziach powstaje tęcza.
+- **Dreamdust** (`STATE` → deterministyczny):
+  - poświata jasnych partii;
+  - cząstki bokeh z seeda (liczba z pola w px źródła);
+  - dryf jako słabnąca smuga w górę (8 kroków);
+  - co szósta cząstka to iskra.
+- **Light Wind:** maska jasnych partii i jednostronna smuga z wagą f^n, liczona przez podwajanie przesunięć (log₂ L kroków), z odcieniem. Wzmocnienie obniżone z 2,5 do 1,2, bo prześwietlało niebo (`oko`).
+- **Kaleidoscope** (`starburst`): kąt zawinięty do sektora i odbity, zoom, środek. Poza obrazem odbicie lustrzane zamiast powielonego brzegu, bo narożniki miały smugi (`oko`).
+- **Warpbloom:** falowe przesunięcie (amplituda 2% krótszego boku × warp, f fal na obraz) i poświata jasnych partii.
+- **Czas (Node, 600×400):** 57–145 ms.
+
+**Testy (`test`)**
+- Silnik 245 z 245, 5 nowych (jedna kluczowa własność na efekt):
+  - płaski obraz bez zmian;
+  - Anaglyph z separacją 0 = bez zmian;
+  - symetria sektora w Kaleidoscope;
+  - smuga Light Wind słabnie z odległością;
+  - Dreamdust deterministyczny, ta sama liczba cząstek przy skali 2, tylko rozjaśnia.
+- Ogólny test skali 2× obejmuje nowe efekty (26–46 dB).
+- Test UI z `ONLY` (6 nowych efektów): 39 z 39. Przeglądarka = Node: 71 z 71.
+- Mutacji nie robiłem (decyzja o minimalizacji testów).

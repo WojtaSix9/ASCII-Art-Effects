@@ -27,7 +27,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 48, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 54, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 6 Fazy 3 (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -589,6 +589,17 @@ const SRC = testImage(300, 200);
   const sp = R(flat, { spacing: 6, outline: 0 }).img; let bg = 0; for (let k = 0; k < sp.data.length; k += 4) if (sp.data[k] === 0 && sp.data[k + 1] === 0) bg++;
   ok('Voxel: odstep > 0 odslania tlo (czarne), odstep 0 nie', bg > W * H * 0.05 && (() => { let z = 0; for (let k = 0; k < vx.data.length; k += 4) if (vx.data[k] === 0 && vx.data[k + 1] === 0) z++; return z === 0; })(), `${bg}`);
   const S = testImage(W, H); ok('Voxel: liczba szescianow przy skali 2 taka sama jak przy 1; obrys przyciemnia', R(S).info.cubes === R(S, {}, 2).info.cubes && meanLum(R(S, { outline: 2 }).img) < meanLum(R(S, { outline: 0 }).img), `${R(S).info.cubes} / ${R(S, {}, 2).info.cubes}`);
+}
+// 26. Krok 9, Faza 3: swiatlo i kolor (po jednej kluczowej wlasnosci na efekt)
+{
+  const W = 160, H = 120; const D = (src: Img, id: string, p: any = {}) => render(src, { style: { id, params: p } }).img; const flat = newImg(W, H, [180, 110, 60, 255]); const S = testImage(W, H);
+  ok('Faza 3 swiatlo: plaski obraz bez zmian (Anaglyph, Prism, Kaleidoscope, Warpbloom bez poswiaty, Light Wind z progiem 100%)', ['anaglyph', 'prism', 'starburst'].every((id) => sha(D(flat, id)) === sha(flat)) && sha(D(flat, 'warpbloom', { bloomIntensity: 0 })) === sha(flat) && sha(D(flat, 'lightwind', { threshold: 100 })) === sha(flat));
+  const ag = D(S, 'anaglyph', { separation: 0 }); ok('Anaglyph: separacja 0 = obraz bez zmian; separacja > 0 rozsuwa R wzgledem G', sha(ag) === sha(S) && sha(D(S, 'anaglyph')) !== sha(S));
+  ok('Kaleidoscope: piksele symetryczne wzgledem osi sektora maja ten sam kolor (8 sektorow, os 22,5°)', (() => { const k = D(S, 'starburst', { segments: 8 }); let bad = 0; for (let r = 10; r < 55; r += 5) for (const t of [5, 12, 18]) { const a1 = (22.5 - t) * Math.PI / 180, a2 = (22.5 + t) * Math.PI / 180; const p1 = (Math.round(60 + r * Math.sin(a1) - 0.5) * W + Math.round(80 + r * Math.cos(a1) - 0.5)) * 4, p2 = (Math.round(60 + r * Math.sin(a2) - 0.5) * W + Math.round(80 + r * Math.cos(a2) - 0.5)) * 4; if (Math.abs(k.data[p1] - k.data[p2]) > 40) bad++; } return bad <= 2; })());
+  const lw = D(newImg(W, H, [0, 0, 0, 255]).data.fill(255, 0, 20 * W * 4) && (() => { const i = newImg(W, H, [0, 0, 0, 255]); for (let k = 0; k < 20 * W * 4; k++) if (k % 4 !== 3) i.data[k] = 255; return i; })(), 'lightwind', { angle: 90, length: 60, threshold: 50 });
+  ok('Light Wind (kat 90°): smuga w dol od jasnego pasa slabnie z odlegloscia', lw.data[(30 * W + 80) * 4] > lw.data[(60 * W + 80) * 4] && lw.data[(60 * W + 80) * 4] > lw.data[(110 * W + 80) * 4] && lw.data[(30 * W + 80) * 4] > 0, `${lw.data[(30 * W + 80) * 4]} ${lw.data[(60 * W + 80) * 4]} ${lw.data[(110 * W + 80) * 4]}`);
+  const r1 = render(S, { style: { id: 'dreamdust' } }), r2 = render(S, { style: { id: 'dreamdust' } }, { scale: 2 });
+  ok('Dreamdust: deterministyczny (ten sam seed = ten sam obraz), liczba czastek przy skali 2 jak przy 1, tylko rozjasnia', sha(r1.img) === sha(D(S, 'dreamdust')) && r1.info.particles === r2.info.particles && sha(D(S, 'dreamdust', { seed: 2 })) !== sha(r1.img) && meanLum(r1.img) >= meanLum(S));
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);
