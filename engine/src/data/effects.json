@@ -712,7 +712,7 @@
     "description": "Ekran kineskopowy: zakrzywienie, linie skanowania, maska luminoforu RGB, poświata, lekkie migotanie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "pixelsort",
@@ -790,7 +790,7 @@
     "description": "Przesunięcie kanałów R, G, B względem siebie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "scanline",
@@ -803,7 +803,7 @@
     "description": "Linie skanowania.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "thermal",
@@ -816,7 +816,7 @@
     "description": "Kamera termowizyjna: jasność mapowana na paletę ciepła, szum sensora, ewentualne znaczniki.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "beacon",
@@ -959,7 +959,7 @@
     "description": "Wykryte krawędzie świecące neonowo na przyciemnionym tle.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "lens",
@@ -972,7 +972,7 @@
     "description": "Wady obiektywu: aberracja chromatyczna, dystorsja beczkowata i winietowanie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "frostedglass",

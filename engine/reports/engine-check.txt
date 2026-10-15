@@ -1,4 +1,4 @@
-OK   rejestr: 29 efektow, unikalne id, domyslne parametry w zakresach
+OK   rejestr: 35 efektow, unikalne id, domyslne parametry w zakresach
 OK   rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)
 OK   dither: 15 algorytmow i 15 palet
 OK   characters: wymiary zrodla, dwa renderowania identyczne, alfa 255  [21506a75c5]
@@ -30,6 +30,12 @@ OK   motionblur: wymiary zrodla, dwa renderowania identyczne, alfa 255  [b85bb81
 OK   tiltshift: wymiary zrodla, dwa renderowania identyczne, alfa 255  [141090ffd4]
 OK   gaussianblur: wymiary zrodla, dwa renderowania identyczne, alfa 255  [c8e223a25e]
 OK   radialblur: wymiary zrodla, dwa renderowania identyczne, alfa 255  [d82da01435]
+OK   rgbsplit: wymiary zrodla, dwa renderowania identyczne, alfa 255  [4facd340a8]
+OK   scanline: wymiary zrodla, dwa renderowania identyczne, alfa 255  [13583960b9]
+OK   crt: wymiary zrodla, dwa renderowania identyczne, alfa 255  [9bb153c4eb]
+OK   thermal: wymiary zrodla, dwa renderowania identyczne, alfa 255  [c0eebf6455]
+OK   edgeglow: wymiary zrodla, dwa renderowania identyczne, alfa 255  [278652cf0a]
+OK   lens: wymiary zrodla, dwa renderowania identyczne, alfa 255  [13cc5c2ab2]
 OK   parametry: wartosc ponad zakres jest obcinana (cellSize 9999 = 80)
 OK   parametry: nieznany klucz, zla opcja select, NaN, zly kolor rzucaja blad
 OK   pipeline: nieznany efekt, skala poza 0,1..8, nieznany post FX rzucaja blad
@@ -38,8 +44,8 @@ OK   coverage: 100% = 400 komorek, 0% = 0, malejaco  [100:400 80:331 50:214 0:0]
 OK   coverage: deterministyczne wycinanie (komorki widoczne przy 50% to podzbior widocznych przy 80%)
 OK   seed: ten sam seed = te same komorki, inny seed = inne  [214 vs 189]
 OK   seed: dither whiteNoise zalezy od seeda, blueNoise nie
-OK   skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich 29 efektow
-OK   skala 2x: obraz po zmniejszeniu podobny do renderu 1x (PSNR > 14 dB)  [min 17.6 dB; characters:21dB block-chars:40dB braille:28dB dots:45dB cross:46dB diamond:43dB lines:47dB diagonal:43dB pixel:40dB mosaic:18dB lego:25dB hexmosaic:44dB disco:50dB halftone:31dB posterize:23dB duotone:30dB gradientmap:26dB dither:18dB pinch:29dB spherize:29dB twirl:29dB zigzag:29dB ripple:29dB polar:32dB shear:30dB motionblur:41dB tiltshift:33dB gaussianblur:50dB radialblur:45dB]
+OK   skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich 35 efektow
+OK   skala 2x: obraz po zmniejszeniu podobny do renderu 1x (PSNR > 14 dB)  [min 17.6 dB; characters:21dB block-chars:40dB braille:28dB dots:45dB cross:46dB diamond:43dB lines:47dB diagonal:43dB pixel:40dB mosaic:18dB lego:25dB hexmosaic:44dB disco:50dB halftone:31dB posterize:23dB duotone:30dB gradientmap:26dB dither:18dB pinch:29dB spherize:29dB twirl:29dB zigzag:29dB ripple:29dB polar:32dB shear:30dB motionblur:41dB tiltshift:33dB gaussianblur:50dB radialblur:45dB rgbsplit:27dB scanline:29dB crt:32dB thermal:34dB edgeglow:32dB lens:32dB]
 OK   Characters: jasniejszy ton = gestszy znak (indeks w rampie nierosnacy), 0 -> spacja, 255 -> @  [13,11,10,8,6,5,3,2,0]
 OK   Characters: invert odwraca mapowanie
 OK   Characters: tekst ma rows x cols z renderu, kazda linia cols znakow  [50x20]
@@ -89,7 +95,7 @@ OK   Color: 8 presetow zmienia obraz, wartosci w zakresie 0..255
 OK   Color tint: opacity 100 + multiply czerni czerwony kanal gdy tint = #00ffff
 OK   effects.json: 91 efektow, 10 kategorii, unikalne id, faza 1 = 18
 OK   effects.json: status ready <=> efekt jest w silniku, kategoria zgodna z definicja silnika
-OK   effects.json: faza kazdego z 29 efektow silnika zgodna z rejestrem; cala Faza 1 (18) gotowa
+OK   effects.json: faza kazdego z 35 efektow silnika zgodna z rejestrem; cala Faza 1 (18) gotowa
 OK   Braille rysowany: 256 znakow x 3 rozmiary, kropka widoczna <=> bit ustawiony
 OK   Znaki rysowane: gestosc nierosnaca wzdluz rampy (braille: liczba kropek; dots, geometric: pole tuszu przy 12x20 i 24x40)
 OK   Pary lustrzane ▲▼ i △▽: identyczne pole tuszu  [0.00%, 0.00%]
@@ -169,3 +175,15 @@ OK   Tilt-Shift: podbicie nasycenia zwieksza nasycenie
 OK   Motion: Samples 4 przy dlugosci 60 px daje 4 osobne kopie waskiej linii (slad schodkowy)  [4]
 OK   Motion: slad waskiej linii ma dlugosc = length (40 px +-3)  [42 px]
 OK   Motion: dlugosc w px skaluje sie z eksportem (skala 2 po zmniejszeniu ~ skala 1, PSNR > 30 dB)  [52.4 dB]
+OK   RGB Split: R = zrodlo przesuniete o +5 px, B o −5 px (dokladnie), G bez zmian; perChannel rusza tez G
+OK   Scanline: srednia jasnosc = 1 − intensity·T/(T+spacing) (0,76 ±0,005); intensity 0 = bez zmian  [0.7600]
+OK   Scanline: roll 50% przesuwa wzor o pol okresu (5 wierszy)
+OK   Scanline: przy skali 1,7 (pasy ulamkowe) srednie przyciemnienie takie samo jak przy 1 (+-0,003)  [0.6667 0.6667]
+OK   CRT: wszystko 0 = obraz bez zmian; zakrzywienie czerni narozniki; seed zmienia migotanie
+OK   CRT: maska luminoforu - kolumny 0, 1, 2 z dominujacym R, G, B (okres 3 px)
+OK   Thermal: kazdy piksel w kolorze palety (0 poza); white-hot rosnie z jasnoscia; celownik bialy 5 px od srodka  [0]
+OK   Edge Glow: jednolity obraz -> tylko przyciemnienie (200 -> 100); sourceDim 0 i brak krawedzi = bez zmian
+OK   Edge Glow: przy krawedzi zielona poswiata, 40 px dalej tylko przyciemnienie (100)  [255 100 20]
+OK   Edge Glow: sila krawedzi niezalezna od skali (prog 60%: skala 2 po zmniejszeniu ~ skala 1, PSNR > 25 dB)  [29.6 dB]
+OK   Aberration: wszystko 0 = bez zmian; strength nie rusza G; winieta przyciemnia rog wzgledem srodka
+OK   Aberration radialna: srodek obrazu bez przesuniecia kanalow (R, B jak zrodlo +-1), rog przesuniety

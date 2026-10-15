@@ -27,7 +27,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 29, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń + 4 rozmycia (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 35, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń + 4 rozmycia + 6 glitch/światło (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -452,6 +452,45 @@ const SRC = testImage(300, 200);
   ok('Motion: slad waskiej linii ma dlugosc = length (40 px +-3)', Math.abs(span - 40) <= 3, `${span} px`);
   const m1 = D(cols, 'motionblur', { angle: 0, length: 20 }), m2 = resize(D(cols, 'motionblur', { angle: 0, length: 20 }, 2), 200, 160);
   ok('Motion: dlugosc w px skaluje sie z eksportem (skala 2 po zmniejszeniu ~ skala 1, PSNR > 30 dB)', psnr(m1, m2) > 30, psnr(m1, m2).toFixed(1) + ' dB');
+}
+// 22. Krok 9: glitch i sygnal, swiatlo (RGB Split, Scanline, CRT, Thermal, Edge Glow, Aberration)
+{
+  const W = 200, H = 160; const D = (src: Img, id: string, p: any = {}, scale = 1) => render(src, { style: { id, params: p } }, { scale }).img; const S = testImage(W, H);
+  const ch = (i: Img, c: number) => sha({ w: i.w, h: i.h, data: i.data.filter((_, k) => k % 4 === c) } as Img);
+  const rs = D(S, 'rgbsplit', { offset: 5, angle: 0 }); let shiftOk = true; for (let y = 0; y < H; y++) for (let x = 5; x < W - 5; x++) { const i = (y * W + x) * 4; if (rs.data[i] !== S.data[i - 20] || rs.data[i + 2] !== S.data[i + 20 + 2]) shiftOk = false; }
+  ok('RGB Split: R = zrodlo przesuniete o +5 px, B o −5 px (dokladnie), G bez zmian; perChannel rusza tez G', shiftOk && ch(rs, 1) === ch(S, 1) && ch(D(S, 'rgbsplit', { perChannel: true }), 1) !== ch(S, 1));
+  // Scanline: przyciemnienie sredniej = intensity · T/(T+spacing); roll 50% = wzor przesuniety o pol okresu
+  const g = uniform(W, H, 200); const sl = D(g, 'scanline', { spacing: 3, thickness: 2, intensity: 60 }); const exp = 1 - 0.6 * 2 / 5; const got = meanLum(sl) / meanLum(g);
+  ok('Scanline: srednia jasnosc = 1 − intensity·T/(T+spacing) (0,76 ±0,005); intensity 0 = bez zmian', Math.abs(got - exp) <= 0.005 && sha(D(g, 'scanline', { intensity: 0 })) === sha(g), got.toFixed(4));
+  const rowL = (i: Img) => [...Array(i.h)].map((_, y) => i.data[y * i.w * 4]); const r0 = rowL(D(g, 'scanline', { spacing: 6, thickness: 4, roll: 0 })), r5 = rowL(D(g, 'scanline', { spacing: 6, thickness: 4, roll: 50 }));
+  ok('Scanline: roll 50% przesuwa wzor o pol okresu (5 wierszy)', r5.slice(0, 140).every((v, y) => v === r0[y + 5]));
+  const s1 = meanLum(D(g, 'scanline', { spacing: 1.5 * 2, thickness: 1 })), s2 = meanLum(D(g, 'scanline', { spacing: 3, thickness: 1 }, 1.7));
+  ok('Scanline: przy skali 1,7 (pasy ulamkowe) srednie przyciemnienie takie samo jak przy 1 (+-0,003)', Math.abs(s1 - s2) <= 0.003, `${s1.toFixed(4)} ${s2.toFixed(4)}`);
+  // CRT
+  const crt0 = D(S, 'crt', { curvature: 0, scanlines: 0, phosphorMask: 0, bloom: 0, flicker: 0 });
+  ok('CRT: wszystko 0 = obraz bez zmian; zakrzywienie czerni narozniki; seed zmienia migotanie', sha(crt0) === sha(S) && D(S, 'crt', { curvature: 100 }).data.slice(0, 3).every((v) => v === 0) && sha(D(S, 'crt', { seed: 1 })) !== sha(D(S, 'crt', { seed: 2 })));
+  const pm = D(g, 'crt', { curvature: 0, scanlines: 0, bloom: 0, flicker: 0, phosphorMask: 100 }); const col = (x: number) => [0, 1, 2].map((c) => pm.data[(50 * W + x) * 4 + c]);
+  ok('CRT: maska luminoforu - kolumny 0, 1, 2 z dominujacym R, G, B (okres 3 px)', [0, 1, 2, 3, 4, 5].every((x) => { const v = col(x); const m = Math.max(...v); return v[x % 3] === m && v.filter((q) => q === m).length === 1; }));
+  // Thermal: bez szumu i celownika kazdy piksel ma kolor z palety; white-hot monotoniczny
+  const { THERMAL_PALETTES, paletteLut } = await import('../src/effects/signal.ts');
+  const th = D(S, 'thermal', { noise: 0, crosshair: false }); const lut = paletteLut(THERMAL_PALETTES.ironbow); const set = new Set<number>(); for (let i = 0; i < 256; i++) set.add(lut[i * 3] << 16 | lut[i * 3 + 1] << 8 | lut[i * 3 + 2]);
+  let off = 0; for (let i = 0; i < th.data.length; i += 4) if (!set.has(th.data[i] << 16 | th.data[i + 1] << 8 | th.data[i + 2])) off++;
+  const ramp = D(gradient(W, H), 'thermal', { palette: 'whitehot', noise: 0, crosshair: false, contrast: 0 }); let mono = true; for (let x = 1; x < W; x++) if (ramp.data[(80 * W + x) * 4] < ramp.data[(80 * W + x - 1) * 4]) mono = false;
+  ok('Thermal: kazdy piksel w kolorze palety (0 poza); white-hot rosnie z jasnoscia; celownik bialy 5 px od srodka', off === 0 && mono && D(S, 'thermal', { crosshair: true }).data.slice(((80 * W) + 100 + 5) * 4, ((80 * W) + 100 + 5) * 4 + 3)   /* ramie 6% krotszego boku = 9,6 px */.every((v) => v === 255), `${off}`);
+  // Edge Glow: obraz bez krawedzi -> tylko przyciemnienie; krawedz swieci, daleko od niej tylko przyciemnienie
+  const ef = D(g, 'edgeglow', { sourceDim: 50 }); ok('Edge Glow: jednolity obraz -> tylko przyciemnienie (200 -> 100); sourceDim 0 i brak krawedzi = bez zmian', ef.data[0] === 100 && sha(D(g, 'edgeglow', { sourceDim: 0 })) === sha(g));
+  const step = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; const v = x < 100 ? 40 : 200; step.data[o] = step.data[o + 1] = step.data[o + 2] = v; }
+  const eg = D(step, 'edgeglow', { sourceDim: 50, glowRadius: 4, colorMode: 'single', glowColor: '#00ff00' }); const at = (x: number) => eg.data[(80 * W + x) * 4 + 1];
+  ok('Edge Glow: przy krawedzi zielona poswiata, 40 px dalej tylko przyciemnienie (100)', at(100) > 200 && at(140) === 100 && at(60) === 20, `${at(100)} ${at(140)} ${at(60)}`);
+  const e1 = D(step, 'edgeglow', { threshold: 60 }), e2 = resize(D(step, 'edgeglow', { threshold: 60 }, 2), W, H);
+  ok('Edge Glow: sila krawedzi niezalezna od skali (prog 60%: skala 2 po zmniejszeniu ~ skala 1, PSNR > 25 dB)', psnr(e1, e2) > 25, psnr(e1, e2).toFixed(1) + ' dB');
+  // Aberration
+  ok('Aberration: wszystko 0 = bez zmian; strength nie rusza G; winieta przyciemnia rog wzgledem srodka', sha(D(S, 'lens', { strength: 0, barrel: 0, fringe: 0, vignette: 0 })) === sha(S) && ch(D(S, 'lens', { strength: 100, fringe: 0 }), 1) === ch(D(S, 'lens', { strength: 0, fringe: 0 }), 1)
+    && (() => { const v = D(g, 'lens', { strength: 0, barrel: 0, fringe: 0, vignette: 100 }); return v.data[0] < v.data[(80 * W + 100) * 4] * 0.5; })());
+  // obraz w drobne pasy pionowe (gladki gradient obrazu testowego w rogu nie zmienia sie przy przesunieciu o ok. 2 px)
+  const stripes = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; stripes.data[o] = stripes.data[o + 1] = stripes.data[o + 2] = 128 + 100 * Math.sin((x + 0.5) / 1.5); }
+  const ab = D(stripes, 'lens', { strength: 100, radial: 100, barrel: 0, fringe: 0, vignette: 0 }); const cpx = (80 * W + 100) * 4; const S0 = stripes;
+  ok('Aberration radialna: srodek obrazu bez przesuniecia kanalow (R, B jak zrodlo +-1), rog przesuniety', Math.abs(ab.data[cpx] - S0.data[cpx]) <= 1 && Math.abs(ab.data[cpx + 2] - S0.data[cpx + 2]) <= 1 && Math.abs(ab.data[(5 * W + 5) * 4] - S0.data[(5 * W + 5) * 4]) > 10);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 62 efekty Faz 2–3 (stan po kroku 9, partia 2; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 56 efektów Faz 2–3 (stan po kroku 9, partia 3; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -354,3 +354,39 @@ Podgląd liczy się w rozdzielczości ekranu, więc zwykle kilka razy mniej piks
 - Przeglądarka = Node: 46 z 46.
 - Dotychczasowe hashe bez zmian.
 - `oko`: miniatury 4 efektów.
+
+## 16. Krok 9, partia 3: glitch i sygnał, światło (15 X 2026)
+
+**Stan:** 35 z 91 efektów gotowych. Zostało 56: 13 Fazy 2 i 43 Fazy 3.
+
+**Efekty** (kod: `engine/src/effects/signal.ts`; opcje z pliku 02: RGB Split i Scanline `docs`, reszta `proj`; zakresy i wzory `proj`)
+- **RGB Split:** R przesunięty o +offset pod kątem `angle`, B o −offset, G na miejscu. `perChannel`: R, G, B co 120°.
+- **Scanline:** okres = `spacing` + `thickness`. Każdy wiersz przyciemniany proporcjonalnie do dokładnego pokrycia pasem (całka po okresie), więc przy ułamkowej skali średnia się nie zmienia. `roll` przesuwa wzór.
+- **CRT Screen:** poświata, maska luminoforu (kolumny R, G, B), linie skanowania co 3 px, migotanie pasami (seed), zakrzywienie z czarnymi narożnikami.
+- **Thermal:** jasność na palecie ironbow / rainbow / white-hot, kontrast, szum sensora (seed), celownik.
+- **Edge Glow:** Sobel na jasności, w przeliczeniu na piksel źródła, więc ten sam próg działa w podglądzie i w eksporcie. Rdzeń krawędzi z rozmytą poświatą jest dodawany trybem screen do przyciemnionego obrazu. Kolor: z obrazu (podbity do pełnej jasności) albo jeden.
+- **Aberration (`lens`):** dystorsja beczkowata, R i B rozsunięte promieniście albo poziomo (`radial`), fioletowe obwódki na mocnych krawędziach (`fringe`).
+  - **Odstępstwo:** opis w katalogu wymienia winietowanie, którego nie ma na liście opcji. Dodałem opcję `vignette` (`proj`).
+- **Domyślne wartości po ocenie miniatur (`oko`):** RGB Split 10 px, Edge Glow próg 15%, Aberration 60%.
+- **Czas (Node, 1600×1067):** Scanline 8 ms, RGB Split 65 ms, Thermal 0,24 s, CRT 0,27 s, Aberration 0,36 s, Edge Glow 0,42 s.
+
+**Testy (`test`)**
+- Silnik 189 z 189, 12 nowych:
+  - RGB Split: R i B przesunięte dokładnie o ±5 px, G bez zmian;
+  - Scanline: średnia = 1 − intensity·T/(T + spacing) (0,7600); roll 50% przesuwa wzór o pół okresu; skala 1,7 daje tę samą średnią;
+  - CRT: zera = bez zmian; narożniki czarne; maska luminoforu ma okres 3 px; seed zmienia migotanie;
+  - Thermal: każdy piksel w kolorze palety; white-hot rośnie z jasnością; celownik;
+  - Edge Glow: jednolity obraz jest tylko przyciemniany; poświata przy krawędzi, 40 px dalej tylko przyciemnienie; siła krawędzi niezależna od skali (29,6 dB);
+  - Aberration: zera = bez zmian; `strength` nie rusza G; winieta; środek bez przesunięcia, róg przesunięty.
+- Dwa testy poprawione po pierwszym uruchomieniu (błędy testu, nie kodu):
+  - celownik Thermal sprawdzany poza ramieniem (ramię 9,6 px, test 10 px);
+  - Aberration sprawdzana na gładkim narożniku obrazu testowego; zamiast tego obraz w pasy.
+- Mutacje, po jednej na efekt, wszystkie wykryte:
+  - odwrócony RGB Split;
+  - Scanline środkiem wiersza zamiast pokrycia;
+  - przesunięta maska CRT;
+  - odwrócony Thermal;
+  - Edge Glow bez skali;
+  - Aberration ruszająca G.
+- Przeglądarka = Node: 52 z 52.
+- Dotychczasowe hashe bez zmian.
