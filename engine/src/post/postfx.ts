@@ -25,7 +25,8 @@ export const POSTFX: PostFxDef[] = [
       for (let i = 0; i < d.length; i += 4) for (let c = 0; c < 3; c++) d[i + c] = 255 - ((255 - d[i + c]) * (255 - bl.data[i + c] * k)) / 255; return img; } },
   { id: 'chromatic', name: 'Chromatic', params: [range('offset', 'Offset', 6, 1, 40, PX), range('angle', 'Angle', 0, 0, 360, { unit: '°' }), range('radial', 'Radial', 0, 0, 100, { unit: '%' })],
     apply(img, p, s) { const { w, h, data: d } = img; const src = new Uint8ClampedArray(d); const a = (p.angle * Math.PI) / 180, ux = Math.cos(a), uy = Math.sin(a), off = p.offset * s, rk = p.radial / 100;
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = x + 0.5 - w / 2, dy = y + 0.5 - h / 2; const rr = Math.hypot(dx, dy) / Math.hypot(w / 2, h / 2); const k = off * (1 - rk + rk * rr * 2); const i = (y * w + x) * 4; const ox = rk > 0 && rr > 0 ? (dx / (rr * Math.hypot(w / 2, h / 2))) : ux, oy = rk > 0 && rr > 0 ? (dy / (rr * Math.hypot(w / 2, h / 2))) : uy;
+      const HD = Math.hypot(w / 2, h / 2);   // krok 6: stała, liczona raz
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = x + 0.5 - w / 2, dy = y + 0.5 - h / 2; const rr = Math.hypot(dx, dy) / HD; const k = off * (1 - rk + rk * rr * 2); const i = (y * w + x) * 4; const ox = rk > 0 && rr > 0 ? (dx / (rr * HD)) : ux, oy = rk > 0 && rr > 0 ? (dy / (rr * HD)) : uy;
         d[i] = sample(src, w, h, x + 0.5 + ox * k, y + 0.5 + oy * k, 0); d[i + 2] = sample(src, w, h, x + 0.5 - ox * k, y + 0.5 - oy * k, 2); } return img; } },
   { id: 'rgbSplit', name: 'RGB Split', params: [range('offset', 'Offset', 5, 1, 20, PX), range('angle', 'Angle', 0, 0, 360, { unit: '°', level: 'advanced' })],
     apply(img, p, s) { const { w, h, data: d } = img; const src = new Uint8ClampedArray(d); const a = (p.angle * Math.PI) / 180, k = p.offset * s; const ox = Math.cos(a) * k, oy = Math.sin(a) * k;

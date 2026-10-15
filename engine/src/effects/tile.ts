@@ -3,7 +3,7 @@ import type { EffectDef, Img, RenderCtx } from '../core/types.ts';
 import { color, common, range, select, seedParam, toggle } from '../core/params.ts';
 import { backdrop } from '../core/compose.ts';
 import { cellAverages, clamp, hash01, lerp, lum, over, parseColor } from '../core/util.ts';
-import { fillRect, paintSDF } from '../core/raster.ts';
+import { fillRect, paintSDF, paintSDFNear } from '../core/raster.ts';
 import { LEGO_COLORS } from '../data/palettes.ts';
 
 const bgSolid = () => ({ ...common('bgMode')[0], default: 'solid' });
@@ -68,8 +68,9 @@ const lego: EffectDef = {
       const c = ctx.p.palette === 'lego' ? nearest(r, g, b, LEGO_RGB) : [r, g, b]; const gap = Math.max(1, ctx.scale * 0.8);
       fillRect(img, x0, y0, x1, y1, c[0] * 0.55, c[1] * 0.55, c[2] * 0.55); fillRect(img, x0 + gap / 2, y0 + gap / 2, x1 - gap / 2, y1 - gap / 2, c[0], c[1], c[2]);
       if (x1 - x0 < cs || y1 - y0 < cs) return; const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
-      paintSDF(img, x0, y0, x1, y1, (x, y) => Math.hypot(x - mx, y - my) - rad, c[0] * (1 - 0.3 * sh), c[1] * (1 - 0.3 * sh), c[2] * (1 - 0.3 * sh));
-      const ox = -rad * 0.12, oy = -rad * 0.12; paintSDF(img, x0, y0, x1, y1, (x, y) => Math.hypot(x - mx - ox, y - my - oy) - rad * 0.8, clamp(c[0] * (1 + 0.28 * sh) + 12 * sh, 0, 255), clamp(c[1] * (1 + 0.28 * sh) + 12 * sh, 0, 255), clamp(c[2] * (1 + 0.28 * sh) + 12 * sh, 0, 255));
+      // krok 6: wypustki rysowane tylko w swoim zasięgu (dalej sd ≥ 0,5, krycie 0)
+      paintSDFNear(img, x0, y0, x1, y1, mx, my, rad + 1, (x, y) => Math.hypot(x - mx, y - my) - rad, c[0] * (1 - 0.3 * sh), c[1] * (1 - 0.3 * sh), c[2] * (1 - 0.3 * sh));
+      const ox = -rad * 0.12, oy = -rad * 0.12; paintSDFNear(img, x0, y0, x1, y1, mx + ox, my + oy, rad * 0.8 + 1, (x, y) => Math.hypot(x - mx - ox, y - my - oy) - rad * 0.8, clamp(c[0] * (1 + 0.28 * sh) + 12 * sh, 0, 255), clamp(c[1] * (1 + 0.28 * sh) + 12 * sh, 0, 255), clamp(c[2] * (1 + 0.28 * sh) + 12 * sh, 0, 255));
     });
   },
 };
@@ -85,12 +86,25 @@ const hexmosaic: EffectDef = {
   params: [range('size', 'Size', 14, 4, 80, { unit: 'px', px: true }), select('orientation', 'Orientation', 'pointy', [['pointy', 'Pointy-top'], ['flat', 'Flat-top']]), range('grout', 'Grout', 1, 0, 12, { unit: 'px', px: true }), color('groutColor', 'Grout colour', '#0a0a0a'), ...common('brightness', 'contrast'), seedParam()],
   render(ctx) {
     const R = ctx.px(ctx.p.size); const pointy = ctx.p.orientation === 'pointy'; const { w, h } = ctx.prep; const d = ctx.prep.data; const gp = ctx.p.grout === 0 ? 0 : ctx.px(ctx.p.grout); const gc = parseColor(ctx.p.groutColor);
+    // Krok 6: współrzędne kafelka (q, r) liczone raz na piksel (pierwsze przejście) i zapamiętane; cos/sin normalnych raz.
     const sums = new Map<number, number[]>(); const key = (q: number, r: number) => (q + 4096) * 8192 + (r + 4096);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const [q, r] = hexOf(x + 0.5, y + 0.5, R, pointy); const k = key(q, r); let s = sums.get(k); if (!s) { s = [0, 0, 0, 0]; sums.set(k, s); } const i = (y * w + x) * 4; s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; s[3]++; }
-    ctx.info.cells = sums.size; const out: Img = { w, h, data: new Uint8ClampedArray(w * h * 4) }; const inr = (R * S3) / 2; const normals = pointy ? [0, 60, 120] : [30, 90, 150];
+    const Q = new Int32Array(w * h), Rr = new Int32Array(w * h); const tile: number[][] = new Array(w * h);
+    let lastK = NaN, lastS: number[] = [];
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const [q, r] = hexOf(x + 0.5, y + 0.5, R, pointy); const s = sums.get(key(q, r))!; const cx = pointy ? R * S3 * (q + r / 2) : R * 1.5 * q, cy = pointy ? R * 1.5 * r : R * S3 * (r + q / 2);
-      let m = 0; for (const a of normals) { const rd = (a * Math.PI) / 180; m = Math.max(m, Math.abs((x + 0.5 - cx) * Math.cos(rd) + (y + 0.5 - cy) * Math.sin(rd))); }
+      // = hexOf(x + 0.5, y + 0.5, R, pointy), bez tworzenia tablicy na piksel
+      const px = x + 0.5, py = y + 0.5;
+      const qf = pointy ? ((S3 / 3) * px - py / 3) / R : ((2 / 3) * px) / R, rf = pointy ? ((2 / 3) * py) / R : ((-1 / 3) * px + (S3 / 3) * py) / R;
+      let q = Math.round(qf), r = Math.round(rf); const s3 = Math.round(-qf - rf); const dq = Math.abs(q - qf), dr = Math.abs(r - rf), ds = Math.abs(s3 + qf + rf);
+      if (dq > dr && dq > ds) q = -r - s3; else if (dr > ds) r = -q - s3;
+      const k = key(q, r); let s = k === lastK ? lastS : sums.get(k); if (!s) { s = [0, 0, 0, 0]; sums.set(k, s); } lastK = k; lastS = s;
+      const p = y * w + x, i = p * 4; Q[p] = q; Rr[p] = r; tile[p] = s; s[0] += d[i]; s[1] += d[i + 1]; s[2] += d[i + 2]; s[3]++;
+    }
+    ctx.info.cells = sums.size; const out: Img = { w, h, data: new Uint8ClampedArray(w * h * 4) }; const inr = (R * S3) / 2;
+    const NC = (pointy ? [0, 60, 120] : [30, 90, 150]).map((a) => { const rd = (a * Math.PI) / 180; return [Math.cos(rd), Math.sin(rd)]; });
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const p = y * w + x; const q = Q[p], r = Rr[p]; const s = tile[p]; const cx = pointy ? R * S3 * (q + r / 2) : R * 1.5 * q, cy = pointy ? R * 1.5 * r : R * S3 * (r + q / 2);
+      const ex = x + 0.5 - cx, ey = y + 0.5 - cy;
+      const m = Math.max(Math.max(Math.max(0, Math.abs(ex * NC[0][0] + ey * NC[0][1])), Math.abs(ex * NC[1][0] + ey * NC[1][1])), Math.abs(ex * NC[2][0] + ey * NC[2][1]));
       const ge = clamp(0.5 + (inr - m - gp / 2), 0, 1); const o = (y * w + x) * 4; // ge = udzial koloru kafelka; reszta to spoina
       out.data[o] = lerp(gc[0], s[0] / s[3], ge); out.data[o + 1] = lerp(gc[1], s[1] / s[3], ge); out.data[o + 2] = lerp(gc[2], s[2] / s[3], ge); out.data[o + 3] = 255;
     }

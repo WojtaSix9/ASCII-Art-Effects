@@ -21,9 +21,14 @@ export function backdrop(ctx: RenderCtx): Img {
   const { w, h } = ctx.src; const mode = ctx.p.bgMode; const [cr, cg, cb] = parseColor(ctx.p.bgColor);
   if (mode === 'solid') return newImg(w, h, [cr, cg, cb, 255]);
   if (mode === 'none') return newImg(w, h, [0, 0, 0, 0]);
+  // Krok 6: tło zależy tylko od źródła i parametrów tła, więc zapamiętujemy ostatnie dla danego źródła; efekt rysuje po kopii.
+  const key = `${mode}|${Math.round(ctx.p.bgBlur * ctx.scale)}|${ctx.p.bgOpacity ?? 100}|${ctx.p.bgColor}`;
+  const hit = bgCache.get(ctx.src); if (hit && hit.key === key) return { w, h, data: new Uint8ClampedArray(hit.img.data) };
   const base = mode === 'original' ? { w, h, data: new Uint8ClampedArray(ctx.src.data) } : fastBlur(ctx.src, Math.round(ctx.p.bgBlur * ctx.scale));
   const k = (ctx.p.bgOpacity ?? 100) / 100; if (k < 1) { const d = base.data; for (let i = 0; i < d.length; i += 4) { d[i] = cr + (d[i] - cr) * k; d[i + 1] = cg + (d[i + 1] - cg) * k; d[i + 2] = cb + (d[i + 2] - cb) * k; } }
+  bgCache.set(ctx.src, { key, img: { w, h, data: new Uint8ClampedArray(base.data) } });
   return base;
 }
+const bgCache = new WeakMap<Img, { key: string; img: Img }>();
 /** Czy komorka ma byc narysowana: deterministyczny hasz, ten sam wynik w kazdej klatce i skali. */
 export const cellVisible = (hash: number, coverage: number) => hash < clamp(coverage, 0, 100) / 100;

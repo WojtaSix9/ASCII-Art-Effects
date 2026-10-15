@@ -94,3 +94,5 @@ OK   Lights: wiecej niz 4 swiatla i zly kolor -> blad
 OK   Lights: struktura - Characters w oswietlonym srodku ma gestsze znaki (eksport tekstowy)  [6.77 -> 10.71]
 OK   Lights: Dither ignoruje swiatla (jak w oryginale)
 OK   Lights: niezaleznosc od skali - skala 2 po zmniejszeniu vs skala 1, PSNR >= 40 dB  [57.9 dB]
+OK   Krok 6: pamiec zrodla i tla - 12 renderow na tym samym zrodle (zmiany tla, skali, swiatel, post FX) = rendery na swiezej kopii
+OK   Krok 6: render nie zmienia obrazu zrodlowego (post FX i Color dzialaja na kopii)

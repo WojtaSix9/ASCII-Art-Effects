@@ -1,34 +1,35 @@
-Obraz 1600x1067, mediana z 3 przebiegow (pierwszy przebieg wlicza rozgrzewke i cache masek znakow, odrzucony)
-characters      166 ms
-block-chars     130 ms
-braille         153 ms
-dots            152 ms
-cross           230 ms
-diamond         129 ms
-lines           152 ms
-diagonal        194 ms
-pixel            29 ms
-mosaic           32 ms
-lego            212 ms
-hexmosaic       255 ms
-disco            24 ms
-halftone        636 ms
-posterize        61 ms
-duotone          43 ms
-gradientmap     140 ms
-dither           58 ms
+Obraz 1600x1067, mediana z 3 przebiegow (pierwszy przebieg wlicza rozgrzewke i cache masek znakow, odrzucony).
+Render "na zimno": kazdy pomiar na swiezej kopii zrodla (kopia poza pomiarem), wiec bez pamieci przeskalowanego zrodla i tla z kroku 6. W edytorze przy zmianie parametru stylu jest szybciej (app/reports).
+characters      157 ms
+block-chars     114 ms
+braille         114 ms
+dots            239 ms
+cross           192 ms
+diamond         111 ms
+lines           146 ms
+diagonal        188 ms
+pixel            31 ms
+mosaic           43 ms
+lego            241 ms
+hexmosaic       137 ms
+disco            26 ms
+halftone        381 ms
+posterize        57 ms
+duotone          41 ms
+gradientmap     163 ms
+dither           55 ms
 --- post FX (na wyniku dots, parametry domyslne) ---
-advBlur         453 ms (lacznie ze stylem pixel)
-vignette        159 ms (lacznie ze stylem pixel)
-scanLines        21 ms (lacznie ze stylem pixel)
-bloom           560 ms (lacznie ze stylem pixel)
-chromatic       191 ms (lacznie ze stylem pixel)
-rgbSplit         96 ms (lacznie ze stylem pixel)
-crtCurve        128 ms (lacznie ze stylem pixel)
-glitch           23 ms (lacznie ze stylem pixel)
-filmGrain        56 ms (lacznie ze stylem pixel)
-pixelate         23 ms (lacznie ze stylem pixel)
-filmDust         40 ms (lacznie ze stylem pixel)
-sharpen         230 ms (lacznie ze stylem pixel)
-noise            75 ms (lacznie ze stylem pixel)
-dither 15 alg.: 488 ms (bayer8 + blueNoise + floyd lacznie)
+advBlur         180 ms (lacznie ze stylem pixel)
+vignette        136 ms (lacznie ze stylem pixel)
+scanLines        24 ms (lacznie ze stylem pixel)
+bloom           243 ms (lacznie ze stylem pixel)
+chromatic       160 ms (lacznie ze stylem pixel)
+rgbSplit        104 ms (lacznie ze stylem pixel)
+crtCurve        126 ms (lacznie ze stylem pixel)
+glitch           28 ms (lacznie ze stylem pixel)
+filmGrain        58 ms (lacznie ze stylem pixel)
+pixelate         30 ms (lacznie ze stylem pixel)
+filmDust         27 ms (lacznie ze stylem pixel)
+sharpen         125 ms (lacznie ze stylem pixel)
+noise            60 ms (lacznie ze stylem pixel)
+dither 15 alg.: 492 ms (bayer8 + blueNoise + floyd lacznie)

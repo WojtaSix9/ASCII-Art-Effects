@@ -29,27 +29,29 @@ export function over(d: Uint8ClampedArray, i: number, r: number, g: number, b: n
   d[i] = (r * a + d[i] * ab * (1 - a)) / ao; d[i + 1] = (g * a + d[i + 1] * ab * (1 - a)) / ao; d[i + 2] = (b * a + d[i + 2] * ab * (1 - a)) / ao; d[i + 3] = ao * 255;
 }
 
-/** Rozmycie pudelkowe (3 przebiegi ~ gaussian), brzegi przez powielenie. Zwraca nowy obraz. */
+/** Rozmycie pudelkowe (3 przebiegi ~ gaussian), brzegi przez powielenie. Zwraca nowy obraz.
+ *  Krok 6 (optymalizacja): wynik bajt w bajt jak w pierwotnej wersji (ta sama sekwencja dzialan na kanal), ale 4 kanaly
+ *  w jednym przejsciu, bez wywolan clamp, a przebieg pionowy wierszami z sumami biezacymi w Float64Array (= liczby JS). */
 export function blur(src: Img, radius: number, passes = 3): Img {
   const r = Math.round(radius); if (r < 1) return { w: src.w, h: src.h, data: new Uint8ClampedArray(src.data) };
   const a = new Float32Array(src.data), b = new Float32Array(a.length);
-  const { w, h } = src;
+  const { w, h } = src; const div = 2 * r + 1; const W = w - 1, H = h - 1;
+  const sums = new Float64Array(w * 4);
   for (let p = 0; p < passes; p++) {
-    for (let y = 0; y < h; y++) for (let c = 0; c < 4; c++) {            // poziomo: a -> b
-      let s = 0; const row = y * w;
-      for (let x = -r; x <= r; x++) s += a[(row + clamp(x, 0, w - 1)) * 4 + c];
+    for (let y = 0; y < h; y++) {                                           // poziomo: a -> b
+      const row = y * w * 4; let s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+      for (let x = -r; x <= r; x++) { const i = row + (x < 0 ? 0 : x > W ? W : x) * 4; s0 += a[i]; s1 += a[i + 1]; s2 += a[i + 2]; s3 += a[i + 3]; }
       for (let x = 0; x < w; x++) {
-        b[(row + x) * 4 + c] = s / (2 * r + 1);
-        s += a[(row + clamp(x + r + 1, 0, w - 1)) * 4 + c] - a[(row + clamp(x - r, 0, w - 1)) * 4 + c];
+        const o = row + x * 4; b[o] = s0 / div; b[o + 1] = s1 / div; b[o + 2] = s2 / div; b[o + 3] = s3 / div;
+        const xa = x + r + 1, xs = x - r; const ia = row + (xa > W ? W : xa) * 4, is = row + (xs < 0 ? 0 : xs) * 4;
+        s0 += a[ia] - a[is]; s1 += a[ia + 1] - a[is + 1]; s2 += a[ia + 2] - a[is + 2]; s3 += a[ia + 3] - a[is + 3];
       }
     }
-    for (let x = 0; x < w; x++) for (let c = 0; c < 4; c++) {            // pionowo: b -> a
-      let s = 0;
-      for (let y = -r; y <= r; y++) s += b[(clamp(y, 0, h - 1) * w + x) * 4 + c];
-      for (let y = 0; y < h; y++) {
-        a[(y * w + x) * 4 + c] = s / (2 * r + 1);
-        s += b[(clamp(y + r + 1, 0, h - 1) * w + x) * 4 + c] - b[(clamp(y - r, 0, h - 1) * w + x) * 4 + c];
-      }
+    sums.fill(0);                                                           // pionowo: b -> a, wierszami
+    for (let y = -r; y <= r; y++) { const row = (y < 0 ? 0 : y > H ? H : y) * w * 4; for (let k = 0; k < w * 4; k++) sums[k] += b[row + k]; }
+    for (let y = 0; y < h; y++) {
+      const row = y * w * 4; const ya = y + r + 1, ys = y - r; const ra = (ya > H ? H : ya) * w * 4, rs = (ys < 0 ? 0 : ys) * w * 4;
+      for (let k = 0; k < w * 4; k++) { a[row + k] = sums[k] / div; sums[k] += b[ra + k] - b[rs + k]; }
     }
   }
   return { w, h, data: new Uint8ClampedArray(a) };
@@ -66,10 +68,14 @@ export function resize(src: Img, nw: number, nh: number): Img {
         for (let yy = y0; yy < y1; yy++) for (let xx = x0; xx < x1; xx++) { const i = (yy * src.w + xx) * 4; r += s[i]; g += s[i + 1]; b += s[i + 2]; a += s[i + 3]; n++; }
         const o = (y * nw + x) * 4; out[o] = r / n; out[o + 1] = g / n; out[o + 2] = b / n; out[o + 3] = a / n; } }
   } else {
+    // krok 6: współrzędne kolumn (x0, x1, tx) raz na kolumnę; arytmetyka jak wcześniej, więc wynik bajt w bajt ten sam
+    const X0 = new Int32Array(nw), X1 = new Int32Array(nw), TX = new Float64Array(nw);
+    for (let x = 0; x < nw; x++) { const fx = clamp((x + 0.5) * sx - 0.5, 0, src.w - 1); X0[x] = Math.floor(fx); X1[x] = Math.min(src.w - 1, X0[x] + 1); TX[x] = fx - X0[x]; }
     for (let y = 0; y < nh; y++) { const fy = clamp((y + 0.5) * sy - 0.5, 0, src.h - 1); const y0 = Math.floor(fy), y1 = Math.min(src.h - 1, y0 + 1), ty = fy - y0;
-      for (let x = 0; x < nw; x++) { const fx = clamp((x + 0.5) * sx - 0.5, 0, src.w - 1); const x0 = Math.floor(fx), x1 = Math.min(src.w - 1, x0 + 1), tx = fx - x0;
-        for (let c = 0; c < 4; c++) { const a = s[(y0 * src.w + x0) * 4 + c], b = s[(y0 * src.w + x1) * 4 + c], d = s[(y1 * src.w + x0) * 4 + c], e = s[(y1 * src.w + x1) * 4 + c];
-          out[(y * nw + x) * 4 + c] = lerp(lerp(a, b, tx), lerp(d, e, tx), ty); } } }
+      const r0 = y0 * src.w, r1 = y1 * src.w;
+      for (let x = 0; x < nw; x++) { const x0 = X0[x], x1 = X1[x], tx = TX[x]; const o = (y * nw + x) * 4;
+        for (let c = 0; c < 4; c++) { const a = s[(r0 + x0) * 4 + c], b = s[(r0 + x1) * 4 + c], d = s[(r1 + x0) * 4 + c], e = s[(r1 + x1) * 4 + c];
+          out[o + c] = lerp(lerp(a, b, tx), lerp(d, e, tx), ty); } } }
   }
   return { w: nw, h: nh, data: out };
 }

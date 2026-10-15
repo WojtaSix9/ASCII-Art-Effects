@@ -17,13 +17,15 @@ const halftone: EffectDef = {
   render(ctx) {
     const { w, h } = ctx.prep; const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.angle * Math.PI) / 180; const ca = Math.cos(ang), sa = Math.sin(ang);
     const sm = blur(ctx.prep, Math.max(1, Math.round(cs * 0.5))); const ink = parseColor(ctx.p.inkColor), paper = parseColor(ctx.p.paperColor); const out = new Uint8ClampedArray(w * h * 4); const hw = w / 2, hh = h / 2;
+    const inv = ctx.p.invert, shape = ctx.p.shape, fromImg = ctx.p.colorMode === 'image';   // krok 6: odczyt parametrów raz
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const dx = x + 0.5 - hw, dy = y + 0.5 - hh; const u = dx * ca + dy * sa, v = -dx * sa + dy * ca; const i = Math.floor(u / cs), j = Math.floor(v / cs); const cu = (i + 0.5) * cs, cv = (j + 0.5) * cs;
       const sx = clamp(Math.round(cu * ca - cv * sa + hw), 0, w - 1), sy = clamp(Math.round(cu * sa + cv * ca + hh), 0, h - 1); const si = (sy * w + sx) * 4; const t = lum(sm.data[si], sm.data[si + 1], sm.data[si + 2]);
-      const a = ctx.p.invert ? t : 1 - t; let sd: number; // a = ilosc tuszu
-      if (ctx.p.shape === 'dot') sd = Math.hypot(u - cu, v - cv) - cs * 0.5 * Math.sqrt(a) * 1.12; else if (ctx.p.shape === 'line') sd = Math.abs(v - cv) - (cs * a) / 2; else sd = Math.max(Math.abs(u - cu), Math.abs(v - cv)) - (cs * Math.sqrt(a)) / 2;
-      const k = clamp(0.5 - sd, 0, 1); const c = ctx.p.colorMode === 'image' ? [sm.data[si], sm.data[si + 1], sm.data[si + 2]] : ink; const o = (y * w + x) * 4;
-      out[o] = lerp(paper[0], c[0], k); out[o + 1] = lerp(paper[1], c[1], k); out[o + 2] = lerp(paper[2], c[2], k); out[o + 3] = 255;
+      const a = inv ? t : 1 - t; let sd: number; // a = ilosc tuszu
+      if (shape === 'dot') sd = Math.hypot(u - cu, v - cv) - cs * 0.5 * Math.sqrt(a) * 1.12; else if (shape === 'line') sd = Math.abs(v - cv) - (cs * a) / 2; else sd = Math.max(Math.abs(u - cu), Math.abs(v - cv)) - (cs * Math.sqrt(a)) / 2;
+      const k = clamp(0.5 - sd, 0, 1); const o = (y * w + x) * 4;
+      const c0 = fromImg ? sm.data[si] : ink[0], c1 = fromImg ? sm.data[si + 1] : ink[1], c2 = fromImg ? sm.data[si + 2] : ink[2];
+      out[o] = lerp(paper[0], c0, k); out[o + 1] = lerp(paper[1], c1, k); out[o + 2] = lerp(paper[2], c2, k); out[o + 3] = 255;
     }
     return { w, h, data: out };
   },

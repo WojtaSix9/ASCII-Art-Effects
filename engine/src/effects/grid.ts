@@ -3,7 +3,7 @@ import type { EffectDef, Img, RenderCtx } from '../core/types.ts';
 import { color, common, range, select, seedParam, toggle } from '../core/params.ts';
 import { backdrop, cellVisible } from '../core/compose.ts';
 import { cellAverages, clamp, hash01, lerp, over, parseColor } from '../core/util.ts';
-import { fillRect, paintSDF, rot, sdBox } from '../core/raster.ts';
+import { fillRect, paintSDF, paintSDFNear, sdBox } from '../core/raster.ts';
 import { CHARSETS } from '../data/charsets.ts';
 
 const CELL = (def = 10) => range('cellSize', 'Cell size', def, 3, 80, { unit: 'px', px: true });
@@ -43,9 +43,10 @@ const characters: EffectDef = {
     { id: 'chars', label: 'Chars', kind: 'text', default: '@#S08Xx+=-;:. ', level: 'main' }, ...COLOR_PARAMS, range('edgeEmphasis', 'Edge emphasis', 0, 0, 100, { level: 'advanced', unit: '%' }), ...GRID_COMMON(), seedParam()],
   render(ctx) {
     if (!ctx.glyphs) throw new Error('Characters needs a glyph provider (canvasGlyphs)'); const { fs, cw, ch } = charCell(ctx); const ramp = rampOf(ctx.p); const eb = edgeBoost(ctx, cellAverages(ctx.prep, cw, ch));
+    const masks = new Map<string, Uint8Array>();   // krok 6: maska znaku raz na render, nie klucz tekstowy na każdą komórkę
     return runGrid(ctx, cw, ch, (img, c, a) => {
       const t = eb ? clamp(c.t + eb[c.cy * a.nx + c.cx], 0, 1) : c.t; const chr = charAt(ramp, t); if (chr === ' ') return;
-      const m = ctx.glyphs!.mask(chr, cw, ch, fs); const w = c.x1 - c.x0;
+      let m = masks.get(chr); if (!m) { m = ctx.glyphs!.mask(chr, cw, ch, fs); masks.set(chr, m); } const w = c.x1 - c.x0;
       for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) { const v = m[(y - c.y0) * cw + (x - c.x0)]; if (v && x - c.x0 < w) over(img.data, (y * img.w + x) * 4, c.r, c.g, c.b, v / 255); }
     });
   },
@@ -128,9 +129,11 @@ const dots: EffectDef = {
   params: [CELL(10), select('dotShape', 'Dot shape', 'circle', [['circle', 'Circle'], ['square', 'Square'], ['diamond', 'Diamond']]), range('minDot', 'Min dot', 0, 0, 100, { unit: '%' }), range('maxDot', 'Max dot', 100, 0, 100, { unit: '%' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
   render(ctx) {
     const cs = ctx.px(ctx.p.cellSize); const lo = ctx.p.minDot / 100, hi = Math.max(lo, ctx.p.maxDot / 100);
+    const sh = ctx.p.dotShape;
     return runGrid(ctx, cs, cs, (img, c) => {
-      const { mx, my, half } = centre(c); const r = half * lerp(lo, hi, Math.sqrt(c.t)); if (r < 0.15) return; const sh = ctx.p.dotShape;
-      paintSDF(img, c.x0, c.y0, c.x1, c.y1, (x, y) => (sh === 'circle' ? Math.hypot(x - mx, y - my) - r : sh === 'square' ? Math.max(Math.abs(x - mx), Math.abs(y - my)) - r : (Math.abs(x - mx) + Math.abs(y - my)) / Math.SQRT2 - r), c.r, c.g, c.b);
+      const { mx, my, half } = centre(c); const r = half * lerp(lo, hi, Math.sqrt(c.t)); if (r < 0.15) return;
+      // zasięg: koło i kwadrat r + 0,5, romb √2·(r + 0,5); dalej sd ≥ 0,5
+      paintSDFNear(img, c.x0, c.y0, c.x1, c.y1, mx, my, (r + 1) * Math.SQRT2, (x, y) => (sh === 'circle' ? Math.hypot(x - mx, y - my) - r : sh === 'square' ? Math.max(Math.abs(x - mx), Math.abs(y - my)) - r : (Math.abs(x - mx) + Math.abs(y - my)) / Math.SQRT2 - r), c.r, c.g, c.b);
     });
   },
 };
@@ -139,10 +142,11 @@ const cross: EffectDef = {
   description: 'A grid of plus signs scaled by brightness.',
   params: [CELL(12), range('strokeThickness', 'Stroke', 16, 4, 60, { unit: '%' }), range('rotation', 'Rotation', 0, 0, 90, { unit: '°' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
   render(ctx) {
-    const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.rotation * Math.PI) / 180;
+    const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.rotation * Math.PI) / 180; const ca = Math.cos(ang), sa = Math.sin(ang);   // = rot()
     return runGrid(ctx, cs, cs, (img, c) => {
       const { mx, my, half } = centre(c); const L = half * (0.2 + 0.8 * c.t); const th = Math.max(0.6, ((c.x1 - c.x0) * ctx.p.strokeThickness) / 200);
-      paintSDF(img, c.x0, c.y0, c.x1, c.y1, (x, y) => { const [u, v] = rot(x - mx, y - my, ang); return Math.min(sdBox(u, v, L, th), sdBox(u, v, th, L)); }, c.r, c.g, c.b);
+      // zasięg: sdBox ≥ |p| − przekątna połowy prostokąta, więc dalej niż hypot(L, th) + 0,5 krycie = 0
+      paintSDFNear(img, c.x0, c.y0, c.x1, c.y1, mx, my, Math.hypot(L, th) + 1, (x, y) => { const dx = x - mx, dy = y - my; const u = dx * ca + dy * sa, v = -dx * sa + dy * ca; return Math.min(sdBox(u, v, L, th), sdBox(u, v, th, L)); }, c.r, c.g, c.b);
     });
   },
 };
@@ -151,10 +155,11 @@ const diamond: EffectDef = {
   description: 'A grid of rhombi sized by tone.',
   params: [CELL(12), select('fill', 'Fill', 'solid', [['solid', 'Solid'], ['outline', 'Outline']]), range('rotation', 'Rotation', 0, 0, 90, { unit: '°' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
   render(ctx) {
-    const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.rotation * Math.PI) / 180; const lw = Math.max(1, ctx.scale * 1.2);
+    const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.rotation * Math.PI) / 180; const lw = Math.max(1, ctx.scale * 1.2); const ca = Math.cos(ang), sa = Math.sin(ang); const outline = ctx.p.fill === 'outline';
     return runGrid(ctx, cs, cs, (img, c) => {
       const { mx, my, half } = centre(c); const R = half * 1.3 * Math.max(0.12, c.t);
-      paintSDF(img, c.x0, c.y0, c.x1, c.y1, (x, y) => { const [u, v] = rot(x - mx, y - my, ang); const sd = (Math.abs(u) + Math.abs(v) - R) / Math.SQRT2; return ctx.p.fill === 'outline' ? Math.abs(sd) - lw / 2 : sd; }, c.r, c.g, c.b);
+      // zasięg: |u| + |v| ≥ |p|, więc dalej niż R + lw + 1 krycie = 0 (także dla obrysu)
+      paintSDFNear(img, c.x0, c.y0, c.x1, c.y1, mx, my, R + lw + 1, (x, y) => { const dx = x - mx, dy = y - my; const u = dx * ca + dy * sa, v = -dx * sa + dy * ca; const sd = (Math.abs(u) + Math.abs(v) - R) / Math.SQRT2; return outline ? Math.abs(sd) - lw / 2 : sd; }, c.r, c.g, c.b);
     });
   },
 };
@@ -175,10 +180,10 @@ const diagonal: EffectDef = {
   description: 'Slanted strokes whose thickness follows brightness.',
   params: [CELL(10), range('angle', 'Angle', 45, 0, 180, { unit: '°' }), range('thickness', 'Max thickness', 70, 5, 100, { unit: '%' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
   render(ctx) {
-    const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.angle * Math.PI) / 180;
+    const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.angle * Math.PI) / 180; const ca = Math.cos(-ang), sa = Math.sin(-ang);   // = rot(…, −ang)
     return runGrid(ctx, cs, cs, (img, c) => {
       const { mx, my, half } = centre(c); const th = (half * ctx.p.thickness / 100) * c.t; if (th < 0.15) return;
-      paintSDF(img, c.x0, c.y0, c.x1, c.y1, (x, y) => { const [u, v] = rot(x - mx, y - my, -ang); return sdBox(u, v, half * 1.45, th); }, c.r, c.g, c.b);
+      paintSDF(img, c.x0, c.y0, c.x1, c.y1, (x, y) => { const dx = x - mx, dy = y - my; const u = dx * ca + dy * sa, v = -dx * sa + dy * ca; return sdBox(u, v, half * 1.45, th); }, c.r, c.g, c.b);
     });
   },
 };

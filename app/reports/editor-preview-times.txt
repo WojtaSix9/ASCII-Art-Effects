@@ -1,0 +1,19 @@
+Krok 6: czas renderu podglądu w edytorze przy zmianie parametru stylu (seed lub coverage), Chromium headless, okno 1440×900,
+zdjęcie 1, Podgląd 726×558 px (skala 0.48). Minimum z 5 zmian, dwa przebiegi każdej wersji (piaskownica: duży szum). 15 X 2026.
+Halftone, Posterize, Duotone, Gradient Map: bez seed/coverage, niezmierzone w tym trybie.
+
+efekt        przed -> po     przyspieszenie
+characters     57 ->   12 ms   4.8x
+block-chars    62 ->   15 ms   4.1x
+braille        75 ->   63 ms   1.2x
+dots           60 ->   21 ms   2.9x
+cross          71 ->   28 ms   2.5x
+diamond        63 ->   13 ms   4.8x
+lines          57 ->   14 ms   4.1x
+diagonal       68 ->   15 ms   4.5x
+pixel          21 ->    6 ms   3.5x
+mosaic         23 ->    8 ms   2.9x
+lego           49 ->   38 ms   1.3x
+hexmosaic      71 ->   29 ms   2.4x
+disco          20 ->    5 ms   4.0x
+dither         32 ->   18 ms   1.8x

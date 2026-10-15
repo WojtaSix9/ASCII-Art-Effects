@@ -89,3 +89,20 @@ Kod: `app/src/engine/` (Worker, klient), strona testowa `/dev/engine`, wynik: `a
 - **Czas (`test`, 1600×1067, mediana z 3, ta sama maszyna co pomiar Node):** w Chromium zwykle podobnie lub szybciej niż w Node (stosunek od 0,4× gradientmap do 1,8× disco). Ponad 100 ms w obu przebiegach: 10 z 18 efektów i 6 z 13 post FX; najwolniejsze halftone ok. 570–600 ms, bloom ok. 540–570, blur ok. 475, hexmosaic 240–300. Między przebiegami czasy różnią się do 2× (piaskownica), więc to rzędy wielkości. Narzut Worker → kanwa: 0,5–2 ms.
 - **Pamięć (`test`):** 216 renderów (18 efektów × skala 1 i 2) przez pełną ścieżkę do kanwy: RSS Chromium po pierwszej partii ok. 533–537 MB i dalej płasko (±4 MB). Bez oznak przecieku. Sterty Workera Chromium nie udostępnia (`performance.memory` brak w Workerze).
 - **`BRAK`:** Safari i Firefox (w szczególności `self.fonts` w Workerze i `OffscreenCanvas` 2D), urządzenia mobilne, pomiar przy rozdzielczości podglądu w edytorze.
+
+## 8. Krok 6: optymalizacja (15 X 2026)
+
+**Zasada:** wynik bajt w bajt taki sam jak przed optymalizacją (te same działania w tej samej kolejności). Dowód: `engine/scripts/hash-baseline.ts`, 212 przypadków (wszystkie efekty, 13 post FX, Lights, niedomyślne parametry: obroty, obrysy, kształty kropek; 2 obrazy × skale 1 i 1,7), identycznych przed i po. Kontrola skryptu: celowo odwrócony znak obrotu w Cross dał 8 różnic. Zgodność Node ↔ przeglądarka nadal 32 z 32.
+
+**Co zmieniono (`kod`):**
+- `blur`: 4 kanały w jednym przejściu, bez wywołań `clamp`, przebieg pionowy wierszami z sumami bieżącymi w `Float64Array`.
+- Kształty siatkowe (Dots, Cross, Diamond) i wypustki LEGO: rysowanie tylko w zasięgu kształtu (`paintSDFNear`; poza nim krycie 0, więc wynik ten sam); obrót bez tworzenia tablicy na piksel.
+- Hex Mosaic: współrzędne kafelka liczone raz na piksel, bez tablic; Characters: maska znaku raz na render; Halftone: parametry odczytane raz; Chromatic: stała raz; `resize`: współrzędne kolumn raz.
+- **Pamięć podręczna:** ostatnie przeskalowane (i oświetlone) źródło oraz ostatnie tło dla danego źródła. Przy zmianie parametru stylu w edytorze nie liczymy ich od nowa. Testy: 12 renderów na tym samym źródle = rendery na świeżej kopii; render nie zmienia obrazu źródłowego (`check-engine.ts`, sekcja 15; 98 z 98). Kontrola: usunięcie `bgOpacity` z klucza pamięci tła wykrywają 2 testy.
+
+**Wynik (`test`):**
+- Edytor (Chromium, podgląd 726×558, zmiana parametru): przed 20–75 ms, po **5–63 ms**; wszystkie zmierzone efekty poniżej celu ~100 ms (`app/reports/editor-preview-times.txt`).
+- Node, 1600×1067, minimum z 7, render „na zimno”: Hex Mosaic 2,3×, Blur 2,1×, Halftone i Bloom 1,7×, Sharpen 1,5×, LEGO 1,3×, reszta bez istotnej zmiany. „Przy suwaku”: Characters 3,7×, Block 4,8×, Diamond 3,1×, Dots 2,3×.
+- Pomiary w piaskownicy mają duży szum (±20–50% przy niezmienionym kodzie); porównania robiłem dwukrotnie, starą i nową wersją na zmianę.
+
+**Nie zrobione (`BRAK`):** WebGL (przy obecnych czasach zbędny dla podglądu); render „na zimno” dużych zdjęć (np. eksport @2x 3000 px) nadal trwa setki ms do sekund; Vignette, CRT Curvature, Braille i Halftone nie przyspieszyły istotnie; pomiar w Safari i na telefonach.

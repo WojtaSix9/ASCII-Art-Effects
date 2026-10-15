@@ -10,6 +10,11 @@ export function paintSDF(img: Img, x0: number, y0: number, x1: number, y1: numbe
     if (a > 0) over(d, (y * img.w + x) * 4, r, g, b, a);
   }
 }
+/** paintSDF ograniczone do kwadratu ±reach wokół (cx, cy) w obrębie [x0,x1)×[y0,y1). Wolno je stosować, gdy poza tym
+ *  kwadratem sd ≥ 0,5 (krycie 0), więc wynik jest bajt w bajt taki sam, a pętla krótsza (krok 6). */
+export function paintSDFNear(img: Img, x0: number, y0: number, x1: number, y1: number, cx: number, cy: number, reach: number, sd: (px: number, py: number) => number, r: number, g: number, b: number, alpha = 1) {
+  paintSDF(img, Math.max(x0, Math.floor(cx - reach)), Math.max(y0, Math.floor(cy - reach)), Math.min(x1, Math.ceil(cx + reach) + 1), Math.min(y1, Math.ceil(cy + reach) + 1), sd, r, g, b, alpha);
+}
 export function fillRect(img: Img, x0: number, y0: number, x1: number, y1: number, r: number, g: number, b: number, alpha = 1) {
   x0 = Math.max(0, Math.round(x0)); y0 = Math.max(0, Math.round(y0)); x1 = Math.min(img.w, Math.round(x1)); y1 = Math.min(img.h, Math.round(y1));
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) over(img.data, (y * img.w + x) * 4, r, g, b, alpha);

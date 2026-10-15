@@ -8,7 +8,7 @@ import { testImage } from './make-test-image.ts';
 import { blur, resize, lum, parseColor, hash01 } from '../src/core/util.ts';
 import { blueNoise64, ALGORITHMS } from '../src/effects/dither.ts';
 import { applyColor } from '../src/post/color.ts';
-import { newImg } from '../src/core/types.ts';
+import { newImg, cloneImg } from '../src/core/types.ts';
 import { resolveParams } from '../src/core/params.ts';
 
 const G = canvasGlyphs((w: number, h: number) => createCanvas(w, h), '"DejaVu Sans Mono"');
@@ -233,6 +233,22 @@ const SRC = testImage(300, 200);
   const g2 = resize(applyLights(uniform(600, 400, 90), { lights: [L1({ x: 0.3 }), L1({ x: 0.7, color: '#4080ff', radius: 35 })], ambient: 60 }), 300, 200);
   const ps = psnr(g1, g2);
   ok('Lights: niezaleznosc od skali - skala 2 po zmniejszeniu vs skala 1, PSNR >= 40 dB', ps >= 40, ps.toFixed(1) + ' dB');
+}
+// 15. Krok 6: pamiec podreczna zrodla i tla nie zmienia wyniku (sekwencja na tym samym zrodle = rendery "na zimno")
+{
+  const seq: [any, number][] = [
+    [{ style: { id: 'dots' } }, 1], [{ style: { id: 'dots', params: { bgBlur: 20 } } }, 1], [{ style: { id: 'dots', params: { bgBlur: 20, bgOpacity: 70 } } }, 1],
+    [{ style: { id: 'dots', params: { bgMode: 'original' } } }, 1], [{ style: { id: 'dots' } }, 1.5], [{ style: { id: 'cross' } }, 1.5],
+    [{ style: { id: 'dots' }, lights: { lights: [{ x: 0.5, y: 0.5, radius: 30, intensity: 80, color: '#ffffff' }] } }, 1.5],
+    [{ style: { id: 'dots' } }, 1.5], [{ style: { id: 'pixel' }, postFx: { vignette: true }, color: { preset: 'sepia' } }, 1], [{ style: { id: 'pixel' } }, 1],
+    [{ style: { id: 'lego', params: { bgColor: '#ff0000', bgMode: 'solid' } } }, 1], [{ style: { id: 'characters', params: { bgOpacity: 10 } } }, 1],
+  ];
+  const warm = seq.map(([st, sc]) => sha(render(SRC, st, { glyphs: G, scale: sc }).img));
+  const cold = seq.map(([st, sc]) => sha(render(cloneImg(SRC), st, { glyphs: G, scale: sc }).img));
+  const bad = seq.map((_, i) => i).filter((i) => warm[i] !== cold[i]);
+  ok('Krok 6: pamiec zrodla i tla - 12 renderow na tym samym zrodle (zmiany tla, skali, swiatel, post FX) = rendery na swiezej kopii', bad.length === 0, bad.join(','));
+  const before = new Uint8ClampedArray(SRC.data); render(SRC, { style: { id: 'posterize', params: { levels: 32 } }, postFx: { noise: true }, color: { preset: 'bw' } }); render(SRC, { style: { id: 'pixel' }, postFx: { filmDust: true } });
+  ok('Krok 6: render nie zmienia obrazu zrodlowego (post FX i Color dzialaja na kopii)', before.every((v, i) => v === SRC.data[i]));
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);
