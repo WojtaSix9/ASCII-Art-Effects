@@ -84,3 +84,13 @@ OK   Znaki rysowane: gestosc nierosnaca wzdluz rampy (braille: liczba kropek; do
 OK   Pary lustrzane ▲▼ i △▽: identyczne pole tuszu  [0.00%, 0.00%]
 OK   isDrawnGlyph: Braille U+2800-28FF i ●◕◑◔○∙◆◼▲▼◇△▽; nie A, ·, █, Σ, ﾊ
 OK   Characters + preset braille: render bez czcionki (dostawca kanwy rzuca wyjatkiem, nie jest wolany)
+OK   Lights: brak swiatel / pusta lista / intensity 0 -> obraz bajt w bajt bez zmian
+OK   Lights: srodek rozjasniony, rog bez zmian (poza zasiegiem), jasnosc nie maleje nigdzie
+OK   Lights: wiekszy radius rozjasnia wiekszy obszar (10 < 20 < 40)  [1468 5884 16288]
+OK   Lights: czerwone swiatlo podnosi kanal R, nie zmienia G i B (screen nie przyciemnia)  [224,100,100]
+OK   Lights: Ambient 50 przyciemnia obszar poza swiatlem o polowe, Ambient 100 go nie zmienia  [50]
+OK   Lights: Ambient 0 bez swiatel = czarny obraz
+OK   Lights: wiecej niz 4 swiatla i zly kolor -> blad
+OK   Lights: struktura - Characters w oswietlonym srodku ma gestsze znaki (eksport tekstowy)  [6.77 -> 10.71]
+OK   Lights: Dither ignoruje swiatla (jak w oryginale)
+OK   Lights: niezaleznosc od skali - skala 2 po zmniejszeniu vs skala 1, PSNR >= 40 dB  [57.9 dB]

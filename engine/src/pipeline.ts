@@ -6,15 +6,21 @@ import { resize } from './core/util.ts';
 import { getEffect } from './registry.ts';
 import { POSTFX } from './post/postfx.ts';
 import { COLOR_PARAMS, applyColor } from './post/color.ts';
+import { applyLights, type LightsState } from './post/lights.ts';
 
-export type RenderState = { style: { id: string; params?: Record<string, any> }; postFx?: Record<string, Record<string, any> | true | false>; color?: Record<string, any> };
+export type RenderState = { style: { id: string; params?: Record<string, any> }; postFx?: Record<string, Record<string, any> | true | false>; color?: Record<string, any>;
+  /** Światła (plik 07): oświetlają źródło przed stylem. Dither ich nie używa (jak w oryginale, plik 01). */
+  lights?: LightsState };
+/** Efekty bez świateł (plik 01, sekcja 1: Dither nie ma zakładki Lights). */
+export const NO_LIGHTS = new Set(['dither']);
 export type RenderOpts = { scale?: number; glyphs?: GlyphProvider | null; strict?: boolean };
 export type RenderResult = { img: Img; info: EffectInfo };
 
 function makeCtx(src: Img, state: RenderState, opts: RenderOpts): { ctx: RenderCtx; effect: ReturnType<typeof getEffect> } {
   const scale = opts.scale ?? 1; if (!(scale >= 0.1 && scale <= 8)) throw new Error('scale must be within 0.1..8');
   const effect = getEffect(state.style.id); const p = resolveParams(effect.params, state.style.params ?? {}, opts.strict ?? true);
-  const scaled = scale === 1 ? src : resize(src, src.w * scale, src.h * scale); const info: EffectInfo = {};
+  let scaled = scale === 1 ? src : resize(src, src.w * scale, src.h * scale); const info: EffectInfo = {};
+  if (state.lights && !NO_LIGHTS.has(effect.id)) scaled = applyLights(scaled, state.lights);
   const prep = adjust(scaled, p.brightness ?? 0, p.contrast ?? 0);
   return { effect, ctx: { src: scaled, prep, p, scale, glyphs: opts.glyphs ?? null, info, px: (v: number) => Math.max(1, Math.round(v * scale)) } };
 }

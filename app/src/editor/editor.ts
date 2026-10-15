@@ -10,6 +10,7 @@ import { cropPixels, loadImage, paint, previewScale } from '../engine/preview.ts
 import { CATEGORIES, matches } from '../effects/catalog.ts';
 import { mountParamPanel } from '../ui/param-panel.ts';
 import { ICON } from './icons.ts';
+import { lightsHtml, mountLights } from './lights-ui.ts';
 import { History, initialState, toRenderState, type EditorState } from './state.ts';
 
 const ZOOMS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4];
@@ -47,7 +48,7 @@ export const editorHtml = () => `
   <nav class="ed-rail" aria-label="Zakładki panelu" data-rail>
     <button type="button" data-tab="style" aria-pressed="true" title="Parametry stylu">${ICON.style}<span class="sr-only">Styl</span></button>
     <button type="button" disabled title="Animacja: wersja 2">${ICON.play}<span class="sr-only">Animacja (wersja 2)</span></button>
-    <button type="button" disabled title="Lights: w przygotowaniu">${ICON.sun}<span class="sr-only">Lights (w przygotowaniu)</span></button>
+    <button type="button" data-tab="lights" aria-pressed="false" title="Lights">${ICON.sun}<span class="sr-only">Lights</span></button>
     <button type="button" data-tab="color" aria-pressed="false" title="Color">${ICON.drop}<span class="sr-only">Color</span></button>
     <button type="button" data-tab="postfx" aria-pressed="false" title="Post FX">${ICON.spark}<span class="sr-only">Post FX</span></button>
   </nav>
@@ -61,6 +62,7 @@ export const editorHtml = () => `
       <p><button type="button" class="ed-btn" data-color-reset>Resetuj Color</button></p>
     </div>
     <div data-tabpanel="postfx" hidden><div data-postfx></div></div>
+    <div data-tabpanel="lights" hidden>${lightsHtml()}</div>
     <p class="ed-meta" data-meta aria-live="off"></p>
   </aside>
 </div>
@@ -97,7 +99,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const styleSel = $<HTMLSelectElement>('[data-style]'), sampleSel = $<HTMLSelectElement>('[data-sample]'), panel = $<HTMLFormElement>('[data-panel]');
   const note = $('[data-note]'), meta = $('[data-meta]'), dialog = $<HTMLDialogElement>('[data-dialog]');
   const engine = sharedEngine();
-  let alive = true, defs: EffectMeta[] = [], post: PostDefs = { postFx: [], color: [] };
+  let alive = true, defs: EffectMeta[] = [], post: PostDefs = { postFx: [], color: [], lights: { params: [], ambient: { id: 'ambient', label: 'Ambient', kind: 'range', default: 100 }, max: 4, skip: [] } };
+  let lights: ReturnType<typeof mountLights> | null = null;
   let state: EditorState = initialState('characters');
   const history = new History();
   let img: CanvasImageSource & { width: number; height: number } | null = null;
@@ -160,7 +163,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   // ---------- historia ----------
   const syncHistoryButtons = () => { T<HTMLButtonElement>('[data-undo]').disabled = !history.canUndo; T<HTMLButtonElement>('[data-redo]').disabled = !history.canRedo; };
   const commit = () => { history.commit(state); syncHistoryButtons(); };
-  const restore = (s: EditorState | null) => { if (!s) return; state = s; syncUrl(); buildStylePanel(); buildColor(); buildPostFx(); markStyle(); syncHistoryButtons(); render(); };
+  const restore = (s: EditorState | null) => { if (!s) return; state = s; syncUrl(); buildStylePanel(); buildColor(); buildPostFx(); lights?.build(); markStyle(); syncLightsTab(); syncHistoryButtons(); render(); };
   const onKey = (e: KeyboardEvent) => {
     if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).closest('input[type="text"], input[type="search"], input[type="number"]')) return;
     const k = e.key.toLowerCase();
@@ -205,7 +208,13 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   };
   const selectStyle = (id: string) => {
     if (!defs.some((d) => d.id === id)) return;
-    state.style = id; buildStylePanel(); markStyle(); syncUrl(); commit(); render();
+    state.style = id; buildStylePanel(); markStyle(); syncLightsTab(); syncUrl(); commit(); render();
+  };
+  /** Dither nie używa świateł (plik 01): zakładka Lights wyłączona, przy otwartej wracamy do Stylu. */
+  const syncLightsTab = () => {
+    const b = $<HTMLButtonElement>('[data-tab="lights"]'); const off = post.lights.skip.includes(state.style);
+    b.disabled = off; b.title = off ? `${defs.find((d) => d.id === state.style)?.name ?? ''} nie używa świateł` : 'Lights';
+    if (off && b.getAttribute('aria-pressed') === 'true') showTab('style');
   };
   styleSel.addEventListener('change', () => selectStyle(styleSel.value));
 
@@ -245,7 +254,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     img = image; src = { w: image.width, h: image.height };
     canvas.setAttribute('aria-label', `Podgląd efektu: ${label}`);
     await engine.setSource(cropPixels(image, { sx: 0, sy: 0, sw: src.w, sh: src.h }));
-    sizedKey = ''; zoom = 1;
+    sizedKey = ''; zoom = 1; lights?.drawBg();
   };
   const useSample = async (n: number) => {
     const s = SAMPLES[n - 1] ?? SAMPLES[0]; const i = await loadImage(s.src); if (!alive) return;
@@ -327,10 +336,11 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     styleSel.innerHTML = defs.map((e) => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
     const want = url.searchParams.get('style'); const ok = !!want && defs.some((e) => e.id === want);
     state = initialState(ok ? want! : 'characters');
-    drawStyles(); buildStylePanel(); buildColor(); buildPostFx(); markStyle(); syncUrl(); commit();
+    lights = mountLights($('[data-tabpanel="lights"]'), post.lights, { get: () => state, source: () => img, change: () => render(), commit, say });
+    drawStyles(); buildStylePanel(); buildColor(); buildPostFx(); lights.build(); markStyle(); syncLightsTab(); syncUrl(); commit();
     if (want && !ok) say(`Efekt „${want}” nie jest jeszcze dostępny. Pokazuję Characters.`);
     layout(true); ro.observe(stage); started = true;
   })().catch((e) => say(`Błąd: ${(e as Error).message}`, 'error'));
 
-  return () => { alive = false; ro.disconnect(); clearTimeout(t); document.removeEventListener('keydown', onKey); delete (window as any).__editorTest; };
+  return () => { alive = false; ro.disconnect(); clearTimeout(t); lights?.dispose(); document.removeEventListener('keydown', onKey); delete (window as any).__editorTest; };
 }

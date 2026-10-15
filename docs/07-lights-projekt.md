@@ -1,6 +1,8 @@
-# Lights: projekt do akceptacji
+# Lights: projekt (zaakceptowany) i stan
 
-Stan na 15 X 2026. Decyzja użytkownika: Claude Code projektuje Lights i opisuje projekt **przed** implementacją. Ten plik to ten opis; nic z niego nie jest jeszcze zaimplementowane.
+Stan na 15 X 2026. Decyzja użytkownika: Claude Code projektuje Lights i opisuje projekt **przed** implementacją.
+
+**Zaakceptowane i zaimplementowane (15 X 2026):** odpowiedzi użytkownika na pytania z sekcji 5: 1) **struktura**, 2) **kolorowe i białe**, 3) **Ambient: tak**. Kod: `engine/src/post/lights.ts` (wpięte w `pipeline.ts` przed jasnością i kontrastem), `app/src/editor/lights-ui.ts`. Testy: silnik 10 własności (`check-engine.ts`, sekcja 14), edytor 11 (`editor-check.ts`). Nie zrobione: przeciąganie świateł bezpośrednio na płótnie.
 
 Oznaczenia: `docs` = z pliku 01, `proj` = moja propozycja, `?` = pytanie do użytkownika.
 

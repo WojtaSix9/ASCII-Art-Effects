@@ -42,7 +42,7 @@ try {
     disabled: [...document.querySelectorAll<HTMLButtonElement>('[data-rail] button')].filter((b) => b.disabled).length,
     tools: !!document.querySelector('[data-ed-tools] [data-undo]'), fav: /ulubione/i.test(document.body.textContent ?? ''),
   }));
-  t('układ: 18 stylów w lewym panelu, szyna 5 ikon (Animacja i Lights wyłączone), narzędzia w pasku górnym, bez Ulubionych', L.styles === 18 && L.rail === 5 && L.disabled === 2 && L.tools && !L.fav, L);
+  t('układ: 18 stylów w lewym panelu, szyna 5 ikon (Animacja wyłączona), narzędzia w pasku górnym, bez Ulubionych', L.styles === 18 && L.rail === 5 && L.disabled === 1 && L.tools && !L.fav, L);
 
   // Lewy panel
   const h0 = await hash(page);
@@ -104,6 +104,57 @@ try {
   const z1 = await page.evaluate(() => ({ s: Number(document.querySelector<HTMLElement>('[data-stage]')!.dataset.scale), w: parseFloat(document.querySelector<HTMLElement>('[data-canvas]')!.style.width), label: document.querySelector('[data-zoom="fit"]')!.textContent }));
   await page.click('[data-zoom="fit"]'); await settle(page);
   t('zoom: + → 150%, płótno 1,5× szersze, podgląd renderuje się w większej skali (≤ 1); „100%” wraca', z1.label === '150%' && Math.abs(z1.w / z0.w - 1.5) < 0.01 && z1.s > z0.s && z1.s <= 1 && (await page.textContent('[data-zoom="fit"]')) === '100%', { z0, z1 });
+
+  // Lights (docs/07)
+  {
+    const lights = () => page.evaluate(() => (window as any).__editorTest.state().lights);
+    const base = await hash(page);
+    await page.click('[data-tab="lights"]'); await page.check('[data-lights-on]'); await settle(page);
+    let st = await lights(); const lit = await hash(page);
+    t('Lights: włączenie dodaje jedno światło (Radius 30, Intensity 80, białe) i zmienia obraz', st.enabled && st.items.length === 1 && st.items[0].radius === 30 && st.items[0].intensity === 80 && st.items[0].color === '#ffffff' && lit !== base, st);
+    await page.uncheck('[data-lights-on]'); await settle(page);
+    t('Lights: wyłączenie przywraca obraz bajt w bajt', (await hash(page)) === base);
+    await page.check('[data-lights-on]'); await settle(page);
+    const pb = (await page.locator('[data-lpad]').boundingBox())!;
+    for (const [fx, fy] of [[0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]]) { await page.mouse.click(pb.x + pb.width * fx, pb.y + pb.height * fy); await settle(page); }
+    st = await lights();
+    t('Lights: kliknięcia w pole dodają światła do limitu 4, piąte daje komunikat', st.items.length === 4 && !!(await page.textContent('[data-note]'))?.includes('Najwyżej 4'), st.items.length);
+    await page.focus('[data-light="0"]'); const x0 = st.items[0].x; await page.keyboard.press('ArrowRight'); await page.keyboard.press('Shift+ArrowDown'); await settle(page);
+    st = await lights();
+    t('Lights: strzałka → przesuwa o 1%, Shift+strzałka o 5%', Math.abs(st.items[0].x - (x0 + 0.01)) < 1e-9 && Math.abs(st.items[0].y - 0.45) < 1e-9, st.items[0]);
+    const h4 = await hash(page);
+    await page.focus('[data-light="1"]'); await page.keyboard.press('Delete'); await settle(page);
+    const n3 = (await lights()).items.length; await page.click('[data-ed-tools] [data-undo]'); await settle(page);
+    t('Lights: Delete usuwa światło, cofnij przywraca je i identyczny obraz', n3 === 3 && (await lights()).items.length === 4 && (await hash(page)) === h4, n3);
+    const lb = (await page.locator('[data-light="2"]').boundingBox())!;
+    await page.mouse.move(lb.x + lb.width / 2, lb.y + lb.height / 2); await page.mouse.down(); await page.mouse.move(pb.x + pb.width * 0.5, pb.y + pb.height * 0.5, { steps: 4 }); await page.mouse.up(); await settle(page);
+    st = await lights();
+    t('Lights: przeciągnięcie przesuwa światło w środek pola', Math.abs(st.items[2].x - 0.5) < 0.02 && Math.abs(st.items[2].y - 0.5) < 0.02, st.items[2]);
+    const hd = await hash(page);
+    await setRange(page, '[data-lparams] [data-p="intensity"]', 0);
+    await page.$eval('[data-lparams] [data-p="color"]', (i) => { const el = i as HTMLInputElement; el.value = '#ff0000'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }); await settle(page);
+    st = await lights();
+    t('Lights: panel zaznaczonego światła zmienia jego Intensity i kolor', st.items[2].intensity === 0 && st.items[2].color === '#ff0000' && (await hash(page)) !== hd, st.items[2]);
+    const ha = await hash(page); await setRange(page, '[data-lamb] [data-p="ambient"]', 40);
+    t('Lights: Ambient 40 zmienia obraz', (await lights()).ambient === 40 && (await hash(page)) !== ha);
+    // Eksport uwzględnia światła: PNG @1x = render w skali 1
+    const same = await page.evaluate(async () => {
+      const T = (window as any).__editorTest; const r = await T.renderAt(1); const png = await T.exportBlob('png', 1);
+      const bmp = await createImageBitmap(png.blob); const c = new OffscreenCanvas(bmp.width, bmp.height); const g = c.getContext('2d')!; g.drawImage(bmp, 0, 0);
+      const dig = async (d: BufferSource) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', d))].join(',');
+      return (await dig(g.getImageData(0, 0, bmp.width, bmp.height).data)) === (await dig(new Uint8Array(r.img.buffer)));
+    });
+    t('Lights: eksport PNG @1x ze światłami = render w skali 1 (piksele identyczne)', same);
+    // Dither: bez świateł
+    await page.click('[data-pick="dither"]'); await settle(page);
+    const dl = await page.evaluate(() => ({ dis: document.querySelector<HTMLButtonElement>('[data-tab="lights"]')!.disabled, tab: document.querySelector('[data-tab="style"]')!.getAttribute('aria-pressed') }));
+    const hDl = await hash(page); await page.click('[data-tab="style"]');
+    t('Lights: przy Dither zakładka wyłączona, panel wraca do Stylu', dl.dis && dl.tab === 'true', dl);
+    await page.click('[data-pick="characters"]'); await settle(page); await page.click('[data-tab="lights"]'); await page.uncheck('[data-lights-on]'); await settle(page);
+    await page.click('[data-pick="dither"]'); await settle(page);
+    t('Lights: Dither ignoruje światła (obraz ze światłami = bez świateł)', (await hash(page)) === hDl);
+    await page.click('[data-pick="characters"]'); await settle(page);
+  }
 
   // Losuj
   const s0 = await page.inputValue('[data-panel] [data-p="seed"]'); await page.click('[data-reseed]'); await settle(page);

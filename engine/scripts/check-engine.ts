@@ -201,5 +201,38 @@ const SRC = testImage(300, 200);
   const noFont = canvasGlyphs(() => { throw new Error('font canvas used'); }, 'x');
   ok('Characters + preset braille: render bez czcionki (dostawca kanwy rzuca wyjatkiem, nie jest wolany)', !throws(() => render(SRC, { style: { id: 'characters', params: { charSet: 'braille' } } }, { glyphs: noFont })));
 }
+// 14. Lights (plik 07): oswietlenie zrodla przed stylem
+{
+  const { applyLights } = await import('../src/index.ts');
+  const G0 = uniform(200, 100, 100);   // szary obraz: latwo mierzyc jasnosc
+  const L1 = (o: Record<string, any> = {}) => ({ x: 0.5, y: 0.5, radius: 20, intensity: 80, color: '#ffffff', ...o });
+  const lumAt = (i: Img, x: number, y: number) => lum(i.data[(y * i.w + x) * 4], i.data[(y * i.w + x) * 4 + 1], i.data[(y * i.w + x) * 4 + 2]);
+  const R0 = R(SRC, 'characters');
+  ok('Lights: brak swiatel / pusta lista / intensity 0 -> obraz bajt w bajt bez zmian',
+    sha(render(SRC, { style: { id: 'characters' }, lights: { lights: [] } }, { glyphs: G }).img) === sha(R0.img)
+    && sha(render(SRC, { style: { id: 'characters' }, lights: { lights: [L1({ intensity: 0 })] } }, { glyphs: G }).img) === sha(R0.img));
+  const lit = applyLights(G0, { lights: [L1()] });
+  ok('Lights: srodek rozjasniony, rog bez zmian (poza zasiegiem), jasnosc nie maleje nigdzie',
+    lumAt(lit, 100, 50) > lumAt(G0, 100, 50) + 0.2 && lumAt(lit, 2, 2) === lumAt(G0, 2, 2) && [...lit.data].every((v, i) => i % 4 === 3 || v >= G0.data[i]));
+  const changed = (i: Img) => { let n = 0; for (let p = 0; p < i.data.length; p += 4) if (i.data[p] !== G0.data[p]) n++; return n; };
+  const c10 = changed(applyLights(G0, { lights: [L1({ radius: 10 })] })), c20 = changed(lit), c40 = changed(applyLights(G0, { lights: [L1({ radius: 40 })] }));
+  ok('Lights: wiekszy radius rozjasnia wiekszy obszar (10 < 20 < 40)', c10 < c20 && c20 < c40, `${c10} ${c20} ${c40}`);
+  const red = applyLights(G0, { lights: [L1({ color: '#ff0000' })] }); const o = (50 * 200 + 100) * 4;
+  ok('Lights: czerwone swiatlo podnosi kanal R, nie zmienia G i B (screen nie przyciemnia)', red.data[o] > 200 && red.data[o + 1] === 100 && red.data[o + 2] === 100, [...red.data.slice(o, o + 3)].join(','));
+  const dim = applyLights(G0, { lights: [L1()], ambient: 50 });
+  ok('Lights: Ambient 50 przyciemnia obszar poza swiatlem o polowe, Ambient 100 go nie zmienia', dim.data[(2 * 200 + 2) * 4] === 50 && lit.data[(2 * 200 + 2) * 4] === 100, String(dim.data[(2 * 200 + 2) * 4]));
+  ok('Lights: Ambient 0 bez swiatel = czarny obraz', applyLights(G0, { lights: [], ambient: 0 }).data.every((v, i) => i % 4 === 3 || v === 0));
+  ok('Lights: wiecej niz 4 swiatla i zly kolor -> blad', throws(() => applyLights(G0, { lights: [L1(), L1(), L1(), L1(), L1()] })) && throws(() => applyLights(G0, { lights: [L1({ color: 'zly' })] })));
+  // Struktura: w Characters swiatlo daje gestsze znaki (eksport tekstowy: wiecej znakow z poczatku rampy w oswietlonym obszarze)
+  const ramp = '@#S08Xx+=-;:. '; const dens = (t: string) => { const rows = t.split('\n').filter(Boolean); const mid = rows.slice(rows.length / 3, (2 * rows.length) / 3).map((r) => r.slice(r.length / 3, (2 * r.length) / 3)).join(''); return [...mid].reduce((a, c) => a + (ramp.length - 1 - Math.max(0, ramp.indexOf(c))), 0) / mid.length; };
+  const t0 = dens(renderText(SRC, { style: { id: 'characters' } })!), t1 = dens(renderText(SRC, { style: { id: 'characters' }, lights: { lights: [L1({ radius: 30 })] } })!);
+  ok('Lights: struktura - Characters w oswietlonym srodku ma gestsze znaki (eksport tekstowy)', t1 > t0 + 1, `${t0.toFixed(2)} -> ${t1.toFixed(2)}`);
+  ok('Lights: Dither ignoruje swiatla (jak w oryginale)', sha(R(SRC, 'dither').img) === sha(render(SRC, { style: { id: 'dither' }, lights: { lights: [L1()] } }).img));
+  // Niezaleznosc od skali: pole swiatla przy skali 2 po zmniejszeniu ~ pole przy skali 1
+  const g1 = applyLights(uniform(300, 200, 90), { lights: [L1({ x: 0.3 }), L1({ x: 0.7, color: '#4080ff', radius: 35 })], ambient: 60 });
+  const g2 = resize(applyLights(uniform(600, 400, 90), { lights: [L1({ x: 0.3 }), L1({ x: 0.7, color: '#4080ff', radius: 35 })], ambient: 60 }), 300, 200);
+  const ps = psnr(g1, g2);
+  ok('Lights: niezaleznosc od skali - skala 2 po zmniejszeniu vs skala 1, PSNR >= 40 dB', ps >= 40, ps.toFixed(1) + ' dB');
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

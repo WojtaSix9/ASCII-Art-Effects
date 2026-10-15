@@ -18,7 +18,7 @@ export type Req =
 
 export type InitRes = { fonts: { family: string; faces: number; loaded: number }[]; fontMs: number; workerFonts: boolean; offscreen: boolean };
 export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[] };
-export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[] }[]; color: ParamDef[] };
+export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[] }[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] } };
 export type ExportRes = { blob: Blob; w: number; h: number; ms: number };
 /** Błąd eksportu, gdy przeglądarka nie utworzy kanwy tej wielkości (limit pamięci/kanwy, np. Safari na iOS). */
 export const LIMIT_ERROR = 'CANVAS_LIMIT';

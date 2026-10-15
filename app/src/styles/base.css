@@ -343,3 +343,15 @@ a { color: inherit; }
   .ed-toolbar { position: static; transform: none; flex-wrap: wrap; justify-content: center; margin: 8px; }
   .ed-stage { padding: 12px; }
 }
+
+/* Lights (docs/07) */
+.ed-lpad { position: relative; width: 100%; margin: 12px 0; background: #000; overflow: hidden; cursor: crosshair; touch-action: none; outline: 1px solid var(--ed-sep-strong); }
+.ed-lpad__bg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.45; }
+.ed-lpad::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.5px); background-size: 16px 16px; }
+.ed-lpad__lights { position: absolute; inset: 0; z-index: 1; }
+.ed-lpad.is-off .ed-lpad__lights { opacity: 0.35; }
+.ed-light { position: absolute; width: 18px; height: 18px; padding: 0; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid #000; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8); cursor: grab; }
+.ed-light[aria-pressed="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #000; }
+.ed-light__ring { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; border: 1px dashed; opacity: 0.55; pointer-events: none; }
+.ed-lsel__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ed-lsel__head .pp-title { margin: 0; }

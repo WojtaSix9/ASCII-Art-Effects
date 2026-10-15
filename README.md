@@ -6,7 +6,7 @@ Narzędzie w przeglądarce do nakładania efektów ASCII i pikselowych na zdjęc
 
 | Katalog | Zawartość |
 |---|---|
-| `docs/` | Specyfikacja. Zacznij od `00-brief-dla-claude-code.md`. `07-lights-projekt.md`: projekt Lights do akceptacji. `docs/v2/`: moduł scen (wersja 2). `docs/archive/`: nieaktualne wersje. |
+| `docs/` | Specyfikacja. Zacznij od `00-brief-dla-claude-code.md`. `07-lights-projekt.md`: projekt i stan Lights. `docs/v2/`: moduł scen (wersja 2). `docs/archive/`: nieaktualne wersje. |
 | `engine/` | Silnik efektów: czysty TypeScript na buforach RGBA, bez DOM. Osobny pakiet z testami w Node (opis: `docs/06-silnik-efektow.md`). |
 | `app/` | Strona (Vite + TypeScript, bez frameworka UI). Importuje silnik wprost z `../engine/src` i uruchamia go w Web Workerze (`app/src/engine/`). |
 | `LICENSES/`, `THIRD_PARTY_NOTICES.md` | Licencje zależności dołączanych do buildu (czcionki). |

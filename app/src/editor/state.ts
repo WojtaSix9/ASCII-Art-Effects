@@ -1,5 +1,5 @@
 // Stan edytora i historia (cofnij/ponów). Stan to czyste dane (JSON), więc migawki są proste i porównywalne.
-import type { RenderState } from '../../../engine/src/index.ts';
+import type { Light, RenderState } from '../../../engine/src/index.ts';
 import type { Values } from '../ui/param-panel.ts';
 
 export type EditorState = {
@@ -9,14 +9,17 @@ export type EditorState = {
   color: Values;
   /** Włączone post FX z parametrami; brak klucza = wyłączony. */
   postFx: Record<string, Values>;
+  /** Lights (docs/07): włączone, lista świateł (najwyżej 4), Ambient 0–100. */
+  lights: { enabled: boolean; items: Light[]; ambient: number };
 };
 
-export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {} });
+export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {}, lights: { enabled: false, items: [], ambient: 100 } });
 
 export const toRenderState = (s: EditorState): RenderState => ({
   style: { id: s.style, params: s.params[s.style] ?? {} },
   postFx: Object.keys(s.postFx).length ? s.postFx : undefined,
   color: Object.keys(s.color).length ? s.color : undefined,
+  lights: s.lights.enabled ? { lights: s.lights.items, ambient: s.lights.ambient } : undefined,
 });
 
 /** Historia migawek: commit() zapisuje stan (pomija powtórzenia), undo()/redo() zwracają stan do przywrócenia. */
