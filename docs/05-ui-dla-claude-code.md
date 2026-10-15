@@ -210,6 +210,9 @@ Po każdym kroku raport: co zrobiono, co przetestowano (i jak), czego nie sprawd
 
 ## 12. Pytania otwarte
 
+**Odpowiedzi użytkownika (14–15 X 2026):** 1) wariant A (zwarta lista na stronie głównej, kafelki z miniaturami na `/effects`); 2) hover = płynne przejście do oryginału; 3) **bez Ulubionych** (usunąć z 8.2); 4) Lights: projekt Claude Code do akceptacji; 5) **PNG i JPG, skala @1x i @2x** (zastępuje 1×–4× z 8.6); 6) i 7) bez odpowiedzi: obowiązują propozycje domyślne (interfejs po polsku, nazwy efektów po angielsku; treści pisze Claude Code do akceptacji).
+
+
 1. Dolna część strony głównej: zwarta lista nazw (jak w 5.3) a osobny `/effects` z miniaturami, czy ta sama lista w obu miejscach?
 2. Hover kafelka: wynik → oryginał (sekcja 5.2), czy suwak przed/po pod kursorem?
 3. Zakładka Ulubione w v1?

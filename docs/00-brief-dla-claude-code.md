@@ -55,6 +55,8 @@ Nie podajemy procentu gotowości: bez testu w przeglądarce nie da się go uczci
 - Szczegóły Fazy 2 i 3 (73 efekty) dopracowuje Claude Code na podstawie pliku 02.
 - **Characters: domyślnie jasny = gęsty znak** (jasny tekst na ciemnym tle), `invert` odwraca. Automatyczne odwracanie dla jasnego tła: opcja na później.
 - **Palety:** zachować pole `source` w `palettes.ts`. Paleta LEGO to **przybliżenie** 24 kolorów; w interfejsie nie nazywać jej „official LEGO Art set”. Dokładne kolory znamy tylko dla Game Boy.
+- **Decyzje z 14–15 X 2026 (w trakcie kroków 2–4):** Braille, Dots i Geometric rysuje kod silnika, Math (greka) i Katakana z czcionek OFL z npm (Noto Sans Mono, Noto Sans JP); podgląd w rozdzielczości ekranu; dwa zdjęcia robocze używane naprzemiennie (`app/src/config/sample.ts`); hover kafelka = płynne przejście do oryginału; dół strony głównej = zwarta lista nazw, `/effects` = kafelki z miniaturami (wariant A).
+- **Decyzje przed krokiem 5 (15 X 2026):** bez zakładki Ulubione (całkowicie, także później); eksport **PNG i JPG w skali @1x i @2x** (zamiast 1–4×); Lights: Claude Code projektuje i opisuje projekt przed implementacją.
 - 23 efekty bez fazy zostają w fazie 3 z `phaseAssigned: false`, dopóki ktoś ich nie przypisze. Propozycja (ocena z nazw i złożoności, nie wiedza o oryginale): do fazy 2 raczej pasują Mixed, Warhol, Cyanotype, Mezzotint, Kaleidoscope, Anaglyph 3D. Claude Code może to zatwierdzić po przeczytaniu opisów w 02.
 
 ## 4. Poprawki dokumentów do zrobienia na początku
