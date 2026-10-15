@@ -9,13 +9,13 @@ import { PALETTES } from '../data/palettes.ts';
 import { newImg } from '../core/types.ts';
 import { composeGlyphs } from '../post/glyphfx.ts';
 
-const CELL = (def = 10) => range('cellSize', 'Cell size', def, 3, 80, { unit: 'px', px: true });
-const COLOR_PARAMS = [select('colorMode', 'Colour', 'image', [['image', 'From image'], ['mono', 'Single colour']]), color('inkColor', 'Ink colour', '#ffffff')];
-const GRID_COMMON = () => [...common('coverage', 'brightness', 'contrast', 'invert', 'bgMode', 'bgBlur', 'bgColor'), { ...common('bgOpacity')[0], default: 40, level: 'main' as const }];
+export const CELL = (def = 10) => range('cellSize', 'Cell size', def, 3, 80, { unit: 'px', px: true });
+export const COLOR_PARAMS = [select('colorMode', 'Colour', 'image', [['image', 'From image'], ['mono', 'Single colour']]), color('inkColor', 'Ink colour', '#ffffff')];
+export const GRID_COMMON = () => [...common('coverage', 'brightness', 'contrast', 'invert', 'bgMode', 'bgBlur', 'bgColor'), { ...common('bgOpacity')[0], default: 40, level: 'main' as const }];
 
-type Cell = { x0: number; y0: number; x1: number; y1: number; cx: number; cy: number; t: number; r: number; g: number; b: number };
+export type Cell = { x0: number; y0: number; x1: number; y1: number; cx: number; cy: number; t: number; r: number; g: number; b: number };
 /** Wspolna petla: srednie komorek z `prep`, ton (z odwroceniem), kolor tuszu, coverage przez hasz; rysuje na tle. */
-function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void, tone?: (t: number) => number, target?: Img): Img {
+export function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void, tone?: (t: number) => number, target?: Img): Img {
   const out = target ?? backdrop(ctx); const a = cellAverages(ctx.prep, cw, ch); const p = ctx.p; const ink = parseColor(p.inkColor ?? '#ffffff');
   ctx.info.cols = a.nx; ctx.info.rows = a.ny;
   for (let cy = 0; cy < a.ny; cy++) for (let cx = 0; cx < a.nx; cx++) {
@@ -28,12 +28,12 @@ function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cel
 }
 /** Style glifowe: bez charBloom/charChroma rysują wprost na tle (wynik bez zmian); z nimi znaki idą na przezroczystą warstwę,
  *  którą composeGlyphs nakłada na tło z poświatą i przesunięciem kanałów tylko dla znaków. */
-function runGlyphGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void): Img {
+export function runGlyphGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void): Img {
   if (!ctx.glyphFx) return runGrid(ctx, cw, ch, draw);
   const bg = backdrop(ctx); const ink = runGrid(ctx, cw, ch, draw, undefined, newImg(bg.w, bg.h, [0, 0, 0, 0]));
   return composeGlyphs(bg, ink, ctx.glyphFx, ch, ctx.scale);
 }
-const charCell = (ctx: RenderCtx) => { const fs = ctx.px(ctx.p.cellSize); return { fs, cw: Math.max(1, Math.round(fs * 0.6)), ch: fs }; };
+export const charCell = (ctx: RenderCtx) => { const fs = ctx.px(ctx.p.cellSize); return { fs, cw: Math.max(1, Math.round(fs * 0.6)), ch: fs }; };
 
 // ---------- Characters ----------
 const rampOf = (p: Record<string, any>) => { const r = p.charSet === 'custom' ? String(p.chars) : CHARSETS[p.charSet].ramp; return r.length >= 2 ? r : r + ' '; };
@@ -45,7 +45,7 @@ function edgeBoost(ctx: RenderCtx, a: ReturnType<typeof cellAverages>) {
   }
   return e;
 }
-function charAt(ramp: string, t: number) { return ramp[clamp(Math.round((1 - t) * (ramp.length - 1)), 0, ramp.length - 1)]; }
+export function charAt(ramp: string, t: number) { return ramp[clamp(Math.round((1 - t) * (ramp.length - 1)), 0, ramp.length - 1)]; }
 const characters: EffectDef = {
   id: 'characters', name: 'Characters', category: 'ASCII & Text', engine: 'GRID', phase: 1, needsGlyphs: true,
   description: 'Each cell gets a character from a tonal ramp by brightness.',

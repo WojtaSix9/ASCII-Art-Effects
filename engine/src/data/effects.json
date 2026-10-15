@@ -62,7 +62,7 @@
     "description": "Mieszanka kilku zestawów znaków w jednym obrazie: np. gęste bloki w cieniach, litery w półtonach, kropki w światłach.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "braille",
@@ -413,7 +413,7 @@
     "description": "Interpretacja: plansza próbek pisma. Obraz złożony ze znaków kroju pisma w różnych rozmiarach i wagach, układających się jak tablica specimenowa.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "lowpoly",
@@ -478,7 +478,7 @@
     "description": "Linie lub cząstki podążające za polem wektorowym wyliczonym z kierunków gradientu obrazu, kolor z obrazu.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "lattice",
@@ -517,7 +517,7 @@
     "description": "7 wariantów (z docs). Interpretacja: komórki zastąpione prostymi bryłami lub formami (kula, kostka, stożek, piramida, walec…) z cieniowaniem.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "schematic",

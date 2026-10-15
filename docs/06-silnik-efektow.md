@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 20 efektów Fazy 3 (stan po kroku 9, partia 10; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 16 efektów Fazy 3 (stan po kroku 9, partia 11; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -635,3 +635,42 @@ Na tej podstawie:
 - Przeglądarka = Node w 88 z 88 przypadków (`QUICK`).
 - Test UI z `ONLY` (te 6 efektów): 39 z 39.
 - Pozostałych testów aplikacji (edytor, smoke, a11y) nie uruchamiałem, bo interfejs się nie zmienił.
+
+## 23. Krok 9, partia 11 (Faza 3): Mixed, Specimen, Forms, Flow Field
+
+**Stan:** 75 z 91 efektów gotowych, zostało 16 (Szkło 7, Materiał i faktura 9).
+
+**Efekty** (`geo4.ts`)
+- **Mixed** (`proj`): trzy zestawy znaków wg tonu komórki: cienie, półtony, światła, z progami `split1` i `split2`.
+  - W wybranym zestawie znak dobiera się tak samo jak w Characters (ton → gęstość), więc ogólna jasność obrazu się zgadza.
+  - `mixRatio` rozmywa granice stref: ton użyty do wyboru zestawu dostaje przesunięcie z hasza komórki.
+  - Domyślnie na ciemnym tle: kropki w cieniach, litery w półtonach, bloki w światłach. Opis w `02` zakłada odwrotną kolejność (jasne tło).
+  - Eksport tekstu działa.
+- **Specimen** (`proj?`): plansza próbek pisma.
+  - Rzędy o wysokościach z seeda (między `minSize` a `maxSize`). Tekst płynie przez rzędy, a powtórzenia rozdziela spacja.
+  - Krycie znaku = jasność obrazu pod nim. Waga = pogrubienie maski ∝ jasność × `weightRange`.
+  - Wyboru kroju nie ma (`BRAK`): używa tej samej czcionki glifów co Characters.
+  - Błąd znaleziony testem: przy eksporcie @2x szerokość znaku zaokrąglana po przeskalowaniu dawała inny układ (79 vs 81 znaków). Teraz pozycje są liczone w liczbach rzeczywistych, a zaokrąglane dopiero granice.
+- **Forms** (`proj?`): 7 brył w komórkach: kula, kostka (izometryczny sześciokąt), walec, stożek, piramida, torus, ośmiościan.
+  - Każda bryła to sylwetka 2D z cieniowaniem (Lambert albo stałe jasności ścian), światło z lewej góry.
+  - Rozmiar ∝ √ton albo stały. `rotation` obraca bryłę w płaszczyźnie obrazu.
+- **Flow Field** (`STATE` → jedna klatka, `proj`):
+  - Linie z punktów startowych z seeda podążają wzdłuż izolinii jasności (gradient obrócony o 90°), zmieszanych z polem szumu (`noiseScale` = udział szumu).
+  - Kolor linii z obrazu w punkcie startu.
+- **Czas (Node, 600 px):** 15–290 ms (najwolniejszy Flow Field z 3000 linii).
+- **Aplikacja:**
+  - Efekt może podać `glyphText` (znaki, których maski pobierze). Worker ładuje dla nich podzbiory czcionek przed renderem; tak działają Mixed i Specimen.
+  - Mixed i Specimen nie mają skrótów Node = przeglądarka, bo zależą od rasteryzera czcionki (jak Characters).
+
+**Testy silnika (`test`, 284 z 284)** — po jednej kluczowej własności na efekt:
+- Mixed: trzy razy ten sam zestaw daje bajt w bajt Characters (obraz i tekst);
+- Specimen: ten sam układ przy skali 2; czarny obraz i tekst ze spacji dają 0 znaków; waga 100% daje więcej tuszu niż 0%;
+- Forms: pole bryły bez cieniowania zgadza się z geometrią (kula 0,785 = π/4; kostka 0,650 = 3√3/8);
+- Flow Field: na poziomej rampie bez szumu linie są pionowe (zmienność w poziomie 17× większa niż w pionie); seed zmienia układ.
+
+**Aplikacja (`test`):**
+- Przeglądarka = Node w 90 z 90 przypadków (`QUICK`); świeży Worker: pierwszy render = render po wczytaniu czcionek.
+- Test UI z `ONLY` (te 4 efekty): 39 z 39.
+- `hash-baseline`: 436 starych wyników identycznych bajt w bajt po zmianach we wspólnym `grid.ts` (eksport funkcji).
+- Miniatury starych efektów, które koder WebP zapisał od nowa z innymi bajtami, przywróciłem. W repo zmieniają się tylko miniatury nowych efektów.
+- **`BRAK`:** nie sprawdzałem, czy Mixed i Specimen w przeglądarce ładują wszystkie znaki (test „świeży Worker” obejmuje tylko Characters).

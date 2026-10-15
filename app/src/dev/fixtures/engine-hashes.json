@@ -69,6 +69,8 @@
   "style:schematic": "3aa7eaa55c82fe6c8149f65ac8b7243cee84736f",
   "style:droste": "8dc1118aebb20a259d2721d51df2f2ba8b431b55",
   "style:isoextrude": "64c7aa47c6eaf36712d912c33a6fc154e8652095",
+  "style:forms": "9e469220fc87bf3154896e49e81030f8cda51da6",
+  "style:flowfield": "cf5756b4594a1e7ac245a63b9c290c10421f5a9f",
   "postfx:advBlur": "b9adadf46a07f5bb83299185ddcaec657d4501c0",
   "postfx:vignette": "353348aca8c976c265e5831d7c6a521bcef9614e",
   "postfx:scanLines": "0d889bf31658bda10d4beb5880a82475ad799091",

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-15T14:41:01.554Z",
+  "generated": "2026-10-15T14:47:18.511Z",
   "size": "960x668",
   "samples": {
     "1": {
@@ -449,6 +449,30 @@
       "bytes": 121758,
       "mode": "q0.8",
       "ms": 333
+    },
+    "mixed": {
+      "sample": 1,
+      "bytes": 104914,
+      "mode": "q0.8",
+      "ms": 38
+    },
+    "flowfield": {
+      "sample": 1,
+      "bytes": 75964,
+      "mode": "q0.8",
+      "ms": 154
+    },
+    "specimen": {
+      "sample": 2,
+      "bytes": 110658,
+      "mode": "q0.8",
+      "ms": 287
+    },
+    "forms": {
+      "sample": 2,
+      "bytes": 198996,
+      "mode": "q0.8",
+      "ms": 52
     }
   }
 }

@@ -33,6 +33,7 @@ export type EffectDef = {
   needsGlyphs?: boolean;
   render: (ctx: RenderCtx) => Img;
   text?: (ctx: RenderCtx) => string;     // eksport tekstowy (Characters, Block, Braille)
+  glyphText?: (p: Record<string, any>) => string;   // znaki, których maski efekt pobierze (aplikacja ładuje dla nich czcionki przed renderem)
 };
 export type PostFxDef = {
   id: string; name: string; params: ParamDef[]; glyphOnly?: boolean;

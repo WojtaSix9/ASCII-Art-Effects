@@ -11,7 +11,7 @@ const PX = { unit: 'px', px: true } as const;
 const DEG = Math.PI / 180;
 const fill = (w: number, h: number, c: number[], src: Img): Img => { const d = new Uint8ClampedArray(w * h * 4); for (let i = 0; i < d.length; i += 4) { d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = src.data[i + 3]; } return { w, h, data: d }; };
 /** Odcinek o grubości t (kapsuła) z wygładzoną krawędzią, kolor c, krycie a. */
-function seg(img: Img, ax: number, ay: number, bx: number, by: number, t: number, c: number[], a = 1) {
+export function seg(img: Img, ax: number, ay: number, bx: number, by: number, t: number, c: number[], a = 1) {
   const { w, h, data: d } = img; const r = t / 2; const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - r - 1)), x1 = Math.min(w - 1, Math.ceil(Math.max(ax, bx) + r + 1)), y0 = Math.max(0, Math.floor(Math.min(ay, by) - r - 1)), y1 = Math.min(h - 1, Math.ceil(Math.max(ay, by) + r + 1));
   const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1e-9;
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {

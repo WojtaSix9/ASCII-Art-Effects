@@ -1,5 +1,5 @@
 // Oczekiwane skróty renderów z Node dla strony /dev/engine: przeglądarka ma dać te same bajty dla efektów,
-// które nie rysują znaków czcionką (wszystkie poza Characters, który zależy od czcionki i rasteryzera).
+// które nie rysują znaków czcionką (wszystkie poza Characters, Mixed i Specimen, który zależy od czcionki i rasteryzera).
 // Uruchomienie: node scripts/gen-dev-fixtures.ts  →  src/dev/fixtures/engine-hashes.json
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';

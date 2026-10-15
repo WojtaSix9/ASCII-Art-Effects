@@ -28,7 +28,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 71, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 23 Fazy 3 (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 75, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 27 Fazy 3 (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -641,6 +641,19 @@ const SRC = testImage(300, 200);
   const diff = (a: Img, b: Img) => { let n = 0; for (let k = 0; k < a.data.length; k += 4) if (Math.abs(a.data[k] - b.data[k]) > 8) n++; return n; };
   const dH = diff(iso({ shading: 100 }), iso({ shading: 0 })), d0 = diff(iso({ shading: 100, maxHeight: 0 }), iso({ shading: 0, maxHeight: 0 }));
   ok('Iso Extrude: cieniowanie zmienia tylko sciany boczne -> przy wysokosci 0 (brak scian) obraz prawie ten sam, przy 150% wyraznie inny', dH > 300 && d0 < dH / 20, `${dH} ${d0}`);
+}
+// 30. Krok 9, Faza 3: Mixed, Specimen, Forms, Flow Field (po jednej kluczowej wlasnosci na efekt)
+{
+  const W = 160, H = 128; const R = (src: Img, id: string, p: any = {}, scale = 1) => render(src, { style: { id, params: p } }, { glyphs: G, scale }); const D = (src: Img, id: string, p: any = {}) => R(src, id, p).img; const S = testImage(W, H); const g = (v: number) => newImg(W, H, [v, v, v, 255]);
+  const same = { shadowSet: 'standard', midSet: 'standard', highlightSet: 'standard' };
+  ok('Mixed: trzy razy ten sam zestaw = Characters z tym zestawem (obraz i tekst); rozne zestawy -> inny obraz', sha(D(S, 'mixed', same)) === sha(D(S, 'characters', { charSet: 'standard' })) && renderText(S, { style: { id: 'mixed', params: same } }) === renderText(S, { style: { id: 'characters', params: { charSet: 'standard' } } }) && sha(D(S, 'mixed')) !== sha(D(S, 'characters')));
+  const sp1 = R(S, 'specimen'), sp2 = R(S, 'specimen', {}, 2); const wt = (k: number) => meanLum(D(g(255), 'specimen', { weightRange: k, bgMode: 'solid', bgColor: '#000000' }));
+  ok('Specimen: uklad rzedow przy skali 2 taki sam jak przy 1; czarny obraz i sam tekst ze spacji -> brak znakow; wieksza waga -> wiecej tuszu', sp1.info.rows === sp2.info.rows && sp1.info.glyphs === sp2.info.glyphs && R(g(0), 'specimen').info.glyphs === 0 && R(S, 'specimen', { textSource: '   ' }).info.glyphs === 0 && wt(100) > wt(0) * 1.3, `${sp1.info.rows}/${sp2.info.rows} ${wt(0).toFixed(3)} ${wt(100).toFixed(3)}`);
+  const cov = (f: string) => meanLum(D(g(255), 'forms', { formType: f, size: 100, shading: 0, colorMode: 'mono', inkColor: '#ffffff', bgColor: '#000000' }));
+  ok('Forms: pole bryly bez cieniowania = geometria (kula pi/4, kostka-szesciokat 3*sqrt3/8 komorki); czarny obraz -> samo tlo', Math.abs(cov('sphere') - Math.PI / 4) < 0.02 && Math.abs(cov('cube') - 3 * Math.sqrt(3) / 8) < 0.02 && colorsOf(D(g(0), 'forms')) === 1, `${cov('sphere').toFixed(3)} ${cov('cube').toFixed(3)}`);
+  const ramp = newImg(W, H, [0, 0, 0, 255]); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) ramp.data.fill(Math.round(40 + (x / (W - 1)) * 200), (y * W + x) * 4, (y * W + x) * 4 + 3);
+  const ff = D(ramp, 'flowfield', { noiseScale: 0, lineCount: 300 }); let ex = 0, ey = 0; for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = (y * W + x) * 4; ex += Math.abs(ff.data[i + 4] - ff.data[i - 4]); ey += Math.abs(ff.data[i + W * 4] - ff.data[i - W * 4]); }
+  ok('Flow Field: rampa pozioma bez szumu -> linie wzdluz izolinii (pionowe): zmiennosc w poziomie >> w pionie; seed zmienia uklad, ten sam seed nie', ex > 4 * ey && sha(D(S, 'flowfield', { seed: 1 })) !== sha(D(S, 'flowfield', { seed: 2 })) && sha(D(S, 'flowfield')) === sha(D(S, 'flowfield')), `${ex} ${ey}`);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);
