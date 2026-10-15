@@ -1,12 +1,12 @@
 // Hero strony głównej (05, sekcja 5.1): suwak przed/po na zdjęciu roboczym, chipy efektów, render na żywo w Workerze.
-import effects from '../../../engine/src/data/effects.json' with { type: 'json' };
+import { ALL } from '../effects/catalog.ts';
 import { HERO_SAMPLE as SAMPLE } from '../config/sample.ts';
 import { sharedEngine } from '../engine/client.ts';
 import { coverRect, cropPixels, loadImage, paint, previewScale, type Rect } from '../engine/preview.ts';
 
 /** 13 chipów (05: ok. 13 efektów ze statusem ready, pierwszy Characters), potem „…” do /effects. */
 export const HERO_CHIPS = ['characters', 'block-chars', 'braille', 'dots', 'halftone', 'pixel', 'lego', 'mosaic', 'hexmosaic', 'dither', 'duotone', 'posterize', 'gradientmap'];
-const nameOf = (id: string) => (effects as { id: string; name: string }[]).find((e) => e.id === id)?.name ?? id;
+const nameOf = (id: string) => ALL.find((e) => e.id === id)?.name ?? id;
 
 export const heroHtml = () => `
 <section class="hero" aria-label="Podgląd efektu">

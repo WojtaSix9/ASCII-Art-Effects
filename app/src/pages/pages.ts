@@ -1,6 +1,8 @@
 import type { Page } from '../router.ts';
 import { heroHtml, mountHero } from '../home/hero.ts';
 import { tilesHtml } from '../home/tiles.ts';
+import { effectListHtml } from '../home/effect-list.ts';
+import { effectsHtml, mountEffects } from '../effects/effects-page.ts';
 import { editorHtml, mountEditor } from '../editor/editor.ts';
 
 // Szkielet (krok 1). Treści BRAK: do napisania i zatwierdzenia w kolejnych krokach (05, sekcje 5–8).
@@ -9,11 +11,11 @@ const stub = (label: string, heading: string, note: string) => () =>
 
 export const home: Page = {
   title: 'ASCII Art Effects', layout: 'site', mainClass: 'page-home',
-  render: () => heroHtml() + tilesHtml(), mount: (main) => mountHero(main),
+  render: () => heroHtml() + tilesHtml() + effectListHtml(), mount: (main) => mountHero(main),
 };
 export const effects: Page = {
-  title: 'Efekty · ASCII Art Effects', layout: 'site',
-  render: stub('/efekty', 'Efekty', 'Lista 91 efektów z rejestru powstanie w kroku 4.'),
+  title: 'Efekty · ASCII Art Effects', layout: 'site', mainClass: 'page-effects',
+  render: effectsHtml, mount: (main, url) => mountEffects(main, url),
 };
 export const howTo: Page = {
   title: 'Jak używać · ASCII Art Effects', layout: 'site',

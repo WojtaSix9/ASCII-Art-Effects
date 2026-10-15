@@ -8,6 +8,7 @@ import { EFFECTS } from '../../engine/src/index.ts';
 import { SAMPLES, HERO_SAMPLE } from '../src/config/sample.ts';
 import { READY, THUMB, sampleNoFor } from '../src/config/thumbs.ts';
 import { TILES } from '../src/home/tiles.ts';
+import { ALL, CATEGORIES, matches, slug } from '../src/effects/catalog.ts';
 
 const BASE = 'http://localhost:4173';
 const server = spawn('npx', ['vite', 'preview'], { stdio: 'ignore' });
@@ -145,6 +146,49 @@ try {
     await page.click('[data-tile="braille"]'); await rendered(page, 'braille');
     t('kafelki: klik → edytor z tym efektem i tym samym zdjęciem co miniatura', (await page.inputValue('[data-style]')) === 'braille' && (await page.inputValue('[data-sample]')) === String(sampleNoFor('braille')));
 
+    // --- Lista wszystkich efektów na stronie głównej (wariant A) ---
+    await page.goto(BASE + '/');
+    const el = await page.evaluate(() => ({
+      groups: document.querySelectorAll('.elist__group').length,
+      links: [...document.querySelectorAll<HTMLAnchorElement>('[data-elist]')].map((a) => [a.dataset.elist, a.getAttribute('href')]),
+      soon: [...document.querySelectorAll<HTMLElement>('[data-elist-soon]')].map((x) => x.dataset.elistSoon),
+    }));
+    const readyIds = ALL.filter((e) => e.status === 'ready').map((e) => e.id);
+    t('lista: 10 kategorii, 91 nazw = 18 linków do edytora (z właściwym zdjęciem) + 73 „wkrótce” bez linku',
+      el.groups === 10 && el.links.length === 18 && el.soon.length === 73 && el.links.every(([id, h]) => readyIds.includes(id!) && h === `/editor?style=${id}&sample=${sampleNoFor(id!)}`)
+      && new Set([...el.links.map((l) => l[0]), ...el.soon]).size === 91, { groups: el.groups, links: el.links.length, soon: el.soon.length });
+
+    // --- /effects ---
+    const fx = () => page.evaluate(() => ({
+      tiles: document.querySelectorAll('.fx-results .tile').length,
+      ready: document.querySelectorAll('.fx-results a[data-tile]').length,
+      soon: document.querySelectorAll('.fx-results [data-soon]').length,
+      soonLinks: document.querySelectorAll('.fx-results [data-soon] a').length,
+      groups: [...document.querySelectorAll<HTMLElement>('.fx-group')].map((g) => g.dataset.group),
+      count: document.querySelector('[data-count]')!.textContent,
+      url: location.search,
+    }));
+    await page.goto(BASE + '/effects');
+    let f = await fx();
+    t('/effects: 91 kafelków w 10 kategoriach; 18 z linkiem i miniaturą, 73 „wkrótce” bez linku', f.tiles === 91 && f.ready === 18 && f.soon === 73 && f.soonLinks === 0 && f.groups.length === 10 && f.count === '91 efektów', f);
+    const firstSoonBeforeReady = await page.$$eval('.fx-group', (gs) => gs.some((g) => { const items = [...g.querySelectorAll('.tile')]; const i = items.findIndex((x) => x.hasAttribute('data-soon')); return i >= 0 && items.slice(i).some((x) => !x.hasAttribute('data-soon')); }));
+    t('/effects: w każdej kategorii najpierw gotowe, potem „wkrótce”', !firstSoonBeforeReady);
+    const expect = (q: string, cat = '') => ALL.filter((e) => matches(e, q, cat)).length;
+    for (const q of ['dith', 'szescio', 'GLASS', 'blok kolor']) {
+      await page.fill('[data-q]', q); f = await fx();
+      t(`/effects: szukaj „${q}” → ${expect(q)} (jak matches() w Node; bez wielkości liter i polskich znaków)`, f.tiles === expect(q) && f.url.includes('q='), f);
+    }
+    await page.fill('[data-q]', '');
+    await page.click('[data-cat="glass"]'); f = await fx();
+    t('/effects: kategoria Glass → 7 kafelków, tylko ta grupa, ?cat=glass', f.tiles === 7 && JSON.stringify(f.groups) === '["glass"]' && f.url === '?cat=glass' && (await page.getAttribute('[data-cat="glass"]', 'aria-pressed')) === 'true', f);
+    await page.goto(BASE + '/effects?q=wave&cat=' + slug(CATEGORIES[9])); f = await fx();
+    t(`/effects: adres ?q=wave&cat=${slug(CATEGORIES[9])} odtwarza filtr (${expect('wave', slug(CATEGORIES[9]))})`, f.tiles === expect('wave', slug(CATEGORIES[9])) && (await page.inputValue('[data-q]')) === 'wave', f);
+    await page.fill('[data-q]', 'zzzz-brak'); f = await fx();
+    const empty = await page.isVisible('[data-clear]'); await page.click('[data-clear]'); const f2 = await fx();
+    t('/effects: brak wyników → komunikat i „Wyczyść filtr” przywraca 91', f.tiles === 0 && empty && f2.tiles === 91 && f2.url === '', { f, f2 });
+    await page.click('[data-tile="lego"]'); await rendered(page, 'lego');
+    t('/effects: klik w kafelek → edytor z efektem', (await page.inputValue('[data-style]')) === 'lego');
+
     // Nieznany efekt
     await page.goto(BASE + '/editor?style=warhol'); await rendered(page, 'characters');
     const n = await page.textContent('[data-note]');
@@ -155,6 +199,8 @@ try {
     await page.goto(BASE + '/'); await rendered(page, 'characters');
     const nw = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, chips: document.querySelector('.hero__chips')!.scrollWidth > document.querySelector('.hero__chips')!.clientWidth }));
     t('375 px: strona bez poziomego przewijania, chipy przewijane w pasku', nw.sw <= 375 && nw.chips, nw);
+    await page.goto(BASE + '/effects'); const fw = await page.evaluate(() => document.documentElement.scrollWidth);
+    t('375 px: /effects bez poziomego przewijania', fw <= 375, fw);
 
     t('brak błędów w konsoli', errors.length === 0, errors.join(' | '));
     await ctx.close();

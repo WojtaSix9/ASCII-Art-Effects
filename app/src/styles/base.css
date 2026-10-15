@@ -209,3 +209,43 @@ a { color: inherit; }
 .tiles__more { text-align: center; margin: 40px 0 0; }
 @media (max-width: 1000px) { .tiles__grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .tiles__grid { grid-template-columns: 1fr; } .tiles__head { padding: 32px 16px 24px; } }
+
+/* Kafelek „wkrótce” (bez miniatury): wzór CSS */
+.tile--soon .tile__inner { display: block; height: 100%; }
+.tile__media--soon {
+  background: repeating-linear-gradient(135deg, #0c0c0e 0 10px, #111114 10px 20px);
+}
+.tile--soon .tile__title { color: var(--text-2); }
+.tile__soon { grid-area: arrow; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+/* Lista wszystkich efektów na stronie głównej (05, sekcja 5.3, wariant A) */
+.elist { max-width: 1200px; margin: 0 auto; padding: 24px 24px 80px; }
+.elist__head h2 { font-family: var(--font-mono); font-weight: 500; font-size: clamp(24px, 3vw, 34px); margin: 8px 0; }
+.elist__head p:not(.label) { color: var(--text-2); margin: 0 0 32px; }
+.elist__cols { columns: 4 220px; column-gap: 32px; }
+.elist__group { break-inside: avoid; margin: 0 0 28px; }
+.elist__group h3 { margin: 0 0 8px; font-weight: 400; }
+.elist__group ul { list-style: none; margin: 0; padding: 0; }
+.elist__group li { padding: 3px 0; font-size: 14px; }
+.elist__group a { color: var(--text); text-decoration: none; }
+.elist__group a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.elist__soon { color: var(--muted); }
+
+/* /effects (05, sekcja 6) */
+.page-effects { padding-bottom: 80px; }
+.fx-head { max-width: 1200px; margin: 0 auto; padding: 64px 24px 24px; }
+.fx-head h1 { font-family: var(--font-mono); font-weight: 500; font-size: clamp(28px, 4vw, 44px); margin: 12px 0 12px; }
+.fx-head h1:focus { outline: none; }
+.fx-head > p:not(.label) { color: var(--text-2); margin: 0 0 24px; }
+.fx-tools { display: grid; gap: 12px; }
+.fx-search { width: 100%; max-width: 420px; background: var(--chip); color: var(--text); border: 1px solid var(--line); padding: 10px 12px; font: inherit; border-radius: 0; }
+.fx-search::placeholder { color: var(--muted); }
+.fx-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.fx-count { color: var(--muted); font-family: var(--font-mono); font-size: 12px; margin: 16px 0 0; }
+.fx-group { margin-top: 32px; }
+.fx-group__title { max-width: 1200px; margin: 0 auto 12px; padding: 0 24px; font-weight: 400; }
+.fx-group__title span { color: var(--text-3); }
+.fx-empty { max-width: 1200px; margin: 32px auto; padding: 0 24px; color: var(--text-2); }
+@media (max-width: 640px) { .fx-head { padding: 40px 16px 16px; } .fx-group__title, .fx-empty, .elist { padding-left: 16px; padding-right: 16px; } }
+.tile__media--soon { aspect-ratio: 960 / 220; }
+.elist__group a::after { content: " ↗"; color: var(--muted); font-size: 12px; }
