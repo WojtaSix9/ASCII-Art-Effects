@@ -2,7 +2,7 @@
 // czeka co najwyżej jedno zlecenie (ostatnie); wcześniejsze oczekujące kończą się wynikiem null.
 // Dzięki temu suwak nie tworzy kolejki renderów.
 import type { RenderState } from '../../../engine/src/index.ts';
-import type { Req, Reply, InitRes, RenderRes, EffectMeta } from './protocol.ts';
+import type { Req, Reply, InitRes, RenderRes, EffectMeta, PostDefs } from './protocol.ts';
 
 type Pending = { resolve: (v: any) => void; reject: (e: Error) => void };
 export type RenderOut = { image: ImageData; info: RenderRes['info']; workerMs: number };
@@ -35,6 +35,9 @@ export class EngineClient {
   private defsP: Promise<EffectMeta[]> | null = null;
   /** Definicje 18 gotowych efektów z silnika (jedno zapytanie na Worker). */
   defs() { return (this.defsP ??= this.call<EffectMeta[]>({ type: 'defs' })); }
+  private postP: Promise<PostDefs> | null = null;
+  /** Definicje Post FX (13, stała kolejność silnika) i parametrów Color. */
+  postDefs() { return (this.postP ??= this.call<PostDefs>({ type: 'postDefs' })); }
 
   /** Ustawia obraz źródłowy (bufor jest przekazywany Workerowi, więc ImageData po wywołaniu jest puste). */
   setSource(img: ImageData) {
@@ -60,6 +63,9 @@ export class EngineClient {
     } catch (e) { job.p.reject(e as Error); }
     finally { this.busy = false; this.pump(); }
   }
+
+  /** Brak renderu w toku i w kolejce (do testów i wskaźników zajętości). */
+  get idle() { return !this.busy && !this.queued; }
 
   terminate() { this.worker.terminate(); }
 }

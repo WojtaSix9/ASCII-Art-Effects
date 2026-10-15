@@ -6,7 +6,7 @@ Narzędzie w przeglądarce do nakładania efektów ASCII i pikselowych na zdjęc
 
 | Katalog | Zawartość |
 |---|---|
-| `docs/` | Specyfikacja. Zacznij od `00-brief-dla-claude-code.md`. `docs/v2/`: moduł scen (wersja 2). `docs/archive/`: nieaktualne wersje. |
+| `docs/` | Specyfikacja. Zacznij od `00-brief-dla-claude-code.md`. `07-lights-projekt.md`: projekt Lights do akceptacji. `docs/v2/`: moduł scen (wersja 2). `docs/archive/`: nieaktualne wersje. |
 | `engine/` | Silnik efektów: czysty TypeScript na buforach RGBA, bez DOM. Osobny pakiet z testami w Node (opis: `docs/06-silnik-efektow.md`). |
 | `app/` | Strona (Vite + TypeScript, bez frameworka UI). Importuje silnik wprost z `../engine/src` i uruchamia go w Web Workerze (`app/src/engine/`). |
 | `LICENSES/`, `THIRD_PARTY_NOTICES.md` | Licencje zależności dołączanych do buildu (czcionki). |
@@ -28,6 +28,7 @@ npm run check:tokens                # kontrast tokenów kolorów (WCAG)
 npm run smoke                       # test w Chromium (Playwright) na zbudowanej wersji; najpierw npm run build
 npm run test:engine                 # silnik w przeglądarce (/dev/engine): zgodność z Node, pokrycie znaków, czasy, pamięć
 npm run test:ui                     # hero, kafelki, miniatury, panel parametrów w edytorze
+npm run test:editor                 # edytor: panel stylów, cofnij/ponów, Color, Post FX, zoom, eksport PNG/JPG, własne zdjęcie
 npm run thumbs                      # wygeneruj miniatury efektów do public/thumbs/ (po npm run build)
 npm run fixtures                    # odśwież oczekiwane skróty z Node po zmianie silnika
 ```

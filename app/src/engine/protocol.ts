@@ -6,6 +6,8 @@ export type WireImg = { w: number; h: number; buffer: ArrayBuffer };
 export type Req =
   | { type: 'init' }
   | { type: 'defs' }                                                 // definicje efektów (parametry do budowy panelu)
+  | { type: 'postDefs' }                                             // definicje Post FX i Color
+  | { type: 'export'; state: RenderState; scale: number; format: 'png' | 'jpeg'; quality?: number }
   | { type: 'setSource'; img: WireImg }
   | { type: 'render'; state: RenderState; scale?: number }
   | { type: 'testImage'; w: number; h: number }                       // dev: syntetyczny obraz testowy jako źródło
@@ -16,6 +18,10 @@ export type Req =
 
 export type InitRes = { fonts: { family: string; faces: number; loaded: number }[]; fontMs: number; workerFonts: boolean; offscreen: boolean };
 export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[] };
+export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[] }[]; color: ParamDef[] };
+export type ExportRes = { blob: Blob; w: number; h: number; ms: number };
+/** Błąd eksportu, gdy przeglądarka nie utworzy kanwy tej wielkości (limit pamięci/kanwy, np. Safari na iOS). */
+export const LIMIT_ERROR = 'CANVAS_LIMIT';
 export type RenderRes = { img: WireImg; info: EffectInfo; ms: number };
 /** Źródło znaku: rysowany kodem, jedna z czcionek (kolejność stosu), czcionka zastępcza urządzenia albo nic (tofu). */
 export type GlyphSource = 'drawn' | 'Geist Mono' | 'Noto Sans Mono' | 'Noto Sans JP' | 'fallback' | 'missing';

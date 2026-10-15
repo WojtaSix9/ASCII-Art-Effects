@@ -1,12 +1,13 @@
 /// <reference lib="webworker" />
 // Silnik efektów w Web Workerze. Glify: OffscreenCanvas + Geist Mono załadowany w Workerze przed pierwszym renderem
 // (inaczej cache masek w canvasGlyphs zapamiętałby znaki z czcionki zastępczej).
-import { render, EFFECTS, POSTFX, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph } from '../../../engine/src/index.ts';
+import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph } from '../../../engine/src/index.ts';
 import type { GlyphProvider, Img, RenderState } from '../../../engine/src/index.ts';
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
 import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK } from './fonts.ts';
-import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta } from './protocol.ts';
+import { LIMIT_ERROR } from './protocol.ts';
+import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes } from './protocol.ts';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope & { fonts?: FontFaceSet; gc?: () => void };
 let glyphs: GlyphProvider | null = null;
@@ -56,6 +57,14 @@ function classify(ch: string): GlyphSource {
   return empty(fb) || same(fb, mask('\u{10FFFD}', absent)) ? 'missing' : 'fallback';
 }
 
+/** Czy przeglądarka utworzy kanwę w×h (limity różnią się między przeglądarkami; Safari na iOS ma najniższe). */
+function canvasFits(w: number, h: number) {
+  try {
+    const c = new OffscreenCanvas(w, h); const g = c.getContext('2d'); if (!g) return false;
+    g.fillStyle = '#fff'; g.fillRect(w - 1, h - 1, 1, 1); return g.getImageData(w - 1, h - 1, 1, 1).data[3] === 255;
+  } catch { return false; }
+}
+
 async function sha1(data: Uint8ClampedArray) {
   const d = new Uint8Array(await crypto.subtle.digest('SHA-1', data as unknown as ArrayBuffer));
   return [...d].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -72,6 +81,19 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
   await init();
   switch (req.type) {
     case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params })) satisfies EffectMeta[] };
+    case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params })), color: COLOR_PARAMS } satisfies PostDefs };
+    case 'export': {
+      if (!source) throw new Error('no source image');
+      const w = Math.round(source.w * req.scale), h = Math.round(source.h * req.scale);
+      if (!canvasFits(w, h)) throw new Error(`${LIMIT_ERROR}:${w}x${h}`);
+      await ensure(rampText(req.state));
+      const t = performance.now(); const r = render(source, req.state, { scale: req.scale, glyphs });
+      const c = new OffscreenCanvas(r.img.w, r.img.h); const g = c.getContext('2d')!;
+      g.putImageData(new ImageData(new Uint8ClampedArray(r.img.data), r.img.w, r.img.h), 0, 0);
+      if (req.format === 'jpeg') { g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#000'; g.fillRect(0, 0, r.img.w, r.img.h); }  // JPG bez alfy: tło czarne
+      const blob = await c.convertToBlob({ type: `image/${req.format}`, quality: req.quality ?? 0.92 });
+      return { data: { blob, w: r.img.w, h: r.img.h, ms: performance.now() - t } satisfies ExportRes };
+    }
     case 'setSource': source = toImg(req.img); return { data: { w: source.w, h: source.h } };
     case 'testImage': source = testImage(req.w, req.h); return { data: { w: source.w, h: source.h } };
     case 'render': {

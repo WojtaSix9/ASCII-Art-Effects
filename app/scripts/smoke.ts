@@ -82,7 +82,7 @@ try {
   const xss = '<img src=x onerror=alert(1)>';
   await page.goto(BASE + '/editor?style=' + encodeURIComponent(xss));
   await page.waitForSelector('[data-stage][data-rendered="characters"]', { timeout: 60_000 });
-  t('/editor?style=<img…> trafia do komunikatu jako tekst, bez elementu img', (await page.locator('main img').count()) === 0 && !!(await page.textContent('[data-note]'))?.includes(xss));
+  t('/editor?style=<img…> trafia do komunikatu jako tekst, nie jako element', (await page.locator('img[src="x"], [data-note] img').count()) === 0 && !!(await page.textContent('[data-note]'))?.includes(xss));
 
   // Nieznana trasa i ukośnik końcowy
   await page.goto(BASE + '/nie-ma-takiej', { waitUntil: 'networkidle' });

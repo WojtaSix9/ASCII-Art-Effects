@@ -47,7 +47,11 @@ const siteNav = (path: string) => {
     <a class="btn-outline" href="/editor">Otwórz edytor</a></header>`;
 };
 
-const editorTop = () => `<header class="ed-top">${brand}</header>`;
+// Pasek górny edytora (05, sekcja 8.1): narzędzia wstawia edytor do [data-ed-tools].
+const editorTop = () => `<header class="ed-top">${brand}<div class="ed-top__tools" data-ed-tools></div>
+  <div class="ed-top__right"><a href="/how-to">Pomoc</a>
+    <details class="ed-menu"><summary aria-label="Menu">☰</summary><nav aria-label="Menu"><a href="/">Strona główna</a><a href="/effects">Efekty</a><a href="/how-to">Jak używać</a></nav></details>
+  </div></header>`;
 
 const app = document.getElementById('app')!;
 let first = true;

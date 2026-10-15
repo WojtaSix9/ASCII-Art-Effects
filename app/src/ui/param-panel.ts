@@ -50,18 +50,24 @@ function control(d: ParamDef, v: unknown): string {
 function section(title: string, defs: ParamDef[], values: Values, allMain = false) {
   if (!defs.length) return '';
   const main = defs.filter((d) => allMain || d.level !== 'advanced'), adv = allMain ? [] : defs.filter((d) => d.level === 'advanced');
-  return `<section class="pp-sec"><h3 class="pp-title">/ ${esc(title)}</h3>${main.map((d) => control(d, values[d.id])).join('')}${
+  return `<section class="pp-sec">${title ? `<h3 class="pp-title">/ ${esc(title)}</h3>` : ''}${main.map((d) => control(d, values[d.id])).join('')}${
     adv.length ? `<details class="pp-adv"><summary>Więcej</summary>${adv.map((d) => control(d, values[d.id])).join('')}</details>` : ''}</section>`;
 }
 
-/** Wstawia panel do `root`; onChange dostaje komplet wartości po każdej zmianie. Zwraca funkcję do odczytu wartości. */
-export function mountParamPanel(root: HTMLElement, styleName: string, defs: ParamDef[], initial: Values, onChange: (v: Values) => void) {
+/** Wstawia panel do `root`; onChange dostaje komplet wartości po każdej zmianie (także w trakcie przeciągania suwaka),
+ *  onCommit po zakończonej zmianie (puszczenie suwaka, wybór z listy) – do historii cofnij/ponów. Zwraca odczyt wartości.
+ *  sections: false = jedna sekcja z tytułem `styleName` (Color, Post FX). */
+export function mountParamPanel(root: HTMLElement, styleName: string, defs: ParamDef[], initial: Values, onChange: (v: Values) => void, onCommit?: (v: Values) => void, opts: { sections?: boolean } = {}) {
   const values: Values = Object.fromEntries(defs.map((d) => [d.id, initial[d.id] ?? structuredClone(d.default)]));
   const g = groupParams(defs);
-  root.innerHTML = section('Backdrop', g.backdrop, values) + section(styleName, g.style, values) + section('Intensity', g.intensity, values) + section('Seed', g.seed, values, true);   // seed to osobny poziom (plik 02), zawsze widoczny
+  root.innerHTML = opts.sections === false ? section(styleName, defs, values)
+    : section('Backdrop', g.backdrop, values) + section(styleName, g.style, values) + section('Intensity', g.intensity, values) + section('Seed', g.seed, values, true);   // seed to osobny poziom (plik 02), zawsze widoczny
   const byId = new Map(defs.map((d) => [d.id, d]));
 
-  root.oninput = root.onchange = (e) => {
+  // 'input' (w trakcie) i 'change' (zakończenie) przychodzą osobno; wartość aktualizuje 'input', a dla kontrolek bez
+  // 'input' (np. niektóre listy) także 'change'. onCommit raz po zakończonej zmianie.
+  root.onchange = (e) => { root.oninput!(e); onCommit?.({ ...values }); };
+  root.oninput = (e) => {
     const el = e.target as HTMLInputElement;
     const grad = el.closest<HTMLElement>('[data-gradient]');
     if (grad) {
@@ -81,7 +87,7 @@ export function mountParamPanel(root: HTMLElement, styleName: string, defs: Para
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-random]'); if (!b) return;
     const d = byId.get(b.dataset.random!)!; const input = root.querySelector<HTMLInputElement>(`[data-p="${d.id}"]`)!;
     input.value = String(Math.floor(Math.random() * ((d.max ?? 99999) + 1)));
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
   };
   return () => ({ ...values });
 }
