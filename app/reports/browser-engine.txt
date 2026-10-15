@@ -1,12 +1,12 @@
 Przeglądarka: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36
-Data: 2026-10-15T11:34:04.970Z
+Data: 2026-10-15T11:46:49.943Z
 
 == Testy ==
 OK   Worker (module) uruchomiony, OffscreenCanvas dostępny
 OK   FontFaceSet w Workerze (self.fonts)
-OK   Geist Mono w Workerze: 6/6 podzbiorów wczytanych od razu  [29 ms]
+OK   Geist Mono w Workerze: 6/6 podzbiorów wczytanych od razu  [30 ms]
 OK   Noto Sans Mono (greek) i Noto Sans JP zarejestrowane, pobierane na żądanie  [Noto Sans Mono: 1, Noto Sans JP: 124]
-OK   Render identyczny z Node: 35/35 przypadków (17 efektów, 16 post FX, Color, Dither)
+OK   Render identyczny z Node: 42/42 przypadków (24 efektów, 16 post FX, Color, Dither)
 OK   Metoda pokrycia: kontrola „A” = Geist Mono  [Geist Mono]
 OK   Metoda pokrycia: kontrola U+10FFFD = brak (tofu)  [missing]
 OK   Każdy znak 16 presetów rysuje kod albo czcionka z npm (bez czcionek urządzenia): 154/154
@@ -37,52 +37,59 @@ math          0    6      4       0        0       0
 katakana      0    0      0      21        0       0
 
 == Czas w obie strony (pixel, zlecenie → Worker → ImageData → kanwa) ==
-600×400    render    6.5 ms, razem    7.2 ms, narzut 0.7 ms
-1600×1067  render   21.7 ms, razem   23.5 ms, narzut 1.8 ms
+600×400    render    5.0 ms, razem    5.7 ms, narzut 0.7 ms
+1600×1067  render   20.3 ms, razem   21.9 ms, narzut 1.6 ms
 
 == Czasy: 1600×1067, mediana z 3 po rozgrzewce; Chromium (Worker) vs Node 22, ta sama maszyna ==
 efekt                    Chromium     Node   > 100 ms w przeglądarce
-characters                  32 ms     40 ms   
-block-chars                 26 ms     38 ms   
-braille                     79 ms    124 ms   
-dots                        73 ms    107 ms   
-cross                       98 ms    167 ms   
-diamond                     41 ms     57 ms   
-lines                       53 ms    114 ms   
-diagonal                    57 ms    123 ms   
-pixel                       22 ms     52 ms   
-mosaic                      29 ms     65 ms   
-lego                       130 ms    187 ms   tak
-hexmosaic                  126 ms    128 ms   tak
-disco                       18 ms     27 ms   
-halftone                   290 ms    428 ms   tak
-posterize                   68 ms     70 ms   
-duotone                     51 ms     89 ms   
-gradientmap                 56 ms    147 ms   
-dither                      58 ms     55 ms   
-pixel + advBlur            201 ms    267 ms   tak
-pixel + vignette            61 ms    138 ms   
-pixel + scanLines           27 ms     30 ms   
-pixel + bloom              245 ms    321 ms   tak
-pixel + charBloom           21 ms     32 ms   
-pixel + chromatic          144 ms    209 ms   tak
-pixel + charChroma          20 ms     29 ms   
-pixel + rgbSplit           117 ms    128 ms   tak
-pixel + crtCurve           111 ms    153 ms   tak
-pixel + glitch              60 ms     27 ms   
-pixel + filmGrain           63 ms     60 ms   
-pixel + pixelate            29 ms     46 ms   
-pixel + halftone           115 ms     83 ms   tak
-pixel + filmDust            28 ms     22 ms   
-pixel + sharpen            142 ms    191 ms   tak
-pixel + noise               75 ms     69 ms   
+characters                  46 ms     45 ms   
+block-chars                 43 ms     40 ms   
+braille                    113 ms    124 ms   tak
+dots                       112 ms    172 ms   tak
+cross                      137 ms    191 ms   tak
+diamond                     70 ms     68 ms   
+lines                       89 ms    121 ms   
+diagonal                    94 ms    127 ms   
+pixel                       44 ms     46 ms   
+mosaic                      64 ms     60 ms   
+lego                       144 ms    254 ms   tak
+hexmosaic                  139 ms    213 ms   tak
+disco                       18 ms     42 ms   
+halftone                   316 ms    406 ms   tak
+posterize                   66 ms     93 ms   
+duotone                     43 ms     80 ms   
+gradientmap                 63 ms    208 ms   
+dither                      81 ms     54 ms   
+pinch                      148 ms    196 ms   tak
+spherize                   145 ms    143 ms   tak
+twirl                      117 ms    194 ms   tak
+zigzag                     114 ms    131 ms   tak
+ripple                     100 ms    231 ms   
+polar                      196 ms    235 ms   tak
+shear                      196 ms    219 ms   tak
+pixel + advBlur            306 ms    305 ms   tak
+pixel + vignette           113 ms    220 ms   tak
+pixel + scanLines           33 ms     42 ms   
+pixel + bloom              354 ms    449 ms   tak
+pixel + charBloom           37 ms     36 ms   
+pixel + chromatic          186 ms    235 ms   tak
+pixel + charChroma          31 ms     36 ms   
+pixel + rgbSplit           119 ms    142 ms   tak
+pixel + crtCurve           117 ms    184 ms   tak
+pixel + glitch              37 ms     49 ms   
+pixel + filmGrain          110 ms     90 ms   tak
+pixel + pixelate            61 ms     59 ms   
+pixel + halftone           117 ms    149 ms   tak
+pixel + filmDust            19 ms     39 ms   
+pixel + sharpen            135 ms    197 ms   tak
+pixel + noise               47 ms     79 ms   
 
-== Pamięć: partie po 36 renderów (18 efektów × skala 1 i 2) na 1600×1067, pełna ścieżka do kanwy, GC po każdej partii ==
+== Pamięć: partie po 2 × liczba efektów renderów (skala 1 i 2) na 1600×1067, pełna ścieżka do kanwy, GC po każdej partii ==
 renderów      RSS Chromium   sterta Workera   sterta strony
-       0     513.6 MB      —      —
-      36     699.1 MB      —        105.9 MB
-      72     699.6 MB      —        105.9 MB
-     108     699.8 MB      —        105.9 MB
-     144     699.9 MB      —        105.9 MB
-     180     699.5 MB      —        105.9 MB
-     216     696.4 MB      —        105.9 MB
+       0     513.8 MB      —      —
+      50     646.6 MB      —        131.9 MB
+     100     646.9 MB      —        131.9 MB
+     150     643.6 MB      —        131.9 MB
+     200     666.8 MB      —        131.9 MB
+     250     666.8 MB      —        131.9 MB
+     300     642.8 MB      —        131.9 MB

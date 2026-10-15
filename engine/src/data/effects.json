@@ -569,7 +569,7 @@
     "description": "Ściąganie lub rozpychanie do punktu.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "spherize",
@@ -582,7 +582,7 @@
     "description": "Efekt kuli, wypukły lub wklęsły.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "twirl",
@@ -595,7 +595,7 @@
     "description": "Skręcenie wokół środka.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "zigzag",
@@ -608,7 +608,7 @@
     "description": "Falowe przesunięcie linii (zygzak poprzeczny).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "ripple",
@@ -621,7 +621,7 @@
     "description": "Koncentryczne fale od środka.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "polar",
@@ -634,7 +634,7 @@
     "description": "Przekształcenie prostokątne ↔ biegunowe (obraz zawijany w okrąg).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "shear",
@@ -647,7 +647,7 @@
     "description": "Falowe ścięcie linii.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "motionblur",

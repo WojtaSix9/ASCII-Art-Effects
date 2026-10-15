@@ -33,7 +33,7 @@ const rendered = (p: Page, id: string) => p.waitForSelector(`[data-stage][data-r
   const stale = SAMPLES.map((s, i) => ({ n: i + 1, now: createHash('sha1').update(readFileSync(new URL('../public' + s.src, import.meta.url))).digest('hex'), was: man.samples[i + 1]?.sha1 })).filter((x) => x.now !== x.was);
   t('miniatury: manifest zgodny z bieżącymi zdjęciami roboczymi (inaczej: npm run thumbs)', stale.length === 0, stale);
   const missing = READY.filter((e) => !man.thumbs[e.id] || man.thumbs[e.id].sample !== sampleNoFor(e.id));
-  t(`miniatury: każdy z ${READY.length} gotowych efektów ma miniaturę na właściwym zdjęciu (naprzemiennie)`, missing.length === 0 && READY.length === 18, missing.map((e) => e.id));
+  t(`miniatury: każdy z ${READY.length} gotowych efektów ma miniaturę na właściwym zdjęciu (naprzemiennie)`, missing.length === 0 && READY.length === EFFECTS.length, missing.map((e) => e.id));
 }
 
 const browser = await chromium.launch();
@@ -89,7 +89,7 @@ try {
     // --- Edytor: panel z `params` ---
     await page.goto(BASE + '/editor?style=dots'); await rendered(page, 'dots');
     t('edytor: ?style=dots → wybrany Dots', (await page.inputValue('[data-style]')) === 'dots');
-    // Dla każdego z 18 efektów: liczba kontrolek = liczba parametrów; render bez błędu
+    // Dla każdego gotowego efektu: liczba kontrolek = liczba parametrów; render bez błędu
     const ids = await page.$$eval('[data-style] option', (o) => o.map((x) => (x as HTMLOptionElement).value));
     const counts: string[] = [];
     for (const id of ids) {
@@ -99,7 +99,7 @@ try {
       counts.push(`${id}:${c.controls}/${exp}`);
       if (c.controls !== exp || c.url !== id || c.note) counts.push(`!${id} kontrolek=${c.controls} oczekiwane=${exp} url=${c.url} note=${c.note}`);
     }
-    t(`edytor: ${ids.length} efektów; kontrolek tyle co parametrów w silniku, render bez błędu, URL ?style= nadąża`, ids.length === 18 && !counts.some((c) => c.startsWith('!')), counts.join(' '));
+    t(`edytor: ${ids.length} efektów; kontrolek tyle co parametrów w silniku, render bez błędu, URL ?style= nadąża`, ids.length === EFFECTS.length && ids.length === READY.length && !counts.some((c) => c.startsWith('!')), counts.join(' '));
 
     // Zmiana parametru zmienia obraz; powrót do wartości daje identyczny obraz (podpięcie + determinizm)
     await page.selectOption('[data-style]', 'characters'); await rendered(page, 'characters');
@@ -154,8 +154,9 @@ try {
       soon: [...document.querySelectorAll<HTMLElement>('[data-elist-soon]')].map((x) => x.dataset.elistSoon),
     }));
     const readyIds = ALL.filter((e) => e.status === 'ready').map((e) => e.id);
-    t('lista: 10 kategorii, 91 nazw = 18 linków do edytora (z właściwym zdjęciem) + 73 „wkrótce” bez linku',
-      el.groups === 10 && el.links.length === 18 && el.soon.length === 73 && el.links.every(([id, h]) => readyIds.includes(id!) && h === `/editor?style=${id}&sample=${sampleNoFor(id!)}`)
+    const NR = readyIds.length;
+    t(`lista: 10 kategorii, 91 nazw = ${NR} linków do edytora (z właściwym zdjęciem) + ${91 - NR} „wkrótce” bez linku`,
+      el.groups === 10 && el.links.length === NR && el.soon.length === 91 - NR && el.links.every(([id, h]) => readyIds.includes(id!) && h === `/editor?style=${id}&sample=${sampleNoFor(id!)}`)
       && new Set([...el.links.map((l) => l[0]), ...el.soon]).size === 91, { groups: el.groups, links: el.links.length, soon: el.soon.length });
 
     // --- /effects ---
@@ -170,7 +171,7 @@ try {
     }));
     await page.goto(BASE + '/effects');
     let f = await fx();
-    t('/effects: 91 kafelków w 10 kategoriach; 18 z linkiem i miniaturą, 73 „wkrótce” bez linku', f.tiles === 91 && f.ready === 18 && f.soon === 73 && f.soonLinks === 0 && f.groups.length === 10 && f.count === '91 efektów', f);
+    t(`/effects: 91 kafelków w 10 kategoriach; ${NR} z linkiem i miniaturą, ${91 - NR} „wkrótce” bez linku`, f.tiles === 91 && f.ready === NR && f.soon === 91 - NR && f.soonLinks === 0 && f.groups.length === 10 && f.count === '91 efektów', f);
     const firstSoonBeforeReady = await page.$$eval('.fx-group', (gs) => gs.some((g) => { const items = [...g.querySelectorAll('.tile')]; const i = items.findIndex((x) => x.hasAttribute('data-soon')); return i >= 0 && items.slice(i).some((x) => !x.hasAttribute('data-soon')); }));
     t('/effects: w każdej kategorii najpierw gotowe, potem „wkrótce”', !firstSoonBeforeReady);
     const expect = (q: string, cat = '') => ALL.filter((e) => matches(e, q, cat)).length;

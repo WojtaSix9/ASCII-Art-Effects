@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium, type Page } from 'playwright';
 import { MAX_SOURCE } from '../src/config/limits.ts';
+import { READY } from '../src/config/thumbs.ts';
 
 const BASE = 'http://localhost:4173';
 const server = spawn('npx', ['vite', 'preview'], { stdio: 'ignore' });
@@ -42,7 +43,7 @@ try {
     disabled: [...document.querySelectorAll<HTMLButtonElement>('[data-rail] button')].filter((b) => b.disabled).length,
     tools: !!document.querySelector('[data-ed-tools] [data-undo]'), fav: /ulubione/i.test(document.body.textContent ?? ''),
   }));
-  t('układ: 18 stylów w lewym panelu, szyna 7 ikon (Animacja wyłączona, Kadr i Tekst od kroku 7), narzędzia w pasku górnym, bez Ulubionych', L.styles === 18 && L.rail === 7 && L.disabled === 1 && L.tools && !L.fav, L);
+  t(`układ: ${READY.length} stylów w lewym panelu, szyna 7 ikon (Animacja wyłączona, Kadr i Tekst od kroku 7), narzędzia w pasku górnym, bez Ulubionych`, L.styles === READY.length && L.rail === 7 && L.disabled === 1 && L.tools && !L.fav, L);
 
   // Lewy panel
   const h0 = await hash(page);

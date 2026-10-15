@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 73 efekty Faz 2–3; warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 66 efektów Faz 2–3 (stan po kroku 9, partia 1; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -278,3 +278,39 @@ Projekt i decyzje użytkownika: `docs/08-tekst-projekt.md`.
 - Dolne arkusze zamiast panelu pod płótnem (05 sekcja 9 dopuszcza to w v1).
 - Test na prawdziwym telefonie, w Safari i Firefoksie.
 - Czytnik ekranu.
+
+## 14. Krok 9 (efekty Faz 2–3), partia 1: zniekształcenia (15 X 2026)
+
+**Stan:** 25 z 91 efektów gotowych (18 Fazy 1 + 7 Fazy 2). Zostało 66: 23 Fazy 2 i 43 Fazy 3.
+
+**Efekty** (kod: `engine/src/effects/distort.ts`)
+- Pinch, Spherize, Twirl, ZigZag, Ripple, Polar, Shear.
+- Opcje i zakresy: `docs` (plik 02, sekcja 5). Wzory: `proj`, opisane w komentarzach.
+- Wszystkie korzystają z jednego odwzorowania odwrotnego z próbkowaniem dwuliniowym: brzeg obrazu jest powielany, a Shear zawija się w poziomie.
+- Promień w % połowy krótszego boku, środek w %.
+- Długości w px (ZigZag: wavelength, Shear: period) skalują się z eksportem.
+- ZigZag i Ripple nazwane po zachowaniu (plik 02): ZigZag to fala trójkątna przesuwająca wiersze, Ripple to fale koncentryczne.
+- Domyślne wartości podniesione po ocenie miniatur (`oko`): Pinch 100, Spherize 80, Ripple 70. Przy niższych efekt był na miniaturze prawie niewidoczny.
+
+**Testy (`test`)**
+- Silnik 155 z 155, 7 nowych:
+  - amount 0 = obraz bez zmian, bajt w bajt;
+  - poza promieniem piksele bez zmian;
+  - Pinch, Spherize i Ripple nie zmieniają obrazu zależnego tylko od kąta, a Twirl obrazu zależnego tylko od odległości (54–59 dB);
+  - ZigZag i Shear nie zmieniają obrazu stałego w wierszach;
+  - pole kropki w środku: Spherize+ i Pinch− powiększają, Spherize− i Pinch+ zmniejszają;
+  - Polar tam i z powrotem odtwarza obraz w wierszach, których okrąg ma obwód ≥ szerokości (24,7 dB).
+- Test Polar najpierw sprawdzał zły obszar (pierścień wokół środka). Złożenie jest tożsamością w całym prostokącie, a wiersze z obwodem < szerokość tracą próbki. Obszar poprawiony z geometrii, próg bez zmian.
+- Ogólny test skali 2× obejmuje nowe efekty (29–32 dB).
+- Mutacje (Polar z odwróconym kątem, Twirl zmieniający odległość, odwrócony Pinch): wszystkie wykryte.
+- Przeglądarka = Node: 42 z 42 hashy.
+- Edytor, UI, smoke, dostępność bez zmian w wynikach.
+- Liczniki „18 efektów” w testach zastąpione liczbą gotowych efektów z rejestru.
+
+**Miniatury**
+- Wygenerowano 7 nowych.
+- Disco, Duotone i Gradient Map zmieniły zdjęcie robocze. To skutek zasady naprzemienności: są w rejestrze za zniekształceniami.
+
+**`BRAK`**
+- Wzory nie są porównane z oryginałem.
+- Polar wypełnia narożniki poza okręgiem przedłużeniem dolnego wiersza (promieniste smugi).

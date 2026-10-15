@@ -89,7 +89,7 @@ try {
     log(`${r.name.padEnd(22)} ${r.ms.toFixed(0).padStart(7)} ms ${n == null ? '      —' : n.toFixed(0).padStart(6) + ' ms'}   ${r.ms > 100 ? 'tak' : ''}`);
   }
   log('');
-  log('== Pamięć: partie po 36 renderów (18 efektów × skala 1 i 2) na 1600×1067, pełna ścieżka do kanwy, GC po każdej partii ==');
+  log('== Pamięć: partie po 2 × liczba efektów renderów (skala 1 i 2) na 1600×1067, pełna ścieżka do kanwy, GC po każdej partii ==');
   log('renderów      RSS Chromium   sterta Workera   sterta strony');
   for (const r of rss) log(`${String(r.renders).padStart(8)}   ${mb(r.rss)}      ${mb(r.workerHeap)}      ${mb(r.pageHeap)}`);
 } finally {

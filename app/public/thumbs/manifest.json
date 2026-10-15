@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-15T06:32:05.890Z",
+  "generated": "2026-10-15T11:43:58.627Z",
   "size": "960x668",
   "samples": {
     "1": {
@@ -28,109 +28,151 @@
       "sample": 1,
       "bytes": 146634,
       "mode": "q0.8",
-      "ms": 179
+      "ms": 155
     },
     "dots": {
       "sample": 1,
       "bytes": 193198,
       "mode": "q0.8",
-      "ms": 157
+      "ms": 55
     },
     "pixel": {
       "sample": 1,
       "bytes": 7304,
       "mode": "q1",
-      "ms": 45
+      "ms": 28
     },
     "lego": {
       "sample": 1,
       "bytes": 19196,
       "mode": "q1",
-      "ms": 114
+      "ms": 105
     },
     "dither": {
       "sample": 1,
       "bytes": 18934,
       "mode": "q1",
-      "ms": 56
+      "ms": 38
     },
     "posterize": {
       "sample": 1,
       "bytes": 66608,
       "mode": "q1",
-      "ms": 56
+      "ms": 28
     },
     "diamond": {
       "sample": 1,
       "bytes": 189002,
       "mode": "q0.8",
-      "ms": 235
+      "ms": 24
     },
     "diagonal": {
       "sample": 1,
       "bytes": 231040,
       "mode": "q0.8",
-      "ms": 210
+      "ms": 36
     },
-    "gradientmap": {
+    "spherize": {
       "sample": 1,
-      "bytes": 68596,
+      "bytes": 58364,
       "mode": "q0.8",
-      "ms": 63
+      "ms": 43
+    },
+    "zigzag": {
+      "sample": 1,
+      "bytes": 59148,
+      "mode": "q0.8",
+      "ms": 42
+    },
+    "polar": {
+      "sample": 1,
+      "bytes": 54020,
+      "mode": "q0.8",
+      "ms": 67
+    },
+    "disco": {
+      "sample": 1,
+      "bytes": 25266,
+      "mode": "q0.8",
+      "ms": 24
+    },
+    "duotone": {
+      "sample": 1,
+      "bytes": 50686,
+      "mode": "q0.8",
+      "ms": 28
     },
     "block-chars": {
       "sample": 2,
       "bytes": 79098,
       "mode": "q0.8",
-      "ms": 177
+      "ms": 103
     },
     "braille": {
       "sample": 2,
       "bytes": 9714,
       "mode": "q1",
-      "ms": 92
+      "ms": 89
     },
     "mosaic": {
       "sample": 2,
       "bytes": 66982,
       "mode": "q1",
-      "ms": 74
+      "ms": 20
     },
     "hexmosaic": {
       "sample": 2,
       "bytes": 162126,
       "mode": "q0.8",
-      "ms": 240
+      "ms": 78
     },
     "halftone": {
       "sample": 2,
       "bytes": 362400,
       "mode": "q0.8",
-      "ms": 282
+      "ms": 152
     },
     "cross": {
       "sample": 2,
       "bytes": 205280,
       "mode": "q0.8",
-      "ms": 265
+      "ms": 51
     },
     "lines": {
       "sample": 2,
       "bytes": 59316,
       "mode": "q0.8",
-      "ms": 240
+      "ms": 41
     },
-    "disco": {
+    "pinch": {
       "sample": 2,
-      "bytes": 30262,
-      "mode": "q1",
-      "ms": 53
-    },
-    "duotone": {
-      "sample": 2,
-      "bytes": 109944,
+      "bytes": 125250,
       "mode": "q0.8",
-      "ms": 74
+      "ms": 51
+    },
+    "twirl": {
+      "sample": 2,
+      "bytes": 126162,
+      "mode": "q0.8",
+      "ms": 51
+    },
+    "ripple": {
+      "sample": 2,
+      "bytes": 121142,
+      "mode": "q0.8",
+      "ms": 63
+    },
+    "shear": {
+      "sample": 2,
+      "bytes": 141122,
+      "mode": "q0.8",
+      "ms": 67
+    },
+    "gradientmap": {
+      "sample": 2,
+      "bytes": 142968,
+      "mode": "q0.8",
+      "ms": 27
     }
   }
 }

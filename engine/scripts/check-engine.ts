@@ -27,7 +27,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 18, bad.join(', '));
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 25, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -60,7 +60,7 @@ const SRC = testImage(300, 200);
   const S1 = testImage(240, 160); const lines: string[] = []; let allSame = true, minP = 99;
   for (const e of EFFECTS) { const a = render(S1, { style: { id: e.id } }, { glyphs: G, scale: 1 }), b = render(S1, { style: { id: e.id } }, { glyphs: G, scale: 2 }); const same = (a.info.cols === b.info.cols && a.info.rows === b.info.rows && a.info.cells === b.info.cells) && b.img.w === 480 && b.img.h === 320; if (!same) allSame = false;
     const p = psnr(resize(b.img, 240, 160), a.img); if (!['dither'].includes(e.id)) minP = Math.min(minP, p); lines.push(`${e.id}:${p.toFixed(0)}dB`); }
-  ok('skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich 18 efektow', allSame);
+  ok(`skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich ${EFFECTS.length} efektow`, allSame);
   ok('skala 2x: obraz po zmniejszeniu podobny do renderu 1x (PSNR > 14 dB)', minP > 14, `min ${minP.toFixed(1)} dB; ${lines.join(' ')}`);
 }
 // 6. Characters i eksport tekstowy
@@ -165,7 +165,7 @@ const SRC = testImage(300, 200);
   const { readFileSync } = await import('node:fs'); const J = JSON.parse(readFileSync('src/data/effects.json', 'utf8')) as any[]; const ready = J.filter((x) => x.status === 'ready');
   ok('effects.json: 91 efektow, 10 kategorii, unikalne id, faza 1 = 18', J.length === 91 && new Set(J.map((x) => x.id)).size === 91 && new Set(J.map((x) => x.category)).size === 10 && J.filter((x) => x.phase === 1).length === 18);
   ok('effects.json: status ready <=> efekt jest w silniku, kategoria zgodna z definicja silnika', ready.length === EFFECTS.length && EFFECTS.every((e) => { const j = J.find((x) => x.id === e.id); return j && j.status === 'ready' && j.category === e.category && j.engine === e.engine; }), EFFECTS.filter((e) => { const j = J.find((x) => x.id === e.id); return !(j && j.category === e.category && j.engine === e.engine); }).map((e) => e.id).join(','));
-  ok('effects.json: 18 efektow Fazy 1 = 18 efektow w silniku', EFFECTS.every((e) => J.find((x) => x.id === e.id)?.phase === 1));
+  ok(`effects.json: faza kazdego z ${EFFECTS.length} efektow silnika zgodna z rejestrem; cala Faza 1 (18) gotowa`, EFFECTS.every((e) => J.find((x) => x.id === e.id)?.phase === e.phase) && J.filter((x) => x.phase === 1).every((x) => x.status === 'ready'));
 }
 // 13. Znaki rysowane kodem (Braille, Dots, Geometric): bez czcionki, zgodne z rampą gęstości
 {
@@ -387,6 +387,34 @@ const SRC = testImage(300, 200);
   const polish = TEXT_FONTS.every((f) => { const a = one({ text: 'ąęłżźćńśó', font: f.id, size: 12, y: 50 }), b = one({ text: 'aelzzcnso', font: f.id, size: 12, y: 50 }); return a.x1 - a.x0 > 0.5 * (b.x1 - b.x0) && a.y0 < b.y0; });
   ok('tekst: polskie znaki we wszystkich 4 krojach (znaki z ogonkami/kreskami siegaja wyzej niz bez)', polish);
   ok('tekst: prostokaty napisow w wyniku (do edytora), null dla pustego', (() => { const o = RT({ text: [T0, { text: '' }] }); return o.textBoxes?.length === 2 && !!o.textBoxes[0] && o.textBoxes[1] === null; })());
+}
+// 20. Krok 9: znieksztalcenia (plik 02, sekcja 5)
+{
+  const W = 200, H = 160; const mk = (f: (x: number, y: number) => number) => { const i = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = Math.round(f(x + 0.5, y + 0.5)); const o = (y * W + x) * 4; i.data[o] = i.data[o + 1] = i.data[o + 2] = v; } return i; };
+  const D = (src: Img, id: string, p: any = {}) => render(src, { style: { id, params: p } }).img;
+  const S = testImage(W, H);
+  ok('znieksztalcenia: amount 0 = obraz bez zmian, bajt w bajt (Pinch, Spherize, Twirl, ZigZag, Ripple, Shear)', ['pinch', 'spherize', 'twirl', 'zigzag', 'ripple', 'shear'].every((id) => sha(D(S, id, { amount: 0 })) === sha(S)));
+  const outside = ['pinch', 'spherize', 'twirl', 'ripple'].filter((id) => { const o = D(S, id, { amount: id === 'twirl' ? 250 : 100, radius: 60 }); const R = 0.6 * 80; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (Math.hypot(x + 0.5 - 100, y + 0.5 - 80) > R + 0.01) { const i = (y * W + x) * 4; if (o.data[i] !== S.data[i] || o.data[i + 1] !== S.data[i + 1]) return true; } return false; });
+  ok('znieksztalcenia: poza promieniem piksele bez zmian (Pinch, Spherize, Twirl, Ripple)', outside.length === 0, outside.join(','));
+  // obraz zalezny tylko od kata: odwzorowania promieniowe (Pinch, Spherize, Ripple) go nie zmieniaja; zalezny tylko od odleglosci: Twirl go nie zmienia
+  const ang = mk((x, y) => 128 + 100 * Math.sin(3 * Math.atan2(y - 80, x - 100))), rad = mk((x, y) => 128 + 100 * Math.sin(Math.hypot(x - 100, y - 80) / 6));
+  const inner = (a: Img, b: Img) => { let se = 0, n = 0; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const r = Math.hypot(x + 0.5 - 100, y + 0.5 - 80); if (r < 6) continue; const d = a.data[(y * W + x) * 4] - b.data[(y * W + x) * 4]; se += d * d; n++; } return se === 0 ? 99 : 10 * Math.log10(65025 / (se / n)); };
+  const pr = ['pinch', 'spherize', 'ripple'].map((id) => [id, inner(D(ang, id, { amount: 100 }), ang)] as const), pt = inner(D(rad, 'twirl', { amount: 250 }), rad);
+  ok('znieksztalcenia: Pinch, Spherize, Ripple zachowuja kierunek (obraz katowy bez zmian), Twirl zachowuje odleglosc (obraz promieniowy bez zmian), PSNR > 30 dB', pr.every(([, v]) => v > 30) && pt > 30, pr.map(([i, v]) => `${i} ${v.toFixed(1)}`).join(' ') + ` twirl ${pt.toFixed(1)}`);
+  const rows = mk((x, y) => 128 + 100 * Math.sin(y / 3));
+  ok('ZigZag i Shear przesuwaja tylko w poziomie: obraz stały w wierszach bez zmian (bajt w bajt)', sha(D(rows, 'zigzag', { amount: 100 })) === sha(rows) && sha(D(rows, 'shear', { amount: 100 })) === sha(rows));
+  // kropka w srodku: Spherize + i Pinch − powiekszaja, Spherize − i Pinch + zmniejszaja
+  const dot = mk((x, y) => (Math.hypot(x - 100, y - 80) < 12 ? 255 : 0)); const area = (i: Img) => { let n = 0; for (let k = 0; k < i.data.length; k += 4) n += i.data[k] / 255; return n; }; const a0 = area(dot);
+  const ar = { sp: area(D(dot, 'spherize', { amount: 100 })), sm: area(D(dot, 'spherize', { amount: -100 })), pp: area(D(dot, 'pinch', { amount: 100 })), pm: area(D(dot, 'pinch', { amount: -100 })) };
+  ok('Spherize > 0 i Pinch < 0 powiekszaja srodek, Spherize < 0 i Pinch > 0 go zmniejszaja (pole kropki)', ar.sp > a0 * 1.3 && ar.pm > a0 * 1.3 && ar.sm < a0 / 1.3 && ar.pp < a0 / 1.3, `${a0.toFixed(0)}: ${Object.entries(ar).map(([k, v]) => k + ' ' + v.toFixed(0)).join(', ')}`);
+  // Polar: toPolar, potem toRect, odtwarza obraz w pierscieniu 0,2–0,9 promienia
+  const sq = testImage(160, 160); const back = D(D(sq, 'polar', { mode: 'toPolar' }), 'polar', { mode: 'toRect' });
+  // zlozenie to tozsamosc w calym prostokacie; wiersz y trafia na okrag o promieniu y/h, wiec wiersze z obwodem < szerokosc (y/h < 160/(2π·80) ≈ 0,32) traca probki
+  let se = 0, n = 0; for (let y = 0; y < 160; y++) for (let x = 0; x < 160; x++) { const r = (y + 0.5) / 160; if (r < 0.35 || r > 0.95) continue; for (let c = 0; c < 3; c++) { const d = back.data[(y * 160 + x) * 4 + c] - sq.data[(y * 160 + x) * 4 + c]; se += d * d; n++; } }
+  const pp = 10 * Math.log10(65025 / (se / n));
+  ok('Polar: prostokatne -> biegunowe -> prostokatne odtwarza obraz w wierszach 0,35–0,95 wysokosci (obwod >= szerokosc; PSNR > 20 dB)', pp > 20, pp.toFixed(1) + ' dB');
+  const z1 = D(rows.w ? mk((x) => 128 + 100 * Math.sin(x / 2)) : rows, 'zigzag', { amount: 100, wavelength: 20 }); let rowShift = 0; for (let y = 0; y < H; y++) { let d = 0; for (let x = 0; x < W; x++) d += Math.abs(z1.data[(y * W + x) * 4] - z1.data[x * 4]); rowShift = Math.max(rowShift, d); }
+  ok('ZigZag: wiersze przesuniete wzgledem siebie (obraz pionowych pasow sie zmienia)', rowShift > 1000);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);
