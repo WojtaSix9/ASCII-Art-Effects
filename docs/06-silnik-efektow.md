@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 9 efektów Fazy 3 (stan po kroku 9, partia 12; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach poza dwoma przykładowymi. Wszystkie 91 efektów są zrobione (stan po kroku 9, partia 13), warstwa tekstu też (krok 7.4). Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -709,3 +709,33 @@ Na tej podstawie:
 - Liquid Glass: 10 tekstur = 10 różnych obrazów; seed zmienia tylko tekstury losowe.
 
 **Aplikacja (`test`):** przeglądarka = Node w 97 z 97 przypadków (`QUICK`); test UI z `ONLY` (7 efektów szkła): 39 z 39.
+
+## 25. Krok 9, partia 13 (Faza 3): Materiał i faktura — katalog kompletny
+
+**Stan:** 91 z 91 efektów gotowych.
+
+**Efekty** (`material.ts`; `proj`, Marble i Molten Metal `proj?`)
+- **Waves:** fala wzdłuż kierunku (`frequency` okresów na szerokość). Powierzchnia: próbka przesunięta prostopadle + cieniowanie zboczy. Tryb linii: faliste linie o grubości ∝ jasność, w kolorze obrazu.
+- **Oil Paint:** Kuwahara (4 kwadranty, sumy z obrazów całkowych, O(1) na piksel). Pociągnięcia: szum rozciągnięty wzdłuż izolinii albo stałego kierunku. Relief oświetlony z odblaskiem.
+- **Watercolor:** Kuwahara + rozmycie, przesunięte szumem (rozlew); pigment subtraktywnie na papierze; ciemniejsze brzegi plam; granulacja i ziarno papieru.
+  - Po poprawce (`oko`) faktura nadal jest dość ziarnista, a ciemniejsze brzegi słabo widoczne przy wartościach domyślnych.
+- **Chrome:** jasność jako wysokość; kolor z wektora odbicia z gradientu otoczenia (studio / sunset / cool).
+  - Poprawka (`oko`): płaskie miejsca trafiały w horyzont i obraz był brązowy. Teraz jasne miejsca odbijają niebo, a ciemne ziemię.
+- **Thin-Film:** grubość warstwy = jasność (+ szum); interferencja dla λ = 650 / 532 / 450 nm.
+- **Marble** (interpretacja): ton kamienia z obrazu (`contrast`) lub szumu, 4 kamienie. Żyłki to |sin| z turbulencją i fazą od jasności, więc wyginają się wzdłuż zmian obrazu.
+  - Turbulencja zwiększona po ocenie wzrokowej: żyłki były prawie proste.
+- **Molten Metal** (interpretacja): rozmyta jasność jako pole metaballi, przesunięta szumem (`flow`). Metal powyżej progu, kolor z palety żaru, odblask i poświata.
+- **Crystallize:** komórki Voronoi w średnim kolorze z fasetą (normalna nachylona od środka kryształu) i ciemną krawędzią.
+- **Emboss:** relief z gradientu jasności, światło z kąta; szary 128 albo kolor obrazu.
+- **Czas (Node, 600 px):** 33–310 ms.
+
+**Testy silnika (`test`, 308 z 308):**
+- parametry zerowe albo płaski obraz = bez zmian albo jednolity wynik (Waves, Emboss, Oil Paint, Chrome, Thin-Film, Molten, Watercolor = kolor papieru);
+- Crystallize: każda komórka Voronoi ma jeden kolor;
+- Marble: większy „Image contrast” = wyższa korelacja wyniku z jasnością obrazu.
+
+**Aplikacja (`test`):**
+- Przeglądarka = Node w 106 z 106 przypadków (`QUICK`).
+- Test UI z `ONLY` (9 efektów): 39 z 39. Lista i galeria pokazują 91 efektów z linkiem i miniaturą, 0 „wkrótce”.
+- Test „efekt wkrótce” nie ma już takiego efektu, więc sprawdza nieistniejące id (komunikat i Characters).
+- Pełnych testów edytora, smoke i a11y nie uruchamiałem w partiach 10–13, bo kod interfejsu się nie zmienił; zmieniły się tylko dane katalogu.

@@ -1076,7 +1076,7 @@
     "description": "Obraz na falującej powierzchni lub zbudowany z falistych linii.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "oilpaint",
@@ -1089,7 +1089,7 @@
     "description": "Obraz olejny: wygładzenie typu Kuwahara plus faktura pociągnięć pędzla i relief farby.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "watercolor",
@@ -1102,7 +1102,7 @@
     "description": "Akwarela: miękkie rozlewy koloru, ciemniejsze krawędzie pigmentu, faktura papieru.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "chrome",
@@ -1115,7 +1115,7 @@
     "description": "Jasność jako wysokość, mapowana na metaliczne odbicie otoczenia.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "thinfilm",
@@ -1128,7 +1128,7 @@
     "description": "Iryzacja jak bańka mydlana: kolory interferencyjne zależne od „grubości” (jasności).",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "marble",
@@ -1141,7 +1141,7 @@
     "description": "Interpretacja: żyłki marmuru ze sterowaniem tonem obrazu i turbulencją.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "molten",
@@ -1154,7 +1154,7 @@
     "description": "Interpretacja: płynny, rozgrzany metal. Jasność deformuje powierzchnię (metaballe), ciepła paleta i poświata.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "crystallize",
@@ -1167,7 +1167,7 @@
     "description": "Komórki Voronoi o średnim kolorze, ze ściętymi krawędziami jak kryształy.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "emboss",
@@ -1180,6 +1180,6 @@
     "description": "Tłoczenie: obraz wygląda jak wypukła rzeźba oświetlona z kierunku.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   }
 ]

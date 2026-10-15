@@ -29,7 +29,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 82, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 34 Fazy 3 (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 91, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 43 Fazy 3 (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -671,6 +671,17 @@ const SRC = testImage(300, 200);
   ok('Glass Orb: poza kula bez zmian (bez rozmycia tla); w kuli obraz odwrocony (rampa pionowa: nad srodkiem jasniej niz pod)', outside && at(80, 40) > at(80, 80), `${at(80, 40)} ${at(80, 80)}`);
   const lg = (t: string, seed = 1) => sha(D(S, 'liquidglass', { texture: t, seed }));
   ok('Liquid Glass: 10 tekstur daje 10 roznych obrazow; seed zmienia tekstury losowe (hammered), nie zmienia regularnych (cross)', new Set(['cross', 'hammered', 'diamond', 'hexagon', 'ripple', 'crackle', 'chevron', 'seedy', 'pixel', 'jello'].map((t) => lg(t))).size === 10 && lg('hammered', 1) !== lg('hammered', 2) && lg('cross', 1) === lg('cross', 2));
+}
+// 32. Krok 9, Faza 3: material i faktura (po jednej kluczowej wlasnosci na efekt)
+{
+  const W = 160, H = 120; const D = (src: Img, id: string, p: any = {}) => render(src, { style: { id, params: p } }).img; const S = testImage(W, H); const flat = newImg(W, H, [180, 110, 60, 255]);
+  ok('Material: parametry zerowe = bez zmian (Waves bez amplitudy, Emboss w kolorze obrazu na plaskim, Oil Paint bez impasto/odblasku na plaskim)', sha(D(S, 'waves', { amplitude: 0 })) === sha(S) && sha(D(flat, 'emboss', { baseColorMode: 'image' })) === sha(flat) && sha(D(flat, 'oilpaint', { impasto: 0, specular: 0 })) === sha(flat));
+  ok('Material: plaski obraz -> jednolity wynik (Emboss szary 128, Chrome, Thin-Film bez szumu, Molten bez plyniecia, Watercolor bialy bez papieru = kolor papieru)', (() => { const e = D(flat, 'emboss'); return colorsOf(e) === 1 && e.data[0] === 128; })() && colorsOf(D(flat, 'chrome')) === 1 && colorsOf(D(flat, 'thinfilm', { noise: 0 })) === 1 && colorsOf(D(flat, 'molten', { flow: 0 })) === 1
+    && (() => { const wc = D(newImg(W, H, [255, 255, 255, 255]), 'watercolor', { paperGrain: 0 }); return colorsOf(wc) === 1 && [0, 1, 2].every((q) => Math.abs(wc.data[q] - parseColor('#f6f1e6')[q]) <= 1); })());
+  const cr = D(S, 'crystallize', { bevelShading: 0, edge: 0 }); const CV = voronoi(W, H, 18, 0.9, 1 * 19 + 2); const first = new Map<number, string>(); let flatCells = true;
+  for (let q = 0; q < W * H; q++) { const c = cr.data.slice(q * 4, q * 4 + 3).join(); const f = first.get(CV.id[q]); if (f === undefined) first.set(CV.id[q], c); else if (f !== c) flatCells = false; }
+  ok('Crystallize: bez fazy i krawedzi kazdy krysztal (komorka Voronoi) ma jeden kolor', flatCells, `${first.size} komorek`);
+  const mb = D(S, 'marble', { contrast: 100 }), mb0 = D(S, 'marble', { contrast: 0 }); ok('Marble: wieksza wartosc "Image contrast" -> wynik bardziej skorelowany z jasnoscia obrazu', (() => { const corr = (a: Img) => { let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0; const n = W * H; for (let q = 0; q < n; q++) { const x = lum(S.data[q * 4], S.data[q * 4 + 1], S.data[q * 4 + 2]), y = lum(a.data[q * 4], a.data[q * 4 + 1], a.data[q * 4 + 2]); sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; } return (sxy / n - (sx / n) * (sy / n)) / Math.sqrt((sxx / n - (sx / n) ** 2) * (syy / n - (sy / n) ** 2)); }; return corr(mb) > corr(mb0) + 0.2; })());
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

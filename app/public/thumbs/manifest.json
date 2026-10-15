@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-15T14:55:28.567Z",
+  "generated": "2026-10-15T15:00:17.400Z",
   "size": "960x668",
   "samples": {
     "1": {
@@ -515,6 +515,60 @@
       "bytes": 116522,
       "mode": "q0.8",
       "ms": 152
+    },
+    "waves": {
+      "sample": 1,
+      "bytes": 59702,
+      "mode": "q0.8",
+      "ms": 69
+    },
+    "watercolor": {
+      "sample": 1,
+      "bytes": 45088,
+      "mode": "q0.8",
+      "ms": 923
+    },
+    "thinfilm": {
+      "sample": 1,
+      "bytes": 81108,
+      "mode": "q0.8",
+      "ms": 303
+    },
+    "molten": {
+      "sample": 1,
+      "bytes": 30322,
+      "mode": "q0.8",
+      "ms": 433
+    },
+    "emboss": {
+      "sample": 1,
+      "bytes": 45374,
+      "mode": "q0.8",
+      "ms": 124
+    },
+    "oilpaint": {
+      "sample": 2,
+      "bytes": 272228,
+      "mode": "q0.8",
+      "ms": 411
+    },
+    "chrome": {
+      "sample": 2,
+      "bytes": 132978,
+      "mode": "q0.8",
+      "ms": 179
+    },
+    "marble": {
+      "sample": 2,
+      "bytes": 94306,
+      "mode": "q0.8",
+      "ms": 320
+    },
+    "crystallize": {
+      "sample": 2,
+      "bytes": 171786,
+      "mode": "q0.8",
+      "ms": 531
     }
   }
 }
