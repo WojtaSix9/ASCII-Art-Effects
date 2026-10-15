@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 56 efektów Faz 2–3 (stan po kroku 9, partia 3; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 49 efektów Faz 2–3 (stan po kroku 9, partia 4; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -390,3 +390,62 @@ Podgląd liczy się w rozdzielczości ekranu, więc zwykle kilka razy mniej piks
   - Aberration ruszająca G.
 - Przeglądarka = Node: 52 z 52.
 - Dotychczasowe hashe bez zmian.
+
+## 17. Krok 9, partia 4: druk (15 X 2026)
+
+**Stan:** 42 z 91 efektów gotowych. Zostało 49: 6 Fazy 2 (ASCII Studio, Voxel/3D, LED Matrix, Low Poly, Truchet, Smudge) i 43 Fazy 3.
+
+**Wspólne** (`engine/src/core/screen.ts`)
+- `amScreen`: raster AM pod dowolnym kątem, pole kropki = pokrycie (DOT_R przeniesione z post-halftone bez zmian liczbowych, hashe identyczne).
+- `valueNoise`: gładki szum.
+- `dilate`: poszerzanie maski.
+
+**Efekty** (opcje z pliku 02: CMYK Drops `docs`, reszta `proj`; zakresy, domyślne wartości i wzory `proj`)
+- **Risograph** (`print.ts`): 2–3 farby. Rozdział metodą najmniejszych kwadratów w modelu mnożenia (log przepuszczalności), pole kropki dobrane tak, by średni ton się zgadzał. Każda farba ma własny kąt rastra (15°/75°/45°), przesunięcie (misregistration), ziarno i nadruk (mnożenie) albo krycie.
+- **CMYK Drops:** pełny GCR, kąty C 15°, M 75°, Y 0°, K 45°. Opcje:
+  - kropki `dots`, `sharp` albo `ink` (falista, rozlana krawędź);
+  - `gridNoise`, `contrast`, `softness`, `minDot`;
+  - przyrost farby osobno dla każdego kanału.
+- **Comic:** posteryzacja (albo palety Pop / Retro), Ben-Day 45° w cieniach, kontur Sobel > 0,12 poszerzony do grubości.
+- **Crosshatch:** 2–4 warstwy (kąt + 0°, 90°, 45°, 135°), każda włącza się przy coraz większej ciemności. Jitter: falowanie linii.
+- **Sketch:** krawędzie i kreski ołówka 45°/135° w urywanych pociągnięciach na papierze z fakturą. Jasne partie celowo bez kresek.
+- **Stippling** (`stipple.ts`): punkty we współrzędnych źródła (siatka z losowym przesunięciem). Próg: hasz (random), szum niebieski albo ważony Voronoi (2 iteracje Lloyda). Średnica dotMin…dotMax wg ciemności.
+- **Pointillize:** jedna plamka na komórkę, w losowej kolejności rysowania, w kolorze obrazu; dotMin…dotMax, overlap, jitter.
+
+**Poprawki projektu po testach**
+- Kontur w Comic miał próg 0,2. Skok jasności o 39% po wygładzeniu daje tylko 0,19, więc kontur nie powstawał. Teraz 0,12.
+- Kreskowanie w Sketch zaczynało się od ciemności ok. 0,45, więc szarości środkowe były puste. Teraz od ok. 0,1.
+
+**Czas (Node, 1600×1067)**
+
+| Efekt | Czas |
+|---|---|
+| Stippling | 0,2 s |
+| Crosshatch | 0,44 s |
+| Pointillize | 0,49 s |
+| Sketch | 0,53 s |
+| Comic | 0,7 s |
+| CMYK | 0,91 s |
+| Weighted Stippling | 1,1 s |
+| Risograph | 1,2–1,4 s |
+
+**Testy (`test`)**
+- Silnik 210 z 210, 14 nowych:
+  - biel = sam papier, bajt w bajt;
+  - ciemniejsza szarość = ciemniejszy wynik (Sketch: nie jaśniej i wyraźnie ciemniej w czerni);
+  - Risograph: obraz w kolorze farby 2 prawie bez farby 1 (0%);
+  - CMYK: czysty cyjan tylko farbą C; minDot; czerń;
+  - Comic: płaski kolor = posteryzacja, bajt w bajt; kontur tylko przy krawędzi; Ben-Day w cieniu;
+  - Crosshatch: więcej warstw = więcej tuszu;
+  - Sketch: biała kartka bez kresek; linia przy krawędzi;
+  - Stippling: liczba kropek przy skali 2 jak przy 1 (878 / 875); ciemniej = więcej kropek;
+  - Pointillize: płaski kolor = piksele między tłem a kolorem; liczba plamek przy skali 2 identyczna.
+- Mutacje, wszystkie wykryte:
+  - odwrócony rozdział Risographu;
+  - zły K w CMYK;
+  - zła posteryzacja w Comic;
+  - odwrócony Crosshatch;
+  - Stippling i Pointillize bez współrzędnych źródła.
+- Przeglądarka = Node: 59 z 59.
+- Dotychczasowe hashe bez zmian.
+- `oko`: miniatury, a Sketch, Crosshatch i Pointillize także w 600 px.

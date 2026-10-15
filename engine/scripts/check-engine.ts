@@ -5,7 +5,7 @@ import { writeFileSync } from 'node:fs';
 import { render, renderText, EFFECTS, POSTFX, COLOR_PARAMS, canvasGlyphs, getEffect, PALETTES } from '../src/index.ts';
 import type { Img } from '../src/index.ts';
 import { testImage } from './make-test-image.ts';
-import { blur, resize, lum, parseColor, hash01, mulberry32 } from '../src/core/util.ts';
+import { blur, resize, lum, parseColor, hash01, mulberry32, clamp, lerp } from '../src/core/util.ts';
 import { blueNoise64, ALGORITHMS } from '../src/effects/dither.ts';
 import { applyColor } from '../src/post/color.ts';
 import { newImg, cloneImg } from '../src/core/types.ts';
@@ -27,7 +27,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 35, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń + 4 rozmycia + 6 glitch/światło (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 42, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń + 4 rozmycia + 6 glitch/światło + 7 druk (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -491,6 +491,48 @@ const SRC = testImage(300, 200);
   const stripes = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; stripes.data[o] = stripes.data[o + 1] = stripes.data[o + 2] = 128 + 100 * Math.sin((x + 0.5) / 1.5); }
   const ab = D(stripes, 'lens', { strength: 100, radial: 100, barrel: 0, fringe: 0, vignette: 0 }); const cpx = (80 * W + 100) * 4; const S0 = stripes;
   ok('Aberration radialna: srodek obrazu bez przesuniecia kanalow (R, B jak zrodlo +-1), rog przesuniety', Math.abs(ab.data[cpx] - S0.data[cpx]) <= 1 && Math.abs(ab.data[cpx + 2] - S0.data[cpx + 2]) <= 1 && Math.abs(ab.data[(5 * W + 5) * 4] - S0.data[(5 * W + 5) * 4]) > 10);
+}
+// 23. Krok 9: druk (Risograph, CMYK Drops, Comic, Crosshatch, Sketch, Stippling, Pointillize)
+{
+  const W = 160, H = 120; const R = (src: Img, id: string, p: any = {}, scale = 1) => render(src, { style: { id, params: p } }, { scale });
+  const D = (src: Img, id: string, p: any = {}, scale = 1) => R(src, id, p, scale).img; const flat = (r: number, g: number, b: number) => newImg(W, H, [r, g, b, 255]);
+  const allEq = (i: Img, c: number[]) => { for (let k = 0; k < i.data.length; k += 4) if (i.data[k] !== c[0] || i.data[k + 1] !== c[1] || i.data[k + 2] !== c[2]) return false; return true; };
+  const mono = (id: string, p: any = {}) => { const m = [230, 180, 130, 80, 30].map((v) => meanLum(D(flat(v, v, v), id, p))); return { ok: m.every((v, i) => i === 0 || v < m[i - 1]), m }; };
+  const white = flat(255, 255, 255);
+  ok('druk: biel daje sam papier, bajt w bajt (Risograph, CMYK Drops, Crosshatch, Stippling)', allEq(D(white, 'risograph'), parseColor('#f2ede4')) && allEq(D(white, 'halftonecmyk'), parseColor('#f7f3ea')) && allEq(D(white, 'crosshatch'), parseColor('#f6f2e8')) && allEq(D(white, 'stippling'), parseColor('#f4f1ea')));
+  const mons = ['risograph', 'halftonecmyk', 'crosshatch', 'sketch', 'stippling'].map((id) => [id, mono(id, id === 'sketch' ? { paperTexture: 0 } : {})] as const);
+  // Sketch: swiatla celowo bez kresek (jak szkic olowkiem), wiec dla niego: nie jasniej i wyraznie ciemniej w czerni
+  const skm = mono('sketch', { paperTexture: 0 }).m; const skOk = skm.every((v, i) => i === 0 || v <= skm[i - 1] + 1e-9) && skm[4] < skm[0] - 0.1;
+  ok('druk: ciemniejsza szarosc = ciemniejszy wynik (5 tonow; Sketch: nie jasniej i o > 0,1 ciemniej w czerni)', mons.every(([id, r]) => (id === 'sketch' ? skOk : r.ok)), mons.filter(([, r]) => !r.ok).map(([id, r]) => id + ' ' + r.m.map((v) => v.toFixed(3)).join('/')).join('; '));
+  // Risograph: obraz w kolorze farby 2 drukuje sie prawie tylko farba 2
+  const rb = D(flat(0, 120, 191), 'risograph', { grain: 0 }); let pink = 0; for (let k = 0; k < rb.data.length; k += 4) if (rb.data[k] > rb.data[k + 2] + 30) pink++;
+  ok('Risograph: obraz w kolorze farby 2 (niebieskiej) prawie bez farby 1 (rozowe piksele < 2%)', pink / (W * H) < 0.02, `${(100 * pink / (W * H)).toFixed(2)}%`);
+  // CMYK: czysty cyjan -> tylko farba C (kazdy piksel lezy na odcinku papier -> papier x cyjan)
+  const cy = D(flat(0, 255, 255), 'halftonecmyk'); const P = parseColor('#f7f3ea'), C = parseColor('#00aeef'); let off = 0;
+  for (let k = 0; k < cy.data.length; k += 4) { const t = (P[0] - cy.data[k]) / Math.max(1, P[0] - P[0] * C[0] / P[0]); for (const c of [1, 2]) { const e = P[c] * lerp(1, C[c] / P[c], clamp(t, 0, 1)); if (Math.abs(cy.data[k + c] - e) > 3) { off++; break; } } }
+  ok('CMYK Drops: czysty cyjan drukuje sie tylko farba C (piksele na odcinku papier–cyjan, +-3)', off === 0, `${off}`);
+  ok('CMYK Drops: jasna szarosc ponizej minDot = sam papier; czern bardzo ciemna', allEq(D(flat(250, 250, 250), 'halftonecmyk', { minDot: 10 }), P) && meanLum(D(flat(0, 0, 0), 'halftonecmyk')) < 0.2);
+  // Comic: plaski jasny kolor -> dokladnie kolor po posteryzacji; kontur tylko przy krawedzi; ciemne plaskie pole -> kropki Ben-Day
+  const lv = 4, q = (v: number) => Math.round((v / 255) * (lv - 1)) * (255 / (lv - 1));
+  ok('Comic: plaski jasny kolor (bez krawedzi i cieni) = kolor po posteryzacji do 4 poziomow, bajt w bajt', allEq(D(flat(200, 150, 240), 'comic', { levels: lv }), [q(200), q(150), q(240)].map(Math.round)));
+  const step = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; const v = x < 80 ? 150 : 250; step.data[o] = step.data[o + 1] = step.data[o + 2] = v; }
+  const cm = D(step, 'comic', { outlineThickness: 3 }); const inkX: number[] = []; for (let x = 0; x < W; x++) { const o = (60 * W + x) * 4; if (cm.data[o] < 40) inkX.push(x); }
+  ok('Comic: kontur tylko przy krawedzi (czarne piksele w odleglosci <= 4 px od x = 80) i jest', inkX.length >= 2 && inkX.every((x) => Math.abs(x - 79.5) <= 4.5), inkX.join(','));
+  const dk = D(flat(60, 60, 60), 'comic'); let inkPx = 0; for (let k = 0; k < dk.data.length; k += 4) if (dk.data[k] === 17) inkPx++;
+  ok('Comic: ciemne pole dostaje kropki Ben-Day (czesc pikseli w kolorze tuszu)', inkPx > W * H * 0.1 && inkPx < W * H * 0.9, `${inkPx}`);
+  ok('Crosshatch: wiecej warstw = wiecej tuszu w czerni', meanLum(D(flat(0, 0, 0), 'crosshatch', { layers: 4 })) < meanLum(D(flat(0, 0, 0), 'crosshatch', { layers: 2 })));
+  const sk = D(white, 'sketch'); let skMin = 255; for (let k = 0; k < sk.data.length; k += 4) skMin = Math.min(skMin, sk.data[k]);
+  ok('Sketch: biala kartka bez krawedzi - tylko faktura papieru (piksele >= 247·0,9), bez kresek', skMin >= Math.floor(247 * 0.9), `${skMin}`);
+  const ske = D(step, 'sketch', { hatchDensity: 0, paperTexture: 0 }); const skx: number[] = []; for (let x = 0; x < W; x++) if (ske.data[(60 * W + x) * 4] < 200) skx.push(x);
+  ok('Sketch: linia tylko przy krawedzi (|x − 80| <= 3)', skx.length >= 1 && skx.every((x) => Math.abs(x - 79.5) <= 3.5), skx.join(','));
+  // Stippling i Pointillize: punkty we wspolrzednych zrodla
+  const S = testImage(W, H); const n1 = R(S, 'stippling').info.dots as number, n2 = R(S, 'stippling', {}, 2).info.dots as number;
+  ok('Stippling: liczba kropek przy skali 2 jak przy 1 (+-2%); seed i rozklad zmieniaja wynik', Math.abs(n2 / n1 - 1) <= 0.02 && sha(D(S, 'stippling', { seed: 1 })) !== sha(D(S, 'stippling', { seed: 2 })) && sha(D(S, 'stippling', { distribution: 'weighted' })) !== sha(D(S, 'stippling')), `${n1} / ${n2}`);
+  const cnt = [200, 120, 40].map((v) => R(flat(v, v, v), 'stippling', { distribution: 'random' }).info.dots as number);
+  ok('Stippling: ciemniej = wiecej kropek (biel 0)', R(white, 'stippling').info.dots === 0 && cnt[0] < cnt[1] && cnt[1] < cnt[2], cnt.join(' '));
+  const pc = [235, 120, 40], bg = parseColor('#f4f1ea'); const pt = D(flat(pc[0], pc[1], pc[2]), 'pointillize'); let bad = 0;
+  for (let k = 0; k < pt.data.length; k += 4) { const t = (pt.data[k + 1] - bg[1]) / (pc[1] - bg[1]); for (const c of [0, 2]) if (Math.abs(pt.data[k + c] - lerp(bg[c], pc[c], clamp(t, 0, 1))) > 3) { bad++; break; } }
+  ok('Pointillize: plaski kolor -> kazdy piksel miedzy tlem a tym kolorem (+-3); liczba plamek przy skali 2 identyczna', bad === 0 && R(S, 'pointillize').info.dots === R(S, 'pointillize', {}, 2).info.dots, `${bad}`);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

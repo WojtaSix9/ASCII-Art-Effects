@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-15T12:35:35.956Z",
+  "generated": "2026-10-15T12:53:32.227Z",
   "size": "960x668",
   "samples": {
     "1": {
@@ -28,211 +28,253 @@
       "sample": 1,
       "bytes": 146634,
       "mode": "q0.8",
-      "ms": 112
+      "ms": 158
     },
     "dots": {
       "sample": 1,
       "bytes": 193198,
       "mode": "q0.8",
-      "ms": 53
+      "ms": 46
     },
     "pixel": {
       "sample": 1,
       "bytes": 7304,
       "mode": "q1",
-      "ms": 16
+      "ms": 25
     },
     "lego": {
       "sample": 1,
       "bytes": 19196,
       "mode": "q1",
-      "ms": 57
+      "ms": 61
     },
     "dither": {
       "sample": 1,
       "bytes": 18934,
       "mode": "q1",
-      "ms": 28
+      "ms": 24
+    },
+    "risograph": {
+      "sample": 1,
+      "bytes": 353218,
+      "mode": "q0.8",
+      "ms": 393
+    },
+    "sketch": {
+      "sample": 1,
+      "bytes": 103710,
+      "mode": "q0.8",
+      "ms": 226
     },
     "posterize": {
       "sample": 1,
       "bytes": 66608,
       "mode": "q1",
-      "ms": 23
-    },
-    "diamond": {
-      "sample": 1,
-      "bytes": 189002,
-      "mode": "q0.8",
-      "ms": 30
-    },
-    "diagonal": {
-      "sample": 1,
-      "bytes": 231040,
-      "mode": "q0.8",
-      "ms": 41
-    },
-    "spherize": {
-      "sample": 1,
-      "bytes": 58364,
-      "mode": "q0.8",
-      "ms": 46
-    },
-    "zigzag": {
-      "sample": 1,
-      "bytes": 59148,
-      "mode": "q0.8",
-      "ms": 34
-    },
-    "polar": {
-      "sample": 1,
-      "bytes": 54020,
-      "mode": "q0.8",
-      "ms": 91
-    },
-    "motionblur": {
-      "sample": 1,
-      "bytes": 21932,
-      "mode": "q0.8",
-      "ms": 346
-    },
-    "gaussianblur": {
-      "sample": 1,
-      "bytes": 12960,
-      "mode": "q0.8",
-      "ms": 88
-    },
-    "crt": {
-      "sample": 1,
-      "bytes": 80938,
-      "mode": "q0.8",
-      "ms": 165
-    },
-    "scanline": {
-      "sample": 1,
-      "bytes": 68790,
-      "mode": "q0.8",
-      "ms": 7
-    },
-    "disco": {
-      "sample": 1,
-      "bytes": 25266,
-      "mode": "q0.8",
-      "ms": 17
-    },
-    "duotone": {
-      "sample": 1,
-      "bytes": 50686,
-      "mode": "q0.8",
       "ms": 19
     },
-    "lens": {
+    "crosshatch": {
       "sample": 1,
-      "bytes": 48544,
+      "bytes": 324222,
       "mode": "q0.8",
-      "ms": 127
+      "ms": 211
+    },
+    "cross": {
+      "sample": 1,
+      "bytes": 176680,
+      "mode": "q0.8",
+      "ms": 47
+    },
+    "lines": {
+      "sample": 1,
+      "bytes": 36772,
+      "mode": "q0.8",
+      "ms": 44
+    },
+    "pinch": {
+      "sample": 1,
+      "bytes": 50466,
+      "mode": "q0.8",
+      "ms": 40
+    },
+    "twirl": {
+      "sample": 1,
+      "bytes": 60312,
+      "mode": "q0.8",
+      "ms": 62
+    },
+    "ripple": {
+      "sample": 1,
+      "bytes": 56044,
+      "mode": "q0.8",
+      "ms": 54
+    },
+    "shear": {
+      "sample": 1,
+      "bytes": 72266,
+      "mode": "q0.8",
+      "ms": 82
+    },
+    "tiltshift": {
+      "sample": 1,
+      "bytes": 39174,
+      "mode": "q0.8",
+      "ms": 188
+    },
+    "radialblur": {
+      "sample": 1,
+      "bytes": 18178,
+      "mode": "q0.8",
+      "ms": 409
+    },
+    "rgbsplit": {
+      "sample": 1,
+      "bytes": 60606,
+      "mode": "q0.8",
+      "ms": 42
+    },
+    "thermal": {
+      "sample": 1,
+      "bytes": 48806,
+      "mode": "q0.8",
+      "ms": 133
+    },
+    "gradientmap": {
+      "sample": 1,
+      "bytes": 68596,
+      "mode": "q0.8",
+      "ms": 21
+    },
+    "edgeglow": {
+      "sample": 1,
+      "bytes": 44804,
+      "mode": "q0.8",
+      "ms": 190
     },
     "block-chars": {
       "sample": 2,
       "bytes": 79098,
       "mode": "q0.8",
-      "ms": 148
+      "ms": 102
     },
     "braille": {
       "sample": 2,
       "bytes": 9714,
       "mode": "q1",
-      "ms": 76
+      "ms": 70
     },
     "mosaic": {
       "sample": 2,
       "bytes": 66982,
       "mode": "q1",
-      "ms": 24
+      "ms": 27
     },
     "hexmosaic": {
       "sample": 2,
       "bytes": 162126,
       "mode": "q0.8",
-      "ms": 93
+      "ms": 73
+    },
+    "stippling": {
+      "sample": 2,
+      "bytes": 316006,
+      "mode": "q0.8",
+      "ms": 243
+    },
+    "comic": {
+      "sample": 2,
+      "bytes": 133140,
+      "mode": "q0.8",
+      "ms": 316
     },
     "halftone": {
       "sample": 2,
       "bytes": 362400,
       "mode": "q0.8",
-      "ms": 218
+      "ms": 94
     },
-    "cross": {
+    "pointillize": {
       "sample": 2,
-      "bytes": 205280,
+      "bytes": 249192,
       "mode": "q0.8",
-      "ms": 45
+      "ms": 584
     },
-    "lines": {
+    "halftonecmyk": {
       "sample": 2,
-      "bytes": 59316,
+      "bytes": 445668,
       "mode": "q0.8",
-      "ms": 38
+      "ms": 286
     },
-    "pinch": {
+    "diamond": {
       "sample": 2,
-      "bytes": 125250,
+      "bytes": 211724,
       "mode": "q0.8",
-      "ms": 56
+      "ms": 31
     },
-    "twirl": {
+    "diagonal": {
       "sample": 2,
-      "bytes": 126162,
+      "bytes": 263338,
       "mode": "q0.8",
-      "ms": 51
+      "ms": 44
     },
-    "ripple": {
+    "spherize": {
       "sample": 2,
-      "bytes": 121142,
+      "bytes": 116054,
       "mode": "q0.8",
-      "ms": 67
+      "ms": 76
     },
-    "shear": {
+    "zigzag": {
       "sample": 2,
-      "bytes": 141122,
+      "bytes": 123614,
       "mode": "q0.8",
-      "ms": 77
+      "ms": 41
     },
-    "tiltshift": {
+    "polar": {
       "sample": 2,
-      "bytes": 60984,
+      "bytes": 98352,
       "mode": "q0.8",
-      "ms": 455
+      "ms": 94
     },
-    "radialblur": {
+    "motionblur": {
       "sample": 2,
-      "bytes": 24838,
+      "bytes": 36330,
       "mode": "q0.8",
-      "ms": 470
+      "ms": 354
     },
-    "rgbsplit": {
+    "gaussianblur": {
       "sample": 2,
-      "bytes": 127872,
+      "bytes": 18408,
       "mode": "q0.8",
-      "ms": 38
+      "ms": 75
     },
-    "thermal": {
+    "crt": {
       "sample": 2,
-      "bytes": 96908,
+      "bytes": 109308,
       "mode": "q0.8",
-      "ms": 144
+      "ms": 159
     },
-    "gradientmap": {
+    "scanline": {
       "sample": 2,
-      "bytes": 142968,
+      "bytes": 142724,
       "mode": "q0.8",
-      "ms": 28
+      "ms": 10
     },
-    "edgeglow": {
+    "disco": {
       "sample": 2,
-      "bytes": 121758,
+      "bytes": 30262,
+      "mode": "q1",
+      "ms": 15
+    },
+    "duotone": {
+      "sample": 2,
+      "bytes": 109944,
       "mode": "q0.8",
-      "ms": 255
+      "ms": 16
+    },
+    "lens": {
+      "sample": 2,
+      "bytes": 95660,
+      "mode": "q0.8",
+      "ms": 238
     }
   }
 }

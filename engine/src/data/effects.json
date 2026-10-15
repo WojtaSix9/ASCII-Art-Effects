@@ -179,7 +179,7 @@
     "description": "Obraz zbudowany z tysięcy małych punktów: gęsto w cieniach, rzadko w światłach (rysunek tuszem punktowym).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "risograph",
@@ -192,7 +192,7 @@
     "description": "Druk risograficzny: 2–3 farby w osobnych warstwach, każda z rastrem, lekko przesunięte względem siebie, z ziarnem i nakładaniem kolorów.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "comic",
@@ -205,7 +205,7 @@
     "description": "Styl komiksowy: posteryzacja do kilku plam koloru, czarne kontury i raster Ben-Day w cieniach.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "sketch",
@@ -218,7 +218,7 @@
     "description": "Szkic ołówkiem: wykryte krawędzie plus lekkie kreskowanie w cieniach na papierze.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "engraving",
@@ -322,7 +322,7 @@
     "description": "Pointylizm: losowe okrągłe plamki koloru z obrazu, różnej wielkości, częściowo nachodzące na siebie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "crosshatch",
@@ -335,7 +335,7 @@
     "description": "Kreskowanie krzyżowe: kolejne warstwy linii pod różnymi kątami włączają się w coraz ciemniejszych miejscach.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "halftonecmyk",
@@ -348,7 +348,7 @@
     "description": "Rozdzielenie na cztery farby (C, M, Y, K) z rastrem pod różnymi kątami na kolorze papieru.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "cross",

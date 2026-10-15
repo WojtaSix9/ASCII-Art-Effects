@@ -3,6 +3,7 @@
 // Kolejnosc stala, niezalezna od kolejnosci wlaczania (plik 01). Wartosci w px skaluja sie ze skala eksportu.
 import type { Img, PostFxDef } from '../core/types.ts';
 import { color, range, select, seedParam } from '../core/params.ts';
+import { DOT_R } from '../core/screen.ts';
 import { blur, cellAverages, clamp, hash01, lerp, lum, mulberry32, parseColor } from '../core/util.ts';
 
 const smooth = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a || 1e-6), 0, 1); return t * t * (3 - 2 * t); };
@@ -11,8 +12,6 @@ const PX = { unit: 'px', px: true } as const;
 
 /** Post-halftone (proj): siatka komórek wyrównana do osi, w każdej komórce jeden kształt, którego POLE jest równe udziałowi tonu
  *  (koło: odwrotność pola koła przyciętego do kwadratu, tablica 257 wartości). Dzięki temu średni ton się zachowuje. */
-const circleInSquare = (r: number) => { const a = 0.5; if (r <= a) return Math.PI * r * r; if (r >= a * Math.SQRT2) return 1; return Math.PI * r * r - 4 * (r * r * Math.acos(a / r) - a * Math.sqrt(r * r - a * a)); };
-const DOT_R = (() => { const t = new Float32Array(257); for (let i = 0; i <= 256; i++) { const A = i / 256; let lo = 0, hi = Math.SQRT1_2; for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2; if (circleInSquare(m) < A) lo = m; else hi = m; } t[i] = (lo + hi) / 2; } return t; })();
 function halftonePost(img: Img, p: Record<string, any>, s: number): Img {
   const cs = Math.max(2, Math.round(p.size * s)); const { w, h, data: d } = img; const a = cellAverages(img, cs, cs); const mono = p.colour === 'mono'; const shape = p.shape;
   for (let cy = 0; cy < a.ny; cy++) for (let cx = 0; cx < a.nx; cx++) {
