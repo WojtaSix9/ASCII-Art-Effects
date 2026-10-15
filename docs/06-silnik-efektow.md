@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 26 efektów Fazy 3 (stan po kroku 9, partia 9; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 20 efektów Fazy 3 (stan po kroku 9, partia 10; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -602,3 +602,36 @@ Na tej podstawie:
 - Mezzotint i Engraving: monotoniczność tonu.
 
 **Aplikacja:** przeglądarka = Node 82 z 82 (`QUICK`); test UI z `ONLY` (11 efektów) 39 z 39. Test „efekt wkrótce” brał Warhol, który już jest gotowy; teraz bierze pierwszy efekt o statusie `soon` z katalogu.
+
+## 22. Krok 9, partia 10 (Faza 3): geometryczne
+
+**Stan:** 71 z 91 efektów gotowych, zostało 20 (wszystkie z Fazy 3).
+
+**Efekty** (`geo3.ts`; wszystko `proj`, bo `docs` podaje tylko nazwy i parametry)
+- **Lattice:** węzły siatki (kwadrat, z przekątnymi albo heksagonalna) połączone krawędziami. Średnica węzła i grubość krawędzi ∝ jasność. Kolor z obrazu (podbity do pełnej jasności) albo biały.
+- **Topography:** izolinie jasności. Wysokość = wygładzona jasność × liczba linii, a odległość od izolinii = |v − round(v)| / |∇v|, więc linia ma stałą grubość niezależnie od nachylenia. Pasy wypełnione kolorem rampy (terrain / heat / mono) albo same linie.
+- **Neon Grid:** siatka synthwave; jasność obrazu steruje jasnością i grubością linii oraz przesuwa odcień o 40°. Opcjonalnie podłoga w perspektywie (horyzont na 40% wysokości, wyżej przyciemnione zdjęcie). Poświata: rozmyta warstwa linii, mieszanie screen.
+- **Schematic:** granatowe tło, siatka główna i pomocnicza, krawędzie z gradientu jasności. Adnotacje z seeda: krzyże pomiarowe i linie wymiarowe, bez tekstu.
+- **Droste:** poziom k = floor(log m / log ratio), gdzie m = odległość od środka w normie max (względem połowy ramki). Piksel poziomu k bierze źródło z odległości / ratio^k, obrócone o k × rotation. Rama poza 1. poziomem zostaje bez zmian.
+- **Iso Extrude:** komórki obróconej o 45° siatki jako słupki izometryczne o wysokości ∝ jasność. Ściany: góra, lewa i prawa z cieniowaniem. Rysowane od tyłu (algorytm malarza), czworokąty wygładzone, opcjonalny obrys.
+- **Czas (Node, 600 px):** 26–332 ms (najwolniejszy Iso Extrude).
+
+**Testy silnika (`test`, 276 z 276)** — po jednej kluczowej własności na efekt:
+- Lattice: czarny obraz = samo tło;
+- Topography: rampa 0–1 przy 10 liniach daje 9–11 izolinii w wierszu (wyszło 11); płaski obraz bez linii;
+- Neon Grid: nad horyzontem = źródło × 0,25; jaśniejszy obraz = jaśniejszy wynik;
+- Schematic: bez adnotacji siatka jest okresowa co `gridSpacing`; seed zmienia adnotacje;
+- Droste: rama bez zmian; piksel 1. poziomu = źródło 2× dalej od środka; płaski obraz bez zmian;
+- Iso Extrude: cieniowanie zmienia tylko ściany boczne (wysokość 0: 46 różnych pikseli, 150%: 1453).
+  - Pierwsza wersja testu (biały płaski obraz) była błędna: przy równych słupkach ściany boczne są zasłonięte przez sąsiadów.
+  - Te 46 pikseli przy wysokości 0 to wygładzone krawędzie zdegenerowanych ścian.
+
+**`BRAK`:**
+- Droste bez płynnej spirali (log-polar), tylko zagnieżdżenie z obrotem.
+- Schematic bez opisów tekstowych.
+- Iso Extrude nie pokazuje ścian na krawędzi kadru.
+
+**Aplikacja:**
+- Przeglądarka = Node w 88 z 88 przypadków (`QUICK`).
+- Test UI z `ONLY` (te 6 efektów): 39 z 39.
+- Pozostałych testów aplikacji (edytor, smoke, a11y) nie uruchamiałem, bo interfejs się nie zmienił.

@@ -28,7 +28,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 65, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 17 Fazy 3 (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 71, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 23 Fazy 3 (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -622,6 +622,25 @@ const SRC = testImage(300, 200);
   ok('Warhol: 2×2 i 3 poziomy -> najwyzej 12 kolorow; Woodblock bez konturu i faktur -> najwyzej colorCount kolorow', colorsOf(D(S, 'warhol', { grid: '2', levels: 3 })) <= 12 && colorsOf(D(S, 'ukiyoe', { outline: 0, woodGrain: 0, paperTexture: 0, colorCount: 5 })) <= 5);
   const mz = [200, 140, 80].map((v) => meanLum(D(g(v), 'mezzotint'))); const en = [220, 140, 60].map((v) => meanLum(D(g(v), 'engraving')));
   ok('Mezzotint i Engraving: ciemniejsza szarosc = ciemniejszy wynik', mz[0] > mz[1] && mz[1] > mz[2] && en[0] > en[1] && en[1] > en[2], `${mz.map((v) => v.toFixed(3))} | ${en.map((v) => v.toFixed(3))}`);
+}
+// 29. Krok 9, Faza 3: geometryczne (po jednej kluczowej wlasnosci na efekt)
+{
+  const W = 160, H = 120; const D = (src: Img, id: string, p: any = {}) => render(src, { style: { id, params: p } }).img; const S = testImage(W, H); const g = (v: number) => newImg(W, H, [v, v, v, 255]);
+  ok('Lattice: czarny obraz (wezly i krawedzie o rozmiarze 0) -> samo tlo', colorsOf(D(g(0), 'lattice', { bgColor: '#102030' })) === 1 && sha(D(g(0), 'lattice', { bgColor: '#102030' })) === sha(newImg(W, H, [16, 32, 48, 255])));
+  const ramp = newImg(W, H, [0, 0, 0, 255]); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; ramp.data[i] = ramp.data[i + 1] = ramp.data[i + 2] = Math.round((x / (W - 1)) * 255); }
+  const tp = D(ramp, 'topography', { lineCount: 10, smoothing: 0, colorRamp: 'mono', lineColor: '#ff0000', thickness: 1.5 }); let runs = 0, inR = false; for (let x = 0; x < W; x++) { const i = (60 * W + x) * 4; const red = tp.data[i] > tp.data[i + 1] + 80; if (red && !inR) runs++; inR = red; }
+  ok('Topography: rampa jasnosci 0–1 i 10 linii -> 9–11 izolinii w wierszu; plaski obraz bez linii', runs >= 9 && runs <= 11 && colorsOf(D(g(100), 'topography', { lineColor: '#ff0000' })) === 1, `${runs}`);
+  const ng = D(S, 'neongrid', { perspective: true, glow: 0 }); let above = true; for (let y = 0; y < H * 0.4 - 1; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; for (let q = 0; q < 3; q++) if (Math.abs(ng.data[i + q] - S.data[i + q] * 0.25) > 1) above = false; }
+  ok('Neon Grid: nad horyzontem (perspektywa, bez poswiaty) przyciemnione zrodlo; jasniejszy obraz = jasniejsze linie', above && meanLum(D(g(220), 'neongrid')) > meanLum(D(g(60), 'neongrid')));
+  const sc = D(g(120), 'schematic', { annotationDensity: 0, gridSpacing: 40 }); let per = true; for (let y = 0; y < H; y++) for (let x = 0; x < W - 40; x++) if (sc.data[(y * W + x) * 4] !== sc.data[(y * W + x + 40) * 4]) per = false;
+  ok('Schematic: plaski obraz bez adnotacji -> sama siatka, okresowa co gridSpacing; seed zmienia adnotacje', per && sha(D(S, 'schematic', { seed: 1 })) !== sha(D(S, 'schematic', { seed: 2 })));
+  const dr = D(S, 'droste', { scaleRatio: 50, rotation: 0 }); let frame = true; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const m = Math.max(Math.abs(x + 0.5 - W / 2) / (W / 2), Math.abs(y + 0.5 - H / 2) / (H / 2)); if (m >= 0.5) { const i = (y * W + x) * 4; if (dr.data[i] !== S.data[i] || dr.data[i + 1] !== S.data[i + 1]) frame = false; } }
+  const pin = (x: number, y: number) => dr.data[(y * W + x) * 4]; const src = (x: number, y: number) => S.data[(y * W + x) * 4];
+  ok('Droste: rama poza 1. poziomem bez zmian; piksel 1. poziomu = zrodlo 2× dalej od srodka (bez obrotu); plaski obraz bez zmian', frame && Math.abs(pin(60, 40) - src(40, 20)) <= 12 && Math.abs(pin(100, 75) - src(120, 90)) <= 12 && sha(D(g(90), 'droste')) === sha(g(90)), `${pin(60, 40)}/${src(40, 20)} ${pin(100, 75)}/${src(120, 90)}`);
+  const sq = g(0); for (let y = 40; y < 80; y++) for (let x = 60; x < 100; x++) sq.data.fill(255, (y * W + x) * 4, (y * W + x) * 4 + 3); const iso = (p: any) => D(sq, 'isoextrude', { outline: false, bgColor: '#000000', ...p });
+  const diff = (a: Img, b: Img) => { let n = 0; for (let k = 0; k < a.data.length; k += 4) if (Math.abs(a.data[k] - b.data[k]) > 8) n++; return n; };
+  const dH = diff(iso({ shading: 100 }), iso({ shading: 0 })), d0 = diff(iso({ shading: 100, maxHeight: 0 }), iso({ shading: 0, maxHeight: 0 }));
+  ok('Iso Extrude: cieniowanie zmienia tylko sciany boczne -> przy wysokosci 0 (brak scian) obraz prawie ten sam, przy 150% wyraznie inny', dH > 300 && d0 < dH / 20, `${dH} ${d0}`);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

@@ -439,7 +439,7 @@
     "description": "Efekt Droste: obraz rekurencyjnie zagnieżdżony w sobie, ze spiralnym obrotem.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "truchet",
@@ -465,7 +465,7 @@
     "description": "Izometryczne słupki, których wysokość zależy od jasności komórki (histogram 3D).",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "flowfield",
@@ -491,7 +491,7 @@
     "description": "Kratownica: węzły siatki połączone krawędziami, grubość węzłów i linii zależy od jasności.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "topography",
@@ -504,7 +504,7 @@
     "description": "Warstwice: izolinie jasności jak na mapie topograficznej.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "forms",
@@ -530,7 +530,7 @@
     "description": "Schemat techniczny: linie siatki, krzyże pomiarowe, wykryte krawędzie i etykiety jak na rysunku inżynierskim.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "neongrid",
@@ -543,7 +543,7 @@
     "description": "Neonowa siatka w stylu synthwave: jasność obrazu steruje jasnością i grubością świecących linii.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "smudge",
