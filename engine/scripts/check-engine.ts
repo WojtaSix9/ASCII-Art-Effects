@@ -27,7 +27,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 25, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 29, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń + 4 rozmycia (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -415,6 +415,43 @@ const SRC = testImage(300, 200);
   ok('Polar: prostokatne -> biegunowe -> prostokatne odtwarza obraz w wierszach 0,35–0,95 wysokosci (obwod >= szerokosc; PSNR > 20 dB)', pp > 20, pp.toFixed(1) + ' dB');
   const z1 = D(rows.w ? mk((x) => 128 + 100 * Math.sin(x / 2)) : rows, 'zigzag', { amount: 100, wavelength: 20 }); let rowShift = 0; for (let y = 0; y < H; y++) { let d = 0; for (let x = 0; x < W; x++) d += Math.abs(z1.data[(y * W + x) * 4] - z1.data[x * 4]); rowShift = Math.max(rowShift, d); }
   ok('ZigZag: wiersze przesuniete wzgledem siebie (obraz pionowych pasow sie zmienia)', rowShift > 1000);
+}
+// 21. Krok 9: rozmycia (plik 02, sekcja 6)
+{
+  const W = 200, H = 160; const mk = (f: (x: number, y: number) => number) => { const i = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = Math.round(f(x + 0.5, y + 0.5)); const o = (y * W + x) * 4; i.data[o] = i.data[o + 1] = i.data[o + 2] = v; } return i; };
+  const D = (src: Img, id: string, p: any = {}, scale = 1) => render(src, { style: { id, params: p } }, { scale }).img;
+  const S = testImage(W, H); const varL = (i: Img) => { const m = meanLum(i); let v = 0; for (let k = 0; k < i.data.length; k += 4) v += (lum(i.data[k], i.data[k + 1], i.data[k + 2]) - m) ** 2; return v / (i.data.length / 4); };
+  ok('rozmycia: wartosc 0 = obraz bez zmian, bajt w bajt (Gaussian radius 0, Motion length 0, Radial amount 0, Tilt-Shift blur 0 i nasycenie 0)', sha(D(S, 'gaussianblur', { radius: 0 })) === sha(S) && sha(D(S, 'motionblur', { length: 0 })) === sha(S) && sha(D(S, 'radialblur', { amount: 0 })) === sha(S) && sha(D(S, 'tiltshift', { blurAmount: 0, saturationBoost: 0 })) === sha(S));
+  const flat = uniform(W, H, 137);
+  ok('rozmycia: jednolity obraz bez zmian (4 efekty, nasycenie Tilt-Shift nie dziala na szarosc)', ['gaussianblur', 'motionblur', 'radialblur', 'tiltshift'].every((id) => sha(D(flat, id)) === sha(flat)));
+  const v = [0, 2, 6, 15].map((r) => varL(D(S, 'gaussianblur', { radius: r }))); const dm = Math.abs(meanLum(D(S, 'gaussianblur', { radius: 15 })) - meanLum(S));
+  ok('Gaussian: wariancja jasnosci maleje z promieniem, srednia zachowana (+-0,005)', v[0] > v[1] && v[1] > v[2] && v[2] > v[3] && dm <= 0.005, v.map((x) => x.toFixed(4)).join(' ') + ` dm ${dm.toFixed(4)}`);
+  // szerokosc rozmycia ~ sigma: profil krawedzi 10–90% ma ok. 2,56 sigma (dla gaussa)
+  const edge = mk((x) => (x < 100 ? 0 : 255)); const e = D(edge, 'gaussianblur', { radius: 10 }); const row = [...Array(W)].map((_, x) => e.data[(80 * W + x) * 4] / 255);
+  const w1090 = row.filter((t) => t > 0.1 && t < 0.9).length;
+  ok('Gaussian: szerokosc krawedzi 10–90% ok. 2,56 x radius (+-20%)', Math.abs(w1090 / (2.56 * 10) - 1) <= 0.2, `${w1090} px`);
+  const e2 = D(edge, 'gaussianblur', { radius: 10 }, 2); const w2 = [...Array(2 * W)].map((_, x) => e2.data[(160 * 2 * W + x) * 4] / 255).filter((t) => t > 0.1 && t < 0.9).length;
+  ok('Gaussian: promien w px skaluje sie z eksportem (szerokosc krawedzi przy skali 2 = 2x, +-10%)', Math.abs(w2 / (2 * w1090) - 1) <= 0.1, `${w1090} -> ${w2} px`);
+  const rows = mk((x, y) => 128 + 100 * Math.sin(y / 3)), cols = mk((x) => 128 + 100 * Math.sin(x / 3));
+  ok('Motion: kat 0 nie zmienia obrazu stalego w wierszach, rozmywa obraz staly w kolumnach; kat 90 odwrotnie', sha(D(rows, 'motionblur', { angle: 0, length: 40 })) === sha(rows) && varL(D(cols, 'motionblur', { angle: 0, length: 40 })) < varL(cols) / 4 && sha(D(cols, 'motionblur', { angle: 90, length: 40 })) === sha(cols));
+  const ang = mk((x, y) => 128 + 100 * Math.sin(3 * Math.atan2(y - 80, x - 100))), rad = mk((x, y) => 128 + 100 * Math.sin(Math.hypot(x - 100, y - 80) / 6));
+  // porownanie w kole r < 70 (krotszy bok 160): luk spinu z dalszych punktow wychodzi poza obraz, a tam probki maja kolor brzegu
+  const ps = (a: Img, b: Img) => { let se = 0, n = 0; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (Math.hypot(x + 0.5 - 100, y + 0.5 - 80) >= 70) continue; for (let c = 0; c < 3; c++) { const d = a.data[(y * W + x) * 4 + c] - b.data[(y * W + x) * 4 + c]; se += d * d; n++; } } return se === 0 ? 99 : 10 * Math.log10(65025 / (se / n)); };
+  const pz = ps(D(ang, 'radialblur', { type: 'zoom', amount: 100 }), ang), pspin = ps(D(rad, 'radialblur', { type: 'spin', amount: 100 }), rad);
+  const zr = ps(D(rad, 'radialblur', { type: 'zoom', amount: 100 }), rad), sa = ps(D(ang, 'radialblur', { type: 'spin', amount: 100 }), ang);
+  ok('Radial: zoom nie zmienia obrazu katowego, spin obrazu promieniowego (PSNR > 35 dB); zoom rozmywa promieniowy, spin katowy (< 30 dB)', pz > 35 && pspin > 35 && zr < 30 && sa < 30, `${pz.toFixed(1)} ${pspin.toFixed(1)} | ${zr.toFixed(1)} ${sa.toFixed(1)}`);
+  // Tilt-Shift: pas ostrosci bez zmian (bez nasycenia), daleko od pasa rozmyte
+  const tsh = D(cols, 'tiltshift', { focusPosition: 50, focusWidth: 20, blurAmount: 100, saturationBoost: 0 }); let band = 0; for (let y = 0; y < H; y++) { if (Math.abs(y + 0.5 - 80) > 0.1 * H - 1) continue; for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (tsh.data[i] !== cols.data[i] || tsh.data[i + 1] !== cols.data[i + 1]) band++; } }
+  const strip = (i: Img, y0: number, y1: number) => { const o = newImg(W, y1 - y0); o.data.set(i.data.subarray(y0 * W * 4, y1 * W * 4)); return o; };
+  ok('Tilt-Shift: piksele w pasie ostrosci bez zmian; gorny brzeg rozmyty (pionowe pasy co ok. 19 px: wariancja < polowy)', band === 0 && varL(strip(tsh, 0, 20)) < varL(strip(cols, 0, 20)) / 2, `zmienione w pasie: ${band}`);
+  const sat = (i: Img) => { let s = 0; for (let k = 0; k < i.data.length; k += 4) s += Math.max(i.data[k], i.data[k + 1], i.data[k + 2]) - Math.min(i.data[k], i.data[k + 1], i.data[k + 2]); return s; };
+  ok('Tilt-Shift: podbicie nasycenia zwieksza nasycenie', sat(D(S, 'tiltshift', { saturationBoost: 60 })) > sat(D(S, 'tiltshift', { saturationBoost: 0 })) * 1.2);
+  const strobe = D(mk((x) => (Math.abs(x - 100) < 2 ? 255 : 0)), 'motionblur', { angle: 0, length: 60, samples: 4 }); const peaks = [...Array(W)].map((_, x) => strobe.data[(80 * W + x) * 4]); const runs = peaks.reduce((n, v, x) => n + (v > 20 && (x === 0 || peaks[x - 1] <= 20) ? 1 : 0), 0);
+  ok('Motion: Samples 4 przy dlugosci 60 px daje 4 osobne kopie waskiej linii (slad schodkowy)', runs === 4, `${runs}`);
+  const ml = D(mk((x) => (Math.abs(x + 0.5 - 100.5) < 1 ? 255 : 0)), 'motionblur', { angle: 0, length: 40 }); const span = [...Array(W)].filter((_, x) => ml.data[(80 * W + x) * 4] > 0).length;
+  ok('Motion: slad waskiej linii ma dlugosc = length (40 px +-3)', Math.abs(span - 40) <= 3, `${span} px`);
+  const m1 = D(cols, 'motionblur', { angle: 0, length: 20 }), m2 = resize(D(cols, 'motionblur', { angle: 0, length: 20 }, 2), 200, 160);
+  ok('Motion: dlugosc w px skaluje sie z eksportem (skala 2 po zmniejszeniu ~ skala 1, PSNR > 30 dB)', psnr(m1, m2) > 30, psnr(m1, m2).toFixed(1) + ' dB');
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

@@ -660,7 +660,7 @@
     "description": "Rozmycie ruchem w kierunku.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "tiltshift",
@@ -673,7 +673,7 @@
     "description": "Efekt miniatury: ostry pas, reszta rozmyta, podbite nasycenie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "gaussianblur",
@@ -686,7 +686,7 @@
     "description": "Klasyczne rozmycie gaussowskie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "radialblur",
@@ -699,7 +699,7 @@
     "description": "Rozmycie od środka: zoom lub obrót.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "crt",

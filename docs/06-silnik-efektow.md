@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 66 efektów Faz 2–3 (stan po kroku 9, partia 1; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 62 efekty Faz 2–3 (stan po kroku 9, partia 2; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -314,3 +314,43 @@ Projekt i decyzje użytkownika: `docs/08-tekst-projekt.md`.
 **`BRAK`**
 - Wzory nie są porównane z oryginałem.
 - Polar wypełnia narożniki poza okręgiem przedłużeniem dolnego wiersza (promieniste smugi).
+
+## 15. Krok 9, partia 2: rozmycia (15 X 2026)
+
+**Stan:** 29 z 91 efektów gotowych. Zostały 62: 19 Fazy 2 i 43 Fazy 3.
+
+**Efekty** (kod: `engine/src/effects/blurs.ts`; opcje z pliku 02, sekcja 6, tam oznaczone `proj`; zakresy i wzory też `proj`)
+- **Gaussian Blur:** `radius` w px ≈ sigma. Trzy przebiegi rozmycia pudełkowego o promieniu r, gdzie √(r(r+1)) ≈ sigma.
+- **Motion Blur:** `angle`, `length` w px, `samples`. Samples 64 (domyślnie) = gładko; 4–63 przy dłuższym śladzie daje tyle kopii („schodki”).
+- **Radial Blur:** `type` zoom / spin, `amount`, środek.
+  - Zoom: skala od 1 do 1 − 0,35·amount, równomiernie w logarytmie.
+  - Spin: łuk ±30°·amount. Pierwotne ±10° test pokazał jako ledwo widoczne (37 dB na obrazie kątowym).
+- **Tilt-Shift:** ostry pas (`focusPosition`, `focusWidth`, `angle`), dalej przejście przez rozmycie R/3 i R (R = 3% krótszego boku × `blurAmount`) oraz `saturationBoost`.
+- **Wydajność:** Motion i Radial liczone w przebiegach po 8 próbek. P przebiegów o odstępach d·8^p składa się w równomierny rozkład 8^P punktów, przy czym przy zoomie skale się mnożą. Liczba przebiegów zależy od długości śladu (końcowy odstęp ≤ ok. 1 px).
+- **Czas (Node, 1600×1067):**
+
+| Efekt | Przed przebiegami | Teraz |
+|---|---|---|
+| Motion | 1,8 s | 0,74 s (przy 200 px: 1,0 s) |
+| Radial zoom | 5,7 s | 1,0 s |
+| Radial spin | 12,1 s | 1,4 s |
+| Tilt-Shift | – | 0,33 s |
+| Gaussian | – | 0,16 s |
+
+Podgląd liczy się w rozdzielczości ekranu, więc zwykle kilka razy mniej pikseli.
+
+**Testy (`test`)**
+- Silnik 171 z 171, 13 nowych:
+  - wartość 0 = bez zmian, bajt w bajt; jednolity obraz bez zmian;
+  - Gaussian: wariancja maleje z promieniem, średnia zachowana; krawędź 10–90% ≈ 2,56·radius (28 px dla 10); przy skali 2 dwa razy szersza (54 px);
+  - Motion: obraz stały w wierszach bez zmian przy 0°, stały w kolumnach przy 90°; ślad wąskiej linii ma długość `length` (42 px dla 40); Samples 4 daje 4 kopie; skala 2 vs 1: 44 dB;
+  - Radial: zoom nie zmienia obrazu kątowego, spin nie zmienia promieniowego (49 i 57 dB w kole, w którym łuk nie wychodzi poza obraz); każdy z nich rozmywa drugi rodzaj obrazu;
+  - Tilt-Shift: pas ostrości bajt w bajt, brzeg rozmyty, nasycenie rośnie.
+- Testy poprawione po pierwszym uruchomieniu, bez zmiany progów:
+  - spin porównywany tylko w kole wewnątrz obrazu (poza nim łuk sięga brzegu);
+  - Tilt-Shift mierzony na drobnych pasach (obraz testowy ma u góry gładkie gradienty);
+  - w teście skali Motion źródło było powiększone dwa razy.
+- Mutacje: Motion i Gaussian bez skali, Tilt-Shift bez pasa, zamienione tryby Radial, ślad o połowę krótszy. Wszystkie wykryte. Gaussian bez skali i krótszy ślad wymagały dopisania testów.
+- Przeglądarka = Node: 46 z 46.
+- Dotychczasowe hashe bez zmian.
+- `oko`: miniatury 4 efektów.
