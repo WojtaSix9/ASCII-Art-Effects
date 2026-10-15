@@ -352,5 +352,41 @@ const SRC = testImage(300, 200);
   const txt = renderText(B, st('characters', { crop: C }), { glyphs: G })!, txtCut = renderText(cut(B, C), st('characters'), { glyphs: G })!;
   ok('kadr: eksport tekstowy tez uwzglednia kadr', txt === txtCut && txt !== renderText(B, st('characters'), { glyphs: G }));
 }
+// 19. Krok 7.4: warstwa tekstu (plik 08), rysowana na koncu, bez gradingu
+{
+  const { TEXT } = await import('./text-fonts.ts'); const { cropRect } = await import('../src/index.ts');
+  const B = testImage(300, 200); const RT = (extra: any, scale = 1, src = B) => render(src, { style: { id: 'pixel' }, ...extra }, { text: TEXT, scale });
+  const base = sha(RT({}).img);
+  ok('tekst: brak napisow, pusty tekst, same spacje, krycie 0 = bajt w bajt bez warstwy', [{ text: [] }, { text: [{ text: '' }] }, { text: [{ text: '   \n ' }] }, { text: [{ text: 'X', opacity: 0 }] }].every((e) => sha(RT(e).img) === base));
+  ok('tekst: napis zmienia obraz; bez dostawcy tekstu blad; 5 napisow blad', sha(RT({ text: [{}] }).img) !== base && throws(() => render(B, { style: { id: 'pixel' }, text: [{}] })) && throws(() => RT({ text: [{}, {}, {}, {}, {}] })));
+  // grading i post FX nie dzialaja na napis: pelne krycie warstwy -> dokladnie kolor napisu
+  const lay = TEXT(300, 200, [resolveParams((await import('../src/index.ts')).TEXT_PARAMS, { text: 'TEST ąę', size: 20, color: '#ffcc00', y: 50 })]).data;
+  const gr = RT({ text: [{ text: 'TEST ąę', size: 20, color: '#ffcc00', y: 50 }], color: { preset: 'bw', hue: 180, invertImage: true, curves: { rgb: [[0, 1], [1, 0]], r: [[0, 0], [1, 1]], g: [[0, 0], [1, 1]], b: [[0, 0], [1, 1]] } }, postFx: { vignette: { intensity: 100 }, noise: true } }).img;
+  let full = 0, bad = 0; for (let i = 0; i < lay.length; i += 4) if (lay[i + 3] === 255) { full++; if (gr.data[i] !== 255 || gr.data[i + 1] !== 204 || gr.data[i + 2] !== 0) bad++; }
+  ok('tekst: Color (B&W, hue, invert, Curves) i post FX nie zmieniaja pikseli napisu (pelne krycie = dokladnie #ffcc00)', full > 300 && bad === 0, `${bad}/${full}`);
+  // pozycja, wyrownanie, rozmiar (pokrycie warstwy, nie prostokat z metryk)
+  const cov = (img: Img, ref: Img) => { let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1; for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) { const i = (y * img.w + x) * 4; if (img.data[i] !== ref.data[i] || img.data[i + 1] !== ref.data[i + 1] || img.data[i + 2] !== ref.data[i + 2]) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } } return { x0: x0 / img.w, y0: y0 / img.h, x1: (x1 + 1) / img.w, y1: (y1 + 1) / img.h }; };
+  const ref1 = RT({}).img; const one = (t: any, scale = 1) => cov(RT({ text: [t] }, scale).img, scale === 1 ? ref1 : RT({}, scale).img);
+  const T0 = { text: 'HAMBURG', size: 15, x: 40, y: 30, font: 'geist' }; const fs = 0.15 * 200;
+  const c1 = one(T0), c2 = one(T0, 2);
+  const dmax = Math.max(Math.abs(c1.x0 - c2.x0) * 300, Math.abs(c1.x1 - c2.x1) * 300, Math.abs(c1.y0 - c2.y0) * 200, Math.abs(c1.y1 - c2.y1) * 200);
+  ok('tekst: skala 2 - zasieg napisu w ulamkach ramki taki sam jak w skali 1 (+-1 px w skali 1)', dmax <= 1 + 1e-9, dmax.toFixed(2) + ' px');
+  ok('tekst: wyrownanie do srodka - srodek napisu w x (+-0,1 rozmiaru), wielkie litery - srodek pionowy w y (+-0,15 rozmiaru)', Math.abs((c1.x0 + c1.x1) / 2 * 300 - 120) <= 0.1 * fs && Math.abs((c1.y0 + c1.y1) / 2 * 200 - 60) <= 0.15 * fs, `${((c1.x0 + c1.x1) / 2 * 300).toFixed(1)}, ${((c1.y0 + c1.y1) / 2 * 200).toFixed(1)}`);
+  const cl = one({ ...T0, align: 'left' }), cr = one({ ...T0, align: 'right' });
+  ok('tekst: do lewej zaczyna sie w x, do prawej konczy w x (+-0,1 rozmiaru)', Math.abs(cl.x0 * 300 - 120) <= 0.1 * fs && Math.abs(cr.x1 * 300 - 120) <= 0.1 * fs, `${(cl.x0 * 300).toFixed(1)} ${(cr.x1 * 300).toFixed(1)}`);
+  // liniowosc: rowne przyrosty wysokosci co 10 jednostek (stala nadwyzka antyaliasingu sie skraca; przy rozmiarze 10 hinting przycina litery)
+  const hh = [20, 30, 40].map((sz) => { const c = one({ ...T0, text: 'HAM', size: sz, x: 50, y: 50 }); /* krótki: przy 40 HAMBURG wychodzi poza ramkę */ return Math.round((c.y1 - c.y0) * 200); });
+  ok('tekst: wysokosc liter rosnie liniowo z rozmiarem (przyrosty 20->30 i 30->40 rowne +-1 px, ok. 0,7 rozmiaru)', hh[0] < hh[1] && Math.abs((hh[2] - hh[1]) - (hh[1] - hh[0])) <= 1 && Math.abs((hh[2] - hh[1]) - 0.7 * 20) <= 3, hh.join(' '));
+  const co = one({ ...T0, outline: 10 }), cs = one({ ...T0, shadow: 80 });
+  ok('tekst: obrys i cien poszerzaja zasieg napisu', co.x0 < c1.x0 && co.y1 > c1.y1 && cs.y1 > c1.y1);
+  // kadr: polozenie wzgledem kadru
+  const C = { x: 0.2, y: 0.1, w: 0.6, h: 0.7 }; const r = cropRect(300, 200, C); const cut = newImg(r.sw, r.sh); for (let y = 0; y < r.sh; y++) for (let x = 0; x < r.sw; x++) for (let k = 0; k < 4; k++) cut.data[(y * r.sw + x) * 4 + k] = B.data[((r.sy + y) * 300 + r.sx + x) * 4 + k];
+  ok('tekst: z kadrem = jak na wycietym zdjeciu (bajt w bajt), napis wzgledem kadru', sha(RT({ crop: C, text: [T0] }).img) === sha(RT({ text: [T0] }, 1, cut).img));
+  // polskie znaki: kazdy krój ma glif (szerokosc inna niz znaku spoza czcionki)
+  const { TEXT_FONTS } = await import('../src/index.ts');
+  const polish = TEXT_FONTS.every((f) => { const a = one({ text: 'ąęłżźćńśó', font: f.id, size: 12, y: 50 }), b = one({ text: 'aelzzcnso', font: f.id, size: 12, y: 50 }); return a.x1 - a.x0 > 0.5 * (b.x1 - b.x0) && a.y0 < b.y0; });
+  ok('tekst: polskie znaki we wszystkich 4 krojach (znaki z ogonkami/kreskami siegaja wyzej niz bez)', polish);
+  ok('tekst: prostokaty napisow w wyniku (do edytora), null dla pustego', (() => { const o = RT({ text: [T0, { text: '' }] }); return o.textBoxes?.length === 2 && !!o.textBoxes[0] && o.textBoxes[1] === null; })());
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

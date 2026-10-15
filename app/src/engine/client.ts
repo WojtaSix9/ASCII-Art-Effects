@@ -5,7 +5,7 @@ import type { RenderState } from '../../../engine/src/index.ts';
 import type { Req, Reply, InitRes, RenderRes, EffectMeta, PostDefs } from './protocol.ts';
 
 type Pending = { resolve: (v: any) => void; reject: (e: Error) => void };
-export type RenderOut = { image: ImageData; info: RenderRes['info']; workerMs: number };
+export type RenderOut = { image: ImageData; info: RenderRes['info']; workerMs: number; textBoxes: RenderRes['textBoxes'] };
 
 export class EngineClient {
   private worker: Worker;
@@ -59,7 +59,7 @@ export class EngineClient {
     try {
       const r = await this.call<RenderRes>({ type: 'render', state: job.state, scale: job.scale });
       const image = new ImageData(new Uint8ClampedArray(r.img.buffer), r.img.w, r.img.h);
-      job.p.resolve({ image, info: r.info, workerMs: r.ms });
+      job.p.resolve({ image, info: r.info, workerMs: r.ms, textBoxes: r.textBoxes });
     } catch (e) { job.p.reject(e as Error); }
     finally { this.busy = false; this.pump(); }
   }

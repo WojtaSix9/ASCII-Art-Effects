@@ -13,9 +13,11 @@ export type EditorState = {
   lights: { enabled: boolean; items: Light[]; ambient: number };
   /** Kadr w ułamkach zdjęcia (null = całe) i wybrana proporcja (crop-ui.ts). */
   crop: Crop | null; cropAspect: string;
+  /** Napisy (docs/08): do 4, parametry jak TEXT_PARAMS silnika (x, y, size w %). */
+  text: Values[];
 };
 
-export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {}, lights: { enabled: false, items: [], ambient: 100 }, crop: null, cropAspect: 'free' });
+export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {}, lights: { enabled: false, items: [], ambient: 100 }, crop: null, cropAspect: 'free', text: [] });
 
 export const toRenderState = (s: EditorState): RenderState => ({
   style: { id: s.style, params: s.params[s.style] ?? {} },
@@ -23,6 +25,7 @@ export const toRenderState = (s: EditorState): RenderState => ({
   color: Object.keys(s.color).length ? s.color : undefined,
   lights: s.lights.enabled ? { lights: s.lights.items, ambient: s.lights.ambient } : undefined,
   crop: s.crop ?? undefined,
+  text: s.text?.length ? s.text : undefined,
 });
 
 /** Historia migawek: commit() zapisuje stan (pomija powtórzenia), undo()/redo() zwracają stan do przywrócenia. */

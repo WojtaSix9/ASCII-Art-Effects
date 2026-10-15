@@ -9,5 +9,11 @@
     "sheet": "node scripts/contact-sheet.ts",
     "bench": "node scripts/bench.ts"
   },
-  "devDependencies": { "@napi-rs/canvas": "^0.1.80" }
+  "devDependencies": {
+    "@fontsource/bebas-neue": "^5.3.0",
+    "@fontsource/geist": "^5.3.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "@napi-rs/canvas": "^0.1.80"
+  }
 }

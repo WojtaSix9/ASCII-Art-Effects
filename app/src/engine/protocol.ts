@@ -1,5 +1,5 @@
 // Komunikaty między stroną a Workerem silnika. Obrazy przechodzą jako ArrayBuffer (transfer, bez kopii).
-import type { RenderState, EffectInfo, ParamDef } from '../../../engine/src/index.ts';
+import type { RenderState, EffectInfo, ParamDef, TextBox } from '../../../engine/src/index.ts';
 
 export type WireImg = { w: number; h: number; buffer: ArrayBuffer };
 
@@ -18,11 +18,12 @@ export type Req =
 
 export type InitRes = { fonts: { family: string; faces: number; loaded: number }[]; fontMs: number; workerFonts: boolean; offscreen: boolean };
 export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[] };
-export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[]; glyphOnly?: boolean }[]; glyphStyles: string[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] } };
+export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[]; glyphOnly?: boolean }[]; glyphStyles: string[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] };
+  text: { params: ParamDef[]; fonts: { id: string; name: string; weights: number[] }[]; max: number } };
 export type ExportRes = { blob: Blob; w: number; h: number; ms: number };
 /** Błąd eksportu, gdy przeglądarka nie utworzy kanwy tej wielkości (limit pamięci/kanwy, np. Safari na iOS). */
 export const LIMIT_ERROR = 'CANVAS_LIMIT';
-export type RenderRes = { img: WireImg; info: EffectInfo; ms: number };
+export type RenderRes = { img: WireImg; info: EffectInfo; ms: number; textBoxes?: (TextBox | null)[] };
 /** Źródło znaku: rysowany kodem, jedna z czcionek (kolejność stosu), czcionka zastępcza urządzenia albo nic (tofu). */
 export type GlyphSource = 'drawn' | 'Geist Mono' | 'Noto Sans Mono' | 'Noto Sans JP' | 'fallback' | 'missing';
 export type CoverageRow = { preset: string; chars: Record<string, GlyphSource> };

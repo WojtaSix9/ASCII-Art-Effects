@@ -1,16 +1,17 @@
 /// <reference lib="webworker" />
 // Silnik efektów w Web Workerze. Glify: OffscreenCanvas + Geist Mono załadowany w Workerze przed pierwszym renderem
 // (inaczej cache masek w canvasGlyphs zapamiętałby znaki z czcionki zastępczej).
-import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES, cropRect } from '../../../engine/src/index.ts';
-import type { GlyphProvider, Img, RenderState } from '../../../engine/src/index.ts';
+import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES, cropRect, canvasText, TEXT_PARAMS, TEXT_FONTS, MAX_TEXTS } from '../../../engine/src/index.ts';
+import type { GlyphProvider, Img, RenderState, TextRenderer } from '../../../engine/src/index.ts';
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
-import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK } from './fonts.ts';
+import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK, registerTextFonts, ensureText, TEXT_STACKS } from './fonts.ts';
 import { LIMIT_ERROR } from './protocol.ts';
 import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes } from './protocol.ts';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope & { fonts?: FontFaceSet; gc?: () => void };
 let glyphs: GlyphProvider | null = null;
+let textR: TextRenderer | null = null;
 let source: Img | null = null;
 let ready: Promise<InitRes> | null = null;
 
@@ -22,6 +23,8 @@ function init(): Promise<InitRes> {
     const workerFonts = !!scope.fonts;
     const f = workerFonts ? await loadGlyphFonts(scope.fonts!) : { fonts: [], ms: 0 };
     glyphs = canvasGlyphs((w, h) => new OffscreenCanvas(w, h), GLYPH_STACK);
+    if (workerFonts) registerTextFonts(scope.fonts!);
+    textR = canvasText((w, h) => new OffscreenCanvas(w, h), TEXT_STACKS);
     return { fonts: f.fonts, fontMs: f.ms, workerFonts, offscreen: typeof OffscreenCanvas === 'function' };
   })());
 }
@@ -34,6 +37,7 @@ function rampText(state: RenderState) {
   return p.charSet === 'custom' ? String(p.chars) : CHARSETS[p.charSet]?.ramp ?? '';
 }
 const ensure = (text: string) => (scope.fonts ? ensureGlyphs(scope.fonts, text) : Promise.resolve());
+const ensureTexts = (state: RenderState) => (scope.fonts ? ensureText(scope.fonts, state.text) : Promise.resolve());
 
 // Klasyfikacja znaku: rysowany kodem, która czcionka ze stosu go ma, czcionka zastępcza urządzenia albo nic (tofu / pusto).
 // Porównanie masek: dana rodzina vs nieistniejąca rodzina (obie bez rodziny ogólnej, więc mają tę samą ścieżkę zastępczą).
@@ -81,14 +85,14 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
   await init();
   switch (req.type) {
     case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params })) satisfies EffectMeta[] };
-    case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params, glyphOnly: f.glyphOnly })), glyphStyles: [...GLYPH_STYLES], color: COLOR_PARAMS, lights: { params: LIGHT_PARAMS, ambient: AMBIENT_PARAM, max: MAX_LIGHTS, skip: [...NO_LIGHTS] } } satisfies PostDefs };
+    case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params, glyphOnly: f.glyphOnly })), glyphStyles: [...GLYPH_STYLES], color: COLOR_PARAMS, lights: { params: LIGHT_PARAMS, ambient: AMBIENT_PARAM, max: MAX_LIGHTS, skip: [...NO_LIGHTS] }, text: { params: TEXT_PARAMS, fonts: TEXT_FONTS, max: MAX_TEXTS } } satisfies PostDefs };
     case 'export': {
       if (!source) throw new Error('no source image');
       const r0 = req.state.crop ? cropRect(source.w, source.h, req.state.crop) : { sw: source.w, sh: source.h };   // kadr zmienia wymiary eksportu
       const w = Math.round(r0.sw * req.scale), h = Math.round(r0.sh * req.scale);
       if (!canvasFits(w, h)) throw new Error(`${LIMIT_ERROR}:${w}x${h}`);
-      await ensure(rampText(req.state));
-      const t = performance.now(); const r = render(source, req.state, { scale: req.scale, glyphs });
+      await ensure(rampText(req.state)); await ensureTexts(req.state);
+      const t = performance.now(); const r = render(source, req.state, { scale: req.scale, glyphs, text: textR });
       const c = new OffscreenCanvas(r.img.w, r.img.h); const g = c.getContext('2d')!;
       g.putImageData(new ImageData(new Uint8ClampedArray(r.img.data), r.img.w, r.img.h), 0, 0);
       if (req.format === 'jpeg') { g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#000'; g.fillRect(0, 0, r.img.w, r.img.h); }  // JPG bez alfy: tło czarne
@@ -99,11 +103,11 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
     case 'testImage': source = testImage(req.w, req.h); return { data: { w: source.w, h: source.h } };
     case 'render': {
       if (!source) throw new Error('no source image');
-      await ensure(rampText(req.state));
-      const t = performance.now(); const r = render(source, req.state, { scale: req.scale ?? 1, glyphs });
+      await ensure(rampText(req.state)); await ensureTexts(req.state);
+      const t = performance.now(); const r = render(source, req.state, { scale: req.scale ?? 1, glyphs, text: textR });
       const ms = performance.now() - t;
       const img = r.img.data.buffer === source.data.buffer ? { ...r.img, data: new Uint8ClampedArray(r.img.data) } : r.img;
-      return { data: { img: toWire(img), info: r.info, ms }, transfer: [img.data.buffer as ArrayBuffer] };
+      return { data: { img: toWire(img), info: r.info, ms, textBoxes: r.textBoxes }, transfer: [img.data.buffer as ArrayBuffer] };
     }
     case 'coverage': {
       await ensure(Object.values(CHARSETS).map((c) => c.ramp).join(''));

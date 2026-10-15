@@ -14,6 +14,7 @@ import type { Curves } from '../../../engine/src/post/grade.ts';
 import { ICON } from './icons.ts';
 import { lightsHtml, mountLights } from './lights-ui.ts';
 import { cropHtml, mountCrop } from './crop-ui.ts';
+import { mountText, textHtml } from './text-ui.ts';
 import { cropRect } from '../../../engine/src/core/crop.ts';
 import { History, initialState, toRenderState, type EditorState } from './state.ts';
 
@@ -38,6 +39,7 @@ export const editorHtml = () => `
       <div class="ed-canvas-wrap" data-wrap>
         <canvas class="ed-canvas" data-canvas role="img"></canvas>
         <canvas class="ed-canvas ed-canvas--before" data-before aria-hidden="true" hidden></canvas>
+        <div class="ed-tlayer" data-tlayer role="group" aria-label="Napisy na płótnie"></div>
       </div>
       <div class="ed-drop" data-drop hidden><p>Upuść zdjęcie, żeby je wczytać</p></div>
     </div>
@@ -55,6 +57,7 @@ export const editorHtml = () => `
     <button type="button" data-tab="lights" aria-pressed="false" title="Lights">${ICON.sun}<span class="sr-only">Lights</span></button>
     <button type="button" data-tab="color" aria-pressed="false" title="Color">${ICON.drop}<span class="sr-only">Color</span></button>
     <button type="button" data-tab="postfx" aria-pressed="false" title="Post FX">${ICON.spark}<span class="sr-only">Post FX</span></button>
+    <button type="button" data-tab="text" aria-pressed="false" title="Tekst">${ICON.text}<span class="sr-only">Tekst</span></button>
     <button type="button" data-tab="crop" aria-pressed="false" title="Kadr">${ICON.crop}<span class="sr-only">Kadr</span></button>
   </nav>
   <aside class="ed-panel" aria-label="Parametry" data-panel-root>
@@ -71,6 +74,7 @@ export const editorHtml = () => `
     <div data-tabpanel="postfx" hidden><div data-postfx></div></div>
     <div data-tabpanel="lights" hidden>${lightsHtml()}</div>
     <div data-tabpanel="crop" hidden>${cropHtml()}</div>
+    <div data-tabpanel="text" hidden>${textHtml()}</div>
     <p class="ed-meta" data-meta aria-live="off"></p>
   </aside>
 </div>
@@ -95,6 +99,7 @@ const toolsHtml = () => `
   <span class="ed-sep" aria-hidden="true"></span>
   <button type="button" class="ed-icon" data-crop-open title="Kadr">${ICON.crop}<span class="sr-only">Kadr</span></button>
   <button type="button" class="ed-icon" data-compare aria-pressed="false" title="Porównaj z oryginałem">${ICON.compare}<span class="sr-only">Porównaj z oryginałem</span></button>
+  <button type="button" class="ed-icon" data-text-add title="Dodaj napis">${ICON.text}<span class="sr-only">Dodaj napis</span></button>
   <span class="ed-sep" aria-hidden="true"></span>
   <button type="button" class="ed-icon" data-undo disabled title="Cofnij (Ctrl+Z)">${ICON.undo}<span class="sr-only">Cofnij</span></button>
   <button type="button" class="ed-icon" data-redo disabled title="Ponów (Ctrl+Shift+Z)">${ICON.redo}<span class="sr-only">Ponów</span></button>`;
@@ -104,12 +109,12 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const tools = document.querySelector<HTMLElement>('[data-ed-tools]');
   if (tools) tools.innerHTML = toolsHtml();
   const T = <E extends Element = HTMLElement>(s: string) => (tools ?? root).querySelector<E>(s)!;
-  const stage = $('[data-stage]'), wrap = $('[data-wrap]'), canvas = $<HTMLCanvasElement>('[data-canvas]'), before = $<HTMLCanvasElement>('[data-before]');
+  const stage = $('[data-stage]'), wrap = $('[data-wrap]'), tlayer = $('[data-tlayer]'), canvas = $<HTMLCanvasElement>('[data-canvas]'), before = $<HTMLCanvasElement>('[data-before]');
   const styleSel = $<HTMLSelectElement>('[data-style]'), sampleSel = $<HTMLSelectElement>('[data-sample]'), panel = $<HTMLFormElement>('[data-panel]');
   const note = $('[data-note]'), meta = $('[data-meta]'), dialog = $<HTMLDialogElement>('[data-dialog]');
   const engine = sharedEngine();
-  let alive = true, defs: EffectMeta[] = [], post: PostDefs = { postFx: [], glyphStyles: [], color: [], lights: { params: [], ambient: { id: 'ambient', label: 'Ambient', kind: 'range', default: 100 }, max: 4, skip: [] } };
-  let lights: ReturnType<typeof mountLights> | null = null, cropUi: ReturnType<typeof mountCrop> | null = null;
+  let alive = true, defs: EffectMeta[] = [], post: PostDefs = { postFx: [], glyphStyles: [], color: [], lights: { params: [], ambient: { id: 'ambient', label: 'Ambient', kind: 'range', default: 100 }, max: 4, skip: [] }, text: { params: [], fonts: [], max: 4 } };
+  let lights: ReturnType<typeof mountLights> | null = null, cropUi: ReturnType<typeof mountCrop> | null = null, textUi: ReturnType<typeof mountText> | null = null;
   let state: EditorState = initialState('characters');
   const history = new History();
   let img: CanvasImageSource & { width: number; height: number } | null = null;
@@ -133,7 +138,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     try {
       const out = await engine.render(toRenderState(state), scale);
       if (!alive || !out) return;
-      paint(canvas, out.image); stage.dataset.rendered = state.style;
+      paint(canvas, out.image); stage.dataset.rendered = state.style; textUi?.setBoxes(out.textBoxes);
       meta.textContent = `Podgląd ${out.image.width}×${out.image.height} px (skala ${scale.toFixed(2)}), render ${out.workerMs.toFixed(0)} ms`;
       if (note.dataset.kind === 'error') say('');
     } catch (e) { say(`Błąd renderu: ${(e as Error).message}`, 'error'); }
@@ -166,7 +171,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     if (b.dataset.zoom === 'fit') setZoom(1);
     else if (b.dataset.zoom) { const d = Number(b.dataset.zoom); setZoom(d > 0 ? ZOOMS.find((z) => z > zoom + 1e-6) ?? 4 : [...ZOOMS].reverse().find((z) => z < zoom - 1e-6) ?? 0.25); }
     else if (b.hasAttribute('data-crop-open')) showTab('crop');
-    else if (b.hasAttribute('data-compare')) { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); before.hidden = !on; }
+    else if (b.hasAttribute('data-text-add')) textUi?.add();
+    else if (b.hasAttribute('data-compare')) { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); before.hidden = !on; tlayer.hidden = on; }
     else if (b.hasAttribute('data-undo')) restore(history.undo());
     else if (b.hasAttribute('data-redo')) restore(history.redo());
   };
@@ -182,9 +188,9 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   // ---------- historia ----------
   const syncHistoryButtons = () => { T<HTMLButtonElement>('[data-undo]').disabled = !history.canUndo; T<HTMLButtonElement>('[data-redo]').disabled = !history.canRedo; };
   const commit = () => { history.commit(state); syncHistoryButtons(); };
-  const restore = (s: EditorState | null) => { if (!s) return; state = s; syncUrl(); buildStylePanel(); buildColor(); buildPostFx(); lights?.build(); cropUi?.build(); markStyle(); syncLightsTab(); syncHistoryButtons(); layout(true); };
+  const restore = (s: EditorState | null) => { if (!s) return; state = s; syncUrl(); buildStylePanel(); buildColor(); buildPostFx(); lights?.build(); cropUi?.build(); textUi?.build(); markStyle(); syncLightsTab(); syncHistoryButtons(); layout(true); };
   const onKey = (e: KeyboardEvent) => {
-    if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).closest('input[type="text"], input[type="search"], input[type="number"]')) return;
+    if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).closest('input[type="text"], input[type="search"], input[type="number"], textarea')) return;
     const k = e.key.toLowerCase();
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); restore(history.undo()); }
     else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); restore(history.redo()); }
@@ -379,8 +385,9 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     const want = url.searchParams.get('style'); const ok = !!want && defs.some((e) => e.id === want);
     state = initialState(ok ? want! : 'characters');
     lights = mountLights($('[data-tabpanel="lights"]'), post.lights, { get: () => state, source: cropped, change: () => render(), commit, say });
+    textUi = mountText($('[data-tabpanel="text"]'), tlayer, post.text, { get: () => state, change: () => render(), commit, say, open: () => showTab('text') });
     cropUi = mountCrop($('[data-tabpanel="crop"]'), { get: () => state, source: () => img, change: () => { lights?.drawBg(); layout(true); }, commit });
-    drawStyles(); buildStylePanel(); buildColor(); buildPostFx(); lights.build(); cropUi.build(); markStyle(); syncLightsTab(); syncUrl(); commit();
+    drawStyles(); buildStylePanel(); buildColor(); buildPostFx(); lights.build(); cropUi.build(); textUi.build(); markStyle(); syncLightsTab(); syncUrl(); commit();
     if (want && !ok) say(`Efekt „${want}” nie jest jeszcze dostępny. Pokazuję Characters.`);
     layout(true); ro.observe(stage); started = true;
   })().catch((e) => say(`Błąd: ${(e as Error).message}`, 'error'));

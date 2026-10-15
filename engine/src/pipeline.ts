@@ -10,6 +10,7 @@ import { COLOR_PARAMS, applyColor } from './post/color.ts';
 import { applyLights, type LightsState } from './post/lights.ts';
 import { GLYPH_STYLES, type GlyphFx } from './post/glyphfx.ts';
 import { cropRect, type Crop } from './core/crop.ts';
+import { compositeText, resolveTexts, textVisible, type TextBox, type TextItem, type TextRenderer } from './post/text.ts';
 export { cropRect, type Crop };
 
 export type RenderState = { style: { id: string; params?: Record<string, any> }; postFx?: Record<string, Record<string, any> | true | false>; color?: Record<string, any>;
@@ -17,7 +18,9 @@ export type RenderState = { style: { id: string; params?: Record<string, any> };
   lights?: LightsState;
   /** Kadr (krok 7.3, proj): prostokąt w ułamkach źródła 0–1. Stosowany pierwszy, przed skalą, światłami i stylem,
    *  więc pozycje świateł i siatka znaków liczą się względem kadru. Brak = całe zdjęcie. */
-  crop?: Crop };
+  crop?: Crop;
+  /** Warstwa tekstu (plik 08): do 4 napisów, rysowana na końcu, po Color. Wymaga RenderOpts.text. */
+  text?: TextItem[] };
 function cropImg(src: Img, c: Crop | undefined): Img {
   if (!c) return src; const r = cropRect(src.w, src.h, c); if (r.sx === 0 && r.sy === 0 && r.sw === src.w && r.sh === src.h) return src;
   const out = new Uint8ClampedArray(r.sw * r.sh * 4);
@@ -27,8 +30,8 @@ function cropImg(src: Img, c: Crop | undefined): Img {
 /** Efekty bez świateł (plik 01, sekcja 1: Dither nie ma zakładki Lights). */
 export const NO_LIGHTS = new Set(['dither']);
 export { GLYPH_STYLES };
-export type RenderOpts = { scale?: number; glyphs?: GlyphProvider | null; strict?: boolean };
-export type RenderResult = { img: Img; info: EffectInfo };
+export type RenderOpts = { scale?: number; glyphs?: GlyphProvider | null; strict?: boolean; text?: TextRenderer | null };
+export type RenderResult = { img: Img; info: EffectInfo; textBoxes?: (TextBox | null)[] };
 
 /** Krok 6: pamięć ostatniego przeskalowanego (i oświetlonego) źródła. Przy przesuwaniu suwaka stylu źródło i skala są te
  *  same, więc nie liczymy ich od nowa. Klucz: tożsamość obiektu źródła, skala i stan świateł. Obraz w pamięci jest tylko
@@ -63,6 +66,13 @@ export function render(src: Img, state: RenderState, opts: RenderOpts = {}): Ren
   if (img.data === ctx.src.data || img.data === ctx.prep.data || img.data === src.data) img = cloneImg(img);   // post FX i Color zmieniają obraz w miejscu
   for (const fx of POSTFX) { const cfg = state.postFx?.[fx.id]; if (!cfg) continue; img = fx.apply(img, resolveParams(fx.params, cfg === true ? {} : cfg, opts.strict ?? true), ctx.scale, 1); }
   if (state.color) img = applyColor(img, resolveParams(COLOR_PARAMS, state.color, opts.strict ?? true));
+  if (state.text?.length) {   // po Color: grading nie dotyczy napisów (plik 01)
+    const items = resolveTexts(state.text, (d, v) => resolveParams(d, v, opts.strict ?? true));
+    if (items.some(textVisible)) {
+      if (!opts.text) throw new Error('text layer needs a text renderer (canvasText)');
+      const layer = opts.text(img.w, img.h, items); compositeText(img, layer.data); return { img, info: ctx.info, textBoxes: layer.boxes };
+    }
+  }
   return { img, info: ctx.info };
 }
 /** Eksport tekstowy (Characters, Block, Braille). Zwraca null, gdy efekt nie ma wersji tekstowej. */

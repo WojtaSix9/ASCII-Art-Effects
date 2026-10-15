@@ -189,3 +189,57 @@ Pliki 01 i 05 wymieniają tylko ikonę „kadr” (`[?]`), więc cały projekt t
 - Brak kadrowania bezpośrednio na płótnie (jest tylko pole w panelu).
 - Pozycje świateł nie przeliczają się przy zmianie kadru, bo zostają względem kadru.
 - Nie sprawdzone na ekranach dotykowych.
+
+## 12. Krok 7, punkt 4: warstwa tekstu (15 X 2026)
+
+Projekt i decyzje użytkownika: `docs/08-tekst-projekt.md`.
+
+**Silnik**
+- `RenderState.text` to lista do 4 napisów (`TEXT_PARAMS`). `RenderOpts.text` to dostawca rysujący kanwą 2D (`canvasText`).
+- Warstwa jest nakładana **po Color, Levels i Curves**, więc korekty jej nie zmieniają.
+- Rozmiar to % wysokości ramki, pozycja to % ramki po kadrze.
+- Wynik zawiera prostokąty napisów (`textBoxes`) do zaznaczania w edytorze.
+- Bez napisów, z pustym tekstem albo kryciem 0 nie ma dostawcy ani warstwy, więc wynik jest bajt w bajt jak wcześniej.
+
+**Node (testy)**
+- `@napi-rs/canvas` nie łączy dwóch plików jednej rodziny po unicode-range: ż, ł, ą wychodziły jako puste prostokąty (`oko`).
+- Dlatego `scripts/text-fonts.ts` rejestruje podzbiory latin i latin-ext pod osobnymi nazwami i podaje je jako listę.
+- Kroje są w devDependencies silnika.
+
+**Przeglądarka**
+- Kroje rejestrowane w Workerze przez `FontFace` z unicode-range.
+- Pobierane dopiero wtedy, gdy napis ich używa (`ensureText`, przed renderem).
+
+**Edytor**
+- Przycisk `T` w pasku górnym, zakładka Tekst: lista napisów, pole wielowierszowe, krój, grubość, rozmiar, wyrównanie, kolor, krycie, X/Y, obrys, cień; w części zaawansowanej odstęp liter i wysokość linii.
+- Na płótnie ramki napisów: przeciąganie, strzałki (Shift 5%), Delete.
+- Przy okazji poprawione dwie rzeczy:
+  - id pól panelu parametrów są unikalne między panelami (wcześniej `p-color` powtarzało się w Lights i Post FX);
+  - Ctrl+Z w polu wielowierszowym nie cofa historii edytora.
+
+**Testy (`test`)**
+- Silnik 141 z 141, 11 nowych:
+  - Color (B&W, hue, invert, Curves) i post FX nie zmieniają pikseli napisu: 0 z 1477 pikseli o pełnym kryciu innych niż #ffcc00;
+  - skala 2 vs 1: zasięg napisu ±1 px;
+  - środek, lewo i prawo zgodne z X (±0,1 rozmiaru);
+  - wysokość rośnie liniowo: 29/43/57 px dla 20/30/40;
+  - obrys i cień poszerzają napis;
+  - z kadrem = jak na wyciętym zdjęciu;
+  - polskie znaki w 4 krojach.
+- Dwa testy poprawione po pierwszym uruchomieniu, bez zmiany progów:
+  - „×2 przy rozmiarach 10 i 20” mierzył też stałą nadwyżkę antyaliasingu i hinting przy 14 px; zastąpiony równymi przyrostami;
+  - przy rozmiarze 40 słowo wychodziło poza ramkę, więc test liniowości używa krótszego napisu.
+- Mutacje silnika: Color po tekście, rozmiar w stałych px, brak wyrównania. Wszystkie wykryte.
+- Edytor 65 z 65, 10 nowych, m.in.:
+  - Bebas Neue wyraźnie węższy niż Geist Mono, czyli krój wczytany w Workerze;
+  - przeciąganie +20%/−30%, cofnij;
+  - eksport PNG z napisem = render;
+  - limit 4, Delete.
+- Mutacje edytora: brak ładowania krojów, brak ramek, Ctrl+Z w polu. Wszystkie wykryte.
+- Dotychczasowe hashe bez zmian.
+
+**`BRAK`**
+- Porównanie Node = przeglądarka nie obejmuje napisów (różne rasteryzery).
+- Brak obrotu i paska tła (decyzja).
+- Licencje krojów do stopki: krok 8.
+- Nie sprawdzone w Safari i Firefoksie ani na ekranach dotykowych.

@@ -42,7 +42,7 @@ try {
     disabled: [...document.querySelectorAll<HTMLButtonElement>('[data-rail] button')].filter((b) => b.disabled).length,
     tools: !!document.querySelector('[data-ed-tools] [data-undo]'), fav: /ulubione/i.test(document.body.textContent ?? ''),
   }));
-  t('układ: 18 stylów w lewym panelu, szyna 6 ikon (Animacja wyłączona, Kadr od kroku 7.3), narzędzia w pasku górnym, bez Ulubionych', L.styles === 18 && L.rail === 6 && L.disabled === 1 && L.tools && !L.fav, L);
+  t('układ: 18 stylów w lewym panelu, szyna 7 ikon (Animacja wyłączona, Kadr i Tekst od kroku 7), narzędzia w pasku górnym, bez Ulubionych', L.styles === 18 && L.rail === 7 && L.disabled === 1 && L.tools && !L.fav, L);
 
   // Lewy panel
   const h0 = await hash(page);
@@ -202,6 +202,52 @@ try {
     await page.selectOption('[data-sample]', smp === '1' ? '2' : '1'); await settle(page); const after = await ET();
     t('kadr: zmiana zdjęcia usuwa kadr (dotyczył poprzedniego zdjęcia)', had && after.st.crop === null);
     await page.selectOption('[data-sample]', smp); await settle(page);
+    await page.click('[data-tab="style"]');
+  }
+
+  // Warstwa tekstu (krok 7.4)
+  {
+    const ST = () => page.evaluate(() => (window as any).__editorTest.state());
+    const h0 = await hash(page);
+    await page.click('[data-ed-tools] [data-text-add]'); await settle(page);
+    const s1 = await ST(); const h1 = await hash(page);
+    const ui1 = await page.evaluate(() => ({ tab: !document.querySelector<HTMLElement>('[data-tabpanel="text"]')!.hidden, box: !!document.querySelector('[data-tbox="0"]'), focus: document.activeElement?.hasAttribute('data-ttext') }));
+    t('tekst: przycisk T dodaje napis, otwiera zakładkę Tekst, obraz się zmienia, na płótnie jest ramka napisu', s1.text.length === 1 && h1 !== h0 && ui1.tab && ui1.box && !!ui1.focus, ui1);
+    await page.fill('[data-ttext]', 'Zażółć gęślą'); await settle(page); const h2 = await hash(page);
+    await page.fill('[data-ttext]', '   '); await settle(page); const h3 = await hash(page);
+    t('tekst: pole tekstu zmienia napis; same spacje = obraz jak bez napisu', h2 !== h1 && h3 === h0);
+    await page.fill('[data-ttext]', 'PLAKAT'); await page.locator('[data-ttext]').dispatchEvent('change'); await settle(page);
+    const redo0 = await page.isDisabled('[data-ed-tools] [data-redo]'); await page.focus('[data-ttext]'); await page.keyboard.press('Control+z'); await settle(page);
+    t('tekst: Ctrl+Z w polu napisu nie cofa historii edytora (Ponów nadal wyłączone; cofa tylko przeglądarka w polu)', redo0 && (await page.isDisabled('[data-ed-tools] [data-redo]')));
+    await page.fill('[data-ttext]', 'PLAKAT'); await page.locator('[data-ttext]').dispatchEvent('change'); await settle(page);
+    // kroje: Bebas Neue (wąski) ma węższą ramkę niż Geist Mono, więc czcionka naprawdę się wczytała w Workerze
+    const boxW = () => page.evaluate(() => document.querySelector<HTMLElement>('[data-tbox="0"]')!.getBoundingClientRect().width);
+    const wMono = await boxW(); await page.selectOption('[data-tparams] [data-p="font"]', 'bebas'); await settle(page); const wBebas = await boxW();
+    await page.selectOption('[data-tparams] [data-p="font"]', 'playfair'); await settle(page); const wPlay = await boxW();
+    t('tekst: zmiana kroju działa w Workerze (Bebas Neue wyraźnie węższy niż Geist Mono, Playfair inny)', wBebas < wMono * 0.75 && Math.abs(wPlay - wMono) > 2, { wMono, wBebas, wPlay });
+    // przeciąganie ramki i cofnij
+    const bb = (await page.locator('[data-tbox="0"]').boundingBox())!; const cvb = (await page.locator('[data-canvas]').boundingBox())!;
+    const before = await ST();
+    await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await page.mouse.down(); await page.mouse.move(bb.x + bb.width / 2 + cvb.width * 0.2, bb.y + bb.height / 2 - cvb.height * 0.3, { steps: 5 }); await page.mouse.up(); await settle(page);
+    const after = await ST(); const bb2 = (await page.locator('[data-tbox="0"]').boundingBox())!;
+    t('tekst: przeciągnięcie przesuwa napis (+20% X, −30% Y ±1) i ramkę po renderze', Math.abs(after.text[0].x - before.text[0].x - 20) <= 1 && Math.abs(after.text[0].y - before.text[0].y + 30) <= 1 && Math.abs((bb2.x - bb.x) - cvb.width * 0.2) <= 3, { b: [before.text[0].x, before.text[0].y], a: [after.text[0].x, after.text[0].y] });
+    await page.click('[data-ed-tools] [data-undo]'); await settle(page);
+    t('tekst: cofnij przywraca położenie napisu', (await ST()).text[0].y === before.text[0].y);
+    await page.focus('[data-tbox="0"]'); await page.keyboard.press('Shift+ArrowLeft'); await settle(page);
+    t('tekst: Shift + strzałka w lewo przesuwa o 5%', (await ST()).text[0].x === before.text[0].x - 5);
+    // eksport = render (z napisem)
+    const same = await page.evaluate(async () => { const T = (window as any).__editorTest; const r = await T.renderAt(1); const png = await T.exportBlob('png', 1);
+      const bmp = await createImageBitmap(png.blob); const c2 = new OffscreenCanvas(bmp.width, bmp.height); const g = c2.getContext('2d')!; g.drawImage(bmp, 0, 0);
+      const dig = async (d: BufferSource) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', d))].join(','); return (await dig(g.getImageData(0, 0, bmp.width, bmp.height).data)) === (await dig(new Uint8Array(r.img.buffer))); });
+    t('tekst: eksport PNG @1x z napisem = render w skali 1', same);
+    // porównanie ukrywa ramki; limit 4; Delete usuwa
+    await page.click('[data-ed-tools] [data-compare]'); const hid = await page.evaluate(() => document.querySelector<HTMLElement>('[data-tlayer]')!.hidden); await page.click('[data-ed-tools] [data-compare]');
+    for (let i = 0; i < 4; i++) await page.click('[data-ed-tools] [data-text-add]');
+    await settle(page); const n4 = (await ST()).text.length; const dis = await page.isDisabled('[data-tadd]'); const msg = await page.textContent('[data-note]');
+    t('tekst: porównanie ukrywa ramki; najwyżej 4 napisy (przycisk wyłączony, komunikat)', hid && n4 === 4 && dis && !!msg?.includes('4'), { n4, dis, msg });
+    for (let i = 3; i >= 0; i--) { await page.focus(`[data-tbox="${i}"]`).catch(() => {}); await page.keyboard.press('Delete'); await settle(page); }
+    const sEnd = await ST(); const hEnd = await hash(page);
+    t('tekst: Delete na ramce usuwa napisy; po usunięciu obraz jak bez napisów', sEnd.text.length === 0 && hEnd === h0, { n: sEnd.text.length });
     await page.click('[data-tab="style"]');
   }
 

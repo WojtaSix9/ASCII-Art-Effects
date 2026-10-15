@@ -1,6 +1,20 @@
-# Warstwa tekstu: projekt do akceptacji
+# Warstwa tekstu: projekt (zaakceptowany) i stan
 
-Stan na 15 X 2026. Decyzja użytkownika: Claude Code opisuje projekt **przed** implementacją, tak jak przy Lights (plik 07). Tu nie ma jeszcze kodu.
+Stan na 15 X 2026. Decyzja użytkownika: Claude Code opisuje projekt **przed** implementacją, tak jak przy Lights (plik 07).
+
+**Odpowiedzi użytkownika (15 X 2026) i wdrożenie:**
+1. Do **4** napisów.
+2. **2 dodatkowe kroje:** Playfair Display (szeryfowy, 400/700) i Bebas Neue (plakatowy, tylko 400; wybór Bold rysuje 400, w panelu jest podpowiedź). Oba OFL-1.1 z `@fontsource`, z polskimi znakami (podzbiór latin-ext).
+3. **Przeciąganie po płótnie:** tak.
+4. **Obrys i cień:** tak, bez paska tła.
+5. **Obrót:** nie.
+
+Kod:
+- silnik: `engine/src/post/text.ts`, wpięte w `pipeline.ts` po Color;
+- Worker: kroje w `app/src/engine/fonts.ts`;
+- UI: `app/src/editor/text-ui.ts`.
+
+Stan testów w `docs/06`, sekcja 12.
 
 Oznaczenia: `docs` = z plików 01, 02 i 05, `proj` = moja propozycja, `?` = pytanie do użytkownika.
 

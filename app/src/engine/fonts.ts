@@ -46,3 +46,38 @@ export async function loadGlyphFonts(set: FontFaceSet) {
 export async function ensureGlyphs(set: FontFaceSet, text: string) {
   if (text.trim()) await set.load(`16px ${GLYPH_STACK}`, text);
 }
+
+// ---------- Warstwa tekstu (plik 08): 4 kroje OFL, pobierane dopiero, gdy napis ich użyje (ensureText) ----------
+import { TEXT_FONTS, textVisible, type TextItem } from '../../../engine/src/post/text.ts';
+import geistSans400 from '@fontsource/geist/400.css?raw';
+import geistSans700 from '@fontsource/geist/700.css?raw';
+import geistMono700 from '@fontsource/geist-mono/700.css?raw';
+import playfair400 from '@fontsource/playfair-display/400.css?raw';
+import playfair700 from '@fontsource/playfair-display/700.css?raw';
+import bebas400 from '@fontsource/bebas-neue/400.css?raw';
+const textUrls = import.meta.glob(['/node_modules/@fontsource/geist/files/geist-*-{400,700}-normal.woff2', '/node_modules/@fontsource/geist-mono/files/geist-mono-*-700-normal.woff2',
+  '/node_modules/@fontsource/playfair-display/files/playfair-display-*-{400,700}-normal.woff2', '/node_modules/@fontsource/bebas-neue/files/bebas-neue-*-400-normal.woff2'], { query: '?url', import: 'default', eager: true }) as Record<string, string>;
+/** Rodzina CSS dla id kroju z silnika. Geist Mono 400 jest już zarejestrowany dla znaków (loadGlyphFonts). */
+export const TEXT_FAMILY: Record<string, string> = { 'geist-mono': 'Geist Mono', geist: 'Geist', playfair: 'Playfair Display', bebas: 'Bebas Neue' };
+export const TEXT_STACKS: Record<string, string> = Object.fromEntries(Object.entries(TEXT_FAMILY).map(([id, f]) => [id, `"${f}", sans-serif`]));
+const TEXT_CSS: [string, string, string][] = [['Geist', '400', geistSans400], ['Geist', '700', geistSans700], ['Geist Mono', '700', geistMono700], ['Playfair Display', '400', playfair400], ['Playfair Display', '700', playfair700], ['Bebas Neue', '400', bebas400]];
+
+/** Rejestruje kroje napisów (bez pobierania plików). */
+export function registerTextFonts(set: FontFaceSet) {
+  let n = 0;
+  for (const [family, weight, css] of TEXT_CSS) for (const block of css.split('@font-face').slice(1)) {
+    const file = /url\(\.\/files\/([^)]+\.woff2)\)/.exec(block)?.[1]; const range = /unicode-range:\s*([^;]+);/.exec(block)?.[1];
+    const url = file && Object.entries(textUrls).find(([k]) => k.endsWith('/' + file))?.[1];
+    if (url && range) { set.add(new FontFace(family, `url(${url})`, { weight, style: 'normal', unicodeRange: range })); n++; }
+  }
+  return n;
+}
+/** Pobiera podzbiory krojów potrzebne napisom (przed renderem: kanwa nie czeka na czcionki). */
+export async function ensureText(set: FontFaceSet, items: TextItem[] | undefined) {
+  for (const t of items ?? []) {
+    const it = { opacity: 100, text: 'Tekst', font: 'geist-mono', weight: '700', ...t }; if (!textVisible(it)) continue;
+    const def = TEXT_FONTS.find((f) => f.id === it.font); if (!def) continue;
+    const w = def.weights.includes(Number(it.weight)) ? Number(it.weight) : def.weights[0];
+    await set.load(`${w} 16px "${TEXT_FAMILY[it.font]}"`, String(it.text));
+  }
+}

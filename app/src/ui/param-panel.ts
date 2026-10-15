@@ -18,10 +18,11 @@ export function groupParams(defs: ParamDef[]) {
   };
 }
 
+let mountN = 0, pfx = 'p';   // id pól unikalne między panelami (np. „color” jest w Lights, Post FX i Tekście)
 const fmt = (d: ParamDef, v: unknown) => `${v}${d.unit ? (d.unit === '%' ? '%' : ' ' + d.unit) : ''}`;
 
 function control(d: ParamDef, v: unknown): string {
-  const id = `p-${d.id}`;
+  const id = `${pfx}-${d.id}`;
   switch (d.kind) {
     case 'range':
       return `<div class="pp-row pp-range"><label for="${id}">${esc(d.label)}</label><output for="${id}" data-out="${d.id}">${esc(fmt(d, v))}</output>
@@ -60,7 +61,7 @@ function section(title: string, defs: ParamDef[], values: Values, allMain = fals
  *  sections: false = jedna sekcja z tytułem `styleName` (Color, Post FX). */
 export function mountParamPanel(root: HTMLElement, styleName: string, defs: ParamDef[], initial: Values, onChange: (v: Values) => void, onCommit?: (v: Values) => void, opts: { sections?: boolean } = {}) {
   const values: Values = Object.fromEntries(defs.map((d) => [d.id, initial[d.id] ?? structuredClone(d.default)]));
-  const g = groupParams(defs);
+  const g = groupParams(defs); pfx = `p${++mountN}`;
   root.innerHTML = opts.sections === false ? section(styleName, defs, values)
     : section('Backdrop', g.backdrop, values) + section(styleName, g.style, values) + section('Intensity', g.intensity, values) + section('Seed', g.seed, values, true);   // seed to osobny poziom (plik 02), zawsze widoczny
   const byId = new Map(defs.map((d) => [d.id, d]));

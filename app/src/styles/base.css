@@ -382,3 +382,15 @@ a { color: inherit; }
 .ed-cfields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .ed-cfields label { display: grid; gap: 2px; font-size: 12px; color: var(--ed-label); }
 .ed-cfields input { width: 100%; min-width: 0; box-sizing: border-box; background: var(--ed-field); color: var(--text); border: 1px solid var(--ed-sep-strong); padding: 4px 6px; font: inherit; }
+
+/* Warstwa tekstu (krok 7.4) */
+.ed-tlayer { position: absolute; inset: 0; pointer-events: none; }
+.ed-tlayer[hidden] { display: none; }
+.ed-tbox { position: absolute; pointer-events: auto; padding: 0; background: transparent; border: 1px dashed transparent; cursor: move; touch-action: none; }
+.ed-tbox:hover { border-color: rgba(255, 255, 255, 0.5); }
+.ed-tbox[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 1px #000; }
+.ed-tbox:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ed-tlist { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+.ed-chip:disabled { opacity: 0.45; cursor: not-allowed; }
+.ed-ttext { width: 100%; box-sizing: border-box; resize: vertical; background: var(--ed-field); color: var(--text); border: 1px solid var(--ed-sep-strong); padding: 6px 8px; font: inherit; margin: 6px 0; }
+.ed-tsel[hidden] { display: none; }

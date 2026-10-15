@@ -128,3 +128,14 @@ OK   kadr: wartosci spoza 0..1, zerowa szerokosc, NaN -> blad
 OK   kadr: bardzo maly kadr daje co najmniej 1x1 px i nie rzuca bledu
 OK   kadr: zmiana kadru na tym samym zrodle nie korzysta z nieaktualnej pamieci podrecznej
 OK   kadr: eksport tekstowy tez uwzglednia kadr
+OK   tekst: brak napisow, pusty tekst, same spacje, krycie 0 = bajt w bajt bez warstwy
+OK   tekst: napis zmienia obraz; bez dostawcy tekstu blad; 5 napisow blad
+OK   tekst: Color (B&W, hue, invert, Curves) i post FX nie zmieniaja pikseli napisu (pelne krycie = dokladnie #ffcc00)  [0/1477]
+OK   tekst: skala 2 - zasieg napisu w ulamkach ramki taki sam jak w skali 1 (+-1 px w skali 1)  [1.00 px]
+OK   tekst: wyrownanie do srodka - srodek napisu w x (+-0,1 rozmiaru), wielkie litery - srodek pionowy w y (+-0,15 rozmiaru)  [120.0, 57.0]
+OK   tekst: do lewej zaczyna sie w x, do prawej konczy w x (+-0,1 rozmiaru)  [122.0 119.0]
+OK   tekst: wysokosc liter rosnie liniowo z rozmiarem (przyrosty 20->30 i 30->40 rowne +-1 px, ok. 0,7 rozmiaru)  [29 43 57]
+OK   tekst: obrys i cien poszerzaja zasieg napisu
+OK   tekst: z kadrem = jak na wycietym zdjeciu (bajt w bajt), napis wzgledem kadru
+OK   tekst: polskie znaki we wszystkich 4 krojach (znaki z ogonkami/kreskami siegaja wyzej niz bez)
+OK   tekst: prostokaty napisow w wyniku (do edytora), null dla pustego
