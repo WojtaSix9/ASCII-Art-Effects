@@ -12,5 +12,6 @@ export const ICON = {
   upload: svg('<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>'),
   dice: svg('<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="15" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/>'),
   download: svg('<path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/>'),
+  crop: svg('<path d="M6 2v16h16"/><path d="M2 6h16v16"/>'),
   panel: svg('<rect x="3" y="4" width="18" height="16"/><path d="M9 4v16"/>'),
 };

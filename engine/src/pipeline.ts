@@ -9,10 +9,21 @@ import { POSTFX } from './post/postfx.ts';
 import { COLOR_PARAMS, applyColor } from './post/color.ts';
 import { applyLights, type LightsState } from './post/lights.ts';
 import { GLYPH_STYLES, type GlyphFx } from './post/glyphfx.ts';
+import { cropRect, type Crop } from './core/crop.ts';
+export { cropRect, type Crop };
 
 export type RenderState = { style: { id: string; params?: Record<string, any> }; postFx?: Record<string, Record<string, any> | true | false>; color?: Record<string, any>;
   /** Światła (plik 07): oświetlają źródło przed stylem. Dither ich nie używa (jak w oryginale, plik 01). */
-  lights?: LightsState };
+  lights?: LightsState;
+  /** Kadr (krok 7.3, proj): prostokąt w ułamkach źródła 0–1. Stosowany pierwszy, przed skalą, światłami i stylem,
+   *  więc pozycje świateł i siatka znaków liczą się względem kadru. Brak = całe zdjęcie. */
+  crop?: Crop };
+function cropImg(src: Img, c: Crop | undefined): Img {
+  if (!c) return src; const r = cropRect(src.w, src.h, c); if (r.sx === 0 && r.sy === 0 && r.sw === src.w && r.sh === src.h) return src;
+  const out = new Uint8ClampedArray(r.sw * r.sh * 4);
+  for (let y = 0; y < r.sh; y++) out.set(src.data.subarray(((r.sy + y) * src.w + r.sx) * 4, ((r.sy + y) * src.w + r.sx + r.sw) * 4), y * r.sw * 4);
+  return { w: r.sw, h: r.sh, data: out };
+}
 /** Efekty bez świateł (plik 01, sekcja 1: Dither nie ma zakładki Lights). */
 export const NO_LIGHTS = new Set(['dither']);
 export { GLYPH_STYLES };
@@ -23,10 +34,11 @@ export type RenderResult = { img: Img; info: EffectInfo };
  *  same, więc nie liczymy ich od nowa. Klucz: tożsamość obiektu źródła, skala i stan świateł. Obraz w pamięci jest tylko
  *  czytany (render() kopiuje wynik, jeśli efekt zwróciłby go bez zmian). */
 let lastScaled: { src: Img; scale: number; lights: string; img: Img } | null = null;
-function scaledSource(src: Img, scale: number, lights: RenderState['lights']): Img {
-  const key = lights ? JSON.stringify(lights) : '';
+function scaledSource(src: Img, scale: number, lights: RenderState['lights'], crop: Crop | undefined): Img {
+  const key = (lights ? JSON.stringify(lights) : '') + (crop ? `|${crop.x},${crop.y},${crop.w},${crop.h}` : '');
   if (lastScaled && lastScaled.src === src && lastScaled.scale === scale && lastScaled.lights === key) return lastScaled.img;
-  let img = scale === 1 ? src : resize(src, src.w * scale, src.h * scale);
+  const cut = cropImg(src, crop);
+  let img = scale === 1 ? cut : resize(cut, cut.w * scale, cut.h * scale);
   if (lights) img = applyLights(img, lights);
   lastScaled = { src, scale, lights: key, img }; return img;
 }
@@ -40,7 +52,7 @@ function makeCtx(src: Img, state: RenderState, opts: RenderOpts): { ctx: RenderC
   const scale = opts.scale ?? 1; if (!(scale >= 0.1 && scale <= 8)) throw new Error('scale must be within 0.1..8');
   const effect = getEffect(state.style.id); const p = resolveParams(effect.params, state.style.params ?? {}, opts.strict ?? true);
   const info: EffectInfo = {};
-  const scaled = scaledSource(src, scale, state.lights && !NO_LIGHTS.has(effect.id) ? state.lights : undefined);
+  const scaled = scaledSource(src, scale, state.lights && !NO_LIGHTS.has(effect.id) ? state.lights : undefined, state.crop);
   const prep = adjust(scaled, p.brightness ?? 0, p.contrast ?? 0);
   return { effect, ctx: { src: scaled, prep, p, scale, glyphs: opts.glyphs ?? null, info, glyphFx: glyphFxOf(effect.id, state, opts), px: (v: number) => Math.max(1, Math.round(v * scale)) } };
 }

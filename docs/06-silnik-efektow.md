@@ -145,3 +145,47 @@ Kod: `engine/src/post/glyphfx.ts` (oba efekty per glif), `engine/src/post/postfx
 - **Czas (Node, 480×320, orientacyjnie):** Characters 63 ms, z Bloom 55 ms, Braille z oboma 47 ms, Halftone po Pixel Art 26 ms.
 - **`BRAK`:** porównanie z oryginałem (nie mam jego wyglądu tych efektów); kąt siatki Halftone (jest tylko wyrównana do osi); Chroma tylko w poziomie (oryginał podaje tylko `offset`).
 
+
+## 11. Krok 7, punkt 3: kadr (15 X 2026)
+
+Pliki 01 i 05 wymieniają tylko ikonę „kadr” (`[?]`), więc cały projekt to `proj`. Kod:
+- silnik: `engine/src/core/crop.ts` i `pipeline.ts`;
+- edytor: `app/src/editor/crop-ui.ts`, zakładka Kadr i przycisk w pasku górnym.
+
+**Silnik**
+- `RenderState.crop = { x, y, w, h }` w ułamkach zdjęcia, stosowany jako pierwszy: przed skalą, światłami i stylem. Skutek: siatka znaków, pozycje świateł, post FX, Color i eksport tekstowy liczą się względem kadru.
+- Wartości spoza 0–1, zerowe i NaN dają błąd. Kadr mniejszy niż 1 px daje 1 px.
+- Pamięć podręczna źródła ma kadr w kluczu.
+
+**Edytor**
+- Pole z całym zdjęciem i prostokątem kadru: środek przesuwa, narożniki zmieniają rozmiar.
+- Proporcje: Dowolne, Oryginał, 1:1, 4:5, 3:2, 16:9, 9:16. Wybór proporcji daje największy kadr w tej proporcji, wyśrodkowany na obecnym.
+- Pola X, Y, szerokość, wysokość w px źródła.
+- Klawiatura: strzałki 1% (Shift 5%), Alt + strzałki zmieniają rozmiar.
+- Najmniejszy bok 16 px.
+- Kadr równy całemu zdjęciu zapisuje się jako brak kadru.
+- Kadr jest w historii cofnij/ponów. Zmiana zdjęcia go usuwa.
+- Podgląd, „przed/po”, pole świateł i eksport pokazują kadr.
+
+**Testy (`test`)**
+- Silnik 130 z 130, 8 nowych:
+  - render z kadrem = render wyciętego zdjęcia, bajt w bajt, dla 7 stylów przy skali 1 i 2, także ze światłami, post FX i Color;
+  - kadr 0,0,1,1 = bez kadru;
+  - zmiana kadru nie korzysta z nieaktualnej pamięci;
+  - eksport tekstowy uwzględnia kadr.
+- Mutacje silnika: klucz pamięci bez kadru i kadr po światłach. Obie wykryte.
+- Dotychczasowe hashe bez zmian.
+- Edytor 55 z 55, 9 nowych:
+  - proporcja 1:1 daje kwadrat w pikselach i na ekranie;
+  - przeciąganie, narożnik z blokadą proporcji, pola, strzałki, cofnij;
+  - eksport @1x = render, wymiary kadru;
+  - reset daje obraz identyczny jak przed kadrowaniem;
+  - zmiana zdjęcia usuwa kadr.
+- Mutacje edytora: układ bez kadru i brak resetu przy zmianie zdjęcia. Obie wykryte.
+
+**`BRAK`**
+- Żaden test nie wykrywa sprawdzenia limitu kanwy bez kadru: ostrzeżenie byłoby tylko ostrożniejsze, a test wymagałby eksportu ponad 100 Mpx.
+- Brak obrotu i odbicia.
+- Brak kadrowania bezpośrednio na płótnie (jest tylko pole w panelu).
+- Pozycje świateł nie przeliczają się przy zmianie kadru, bo zostają względem kadru.
+- Nie sprawdzone na ekranach dotykowych.

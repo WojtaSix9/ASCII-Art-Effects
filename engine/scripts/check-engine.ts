@@ -326,5 +326,31 @@ const SRC = testImage(300, 200);
   const ht1 = HT(testImage(240, 160), { size: 6 }), ht2 = resize(HT(testImage(480, 320), { size: 6 }, 2), 240, 160);
   ok('Halftone: rozmiar w px skaluje sie (skala 2 po zmniejszeniu ~ skala 1, PSNR > 20 dB)', psnr(ht1, ht2) > 20, psnr(ht1, ht2).toFixed(1) + ' dB');
 }
+// 18. Krok 7.3: kadr (crop) stosowany przed wszystkim innym
+{
+  const { cropRect } = await import('../src/index.ts');
+  const B = testImage(300, 200); const st = (id: string, extra: any = {}) => ({ style: { id }, ...extra });
+  const cut = (img: Img, c: { x: number; y: number; w: number; h: number }) => { const r = cropRect(img.w, img.h, c); const o = newImg(r.sw, r.sh); for (let y = 0; y < r.sh; y++) for (let x = 0; x < r.sw; x++) for (let k = 0; k < 4; k++) o.data[(y * r.sw + x) * 4 + k] = img.data[((r.sy + y) * img.w + r.sx + x) * 4 + k]; return o; };
+  const C = { x: 0.13, y: 0.21, w: 0.55, h: 0.6 };
+  const styles = ['characters', 'braille', 'dots', 'pixel', 'halftone', 'lego', 'dither'];
+  ok('kadr: brak kadru i kadr 0,0,1,1 = bajt w bajt to samo', styles.every((id) => { const a = sha(render(B, st(id), { glyphs: G }).img); return sha(render(B, st(id, { crop: { x: 0, y: 0, w: 1, h: 1 } }), { glyphs: G }).img) === a; }));
+  const same = (scale: number, extra: any = {}) => styles.filter((id) => sha(render(B, st(id, { ...extra, crop: C }), { glyphs: G, scale }).img) !== sha(render(cut(B, C), st(id, extra), { glyphs: G, scale }).img));
+  const bad1 = same(1), bad2 = same(2);
+  ok('kadr: render z kadrem = render wycietego zrodla, bajt w bajt (7 stylow, skala 1 i 2)', bad1.length === 0 && bad2.length === 0, [...bad1, ...bad2].join(','));
+  const lit = { lights: { lights: [{ x: 0.3, y: 0.4, radius: 40, intensity: 90, color: '#ffcc88' }], ambient: 60 }, postFx: { vignette: true, charBloom: true }, color: { preset: 'sepia' } };
+  const bad3 = same(1, lit);
+  ok('kadr: swiatla (pozycje wzgledem kadru), post FX i Color dzialaja na wycietym obrazie', bad3.length === 0, bad3.join(','));
+  const r = render(B, st('pixel', { crop: C }), { scale: 2 }).img; const cr = cropRect(300, 200, C);
+  ok('kadr: wymiary wyniku = kadr w px x skala', r.w === Math.round(cr.sw * 2) && r.h === Math.round(cr.sh * 2) && cr.sw === 165 && cr.sh === 120, `${r.w}x${r.h} z ${cr.sw}x${cr.sh}`);
+  ok('kadr: wartosci spoza 0..1, zerowa szerokosc, NaN -> blad', [{ x: -0.1, y: 0, w: 0.5, h: 0.5 }, { x: 0.6, y: 0, w: 0.5, h: 0.5 }, { x: 0, y: 0, w: 0, h: 0.5 }, { x: 0, y: 0, w: NaN, h: 1 }].every((c) => throws(() => render(B, st('pixel', { crop: c })))));
+  const tiny = render(B, st('characters', { crop: { x: 0.5, y: 0.5, w: 0.001, h: 0.001 } }), { glyphs: G }).img;
+  ok('kadr: bardzo maly kadr daje co najmniej 1x1 px i nie rzuca bledu', tiny.w >= 1 && tiny.h >= 1);
+  // pamiec podreczna: sekwencja kadrow na tym samym zrodle = rendery "na zimno"
+  const seq = [C, undefined, { x: 0.5, y: 0, w: 0.5, h: 1 }, C].map((c) => sha(render(B, st('dots', { crop: c })).img));
+  const cold = [C, undefined, { x: 0.5, y: 0, w: 0.5, h: 1 }, C].map((c) => sha(render(cloneImg(B), st('dots', { crop: c })).img));
+  ok('kadr: zmiana kadru na tym samym zrodle nie korzysta z nieaktualnej pamieci podrecznej', seq.join() === cold.join() && seq[0] !== seq[1]);
+  const txt = renderText(B, st('characters', { crop: C }), { glyphs: G })!, txtCut = renderText(cut(B, C), st('characters'), { glyphs: G })!;
+  ok('kadr: eksport tekstowy tez uwzglednia kadr', txt === txtCut && txt !== renderText(B, st('characters'), { glyphs: G }));
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

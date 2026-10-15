@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // Silnik efektów w Web Workerze. Glify: OffscreenCanvas + Geist Mono załadowany w Workerze przed pierwszym renderem
 // (inaczej cache masek w canvasGlyphs zapamiętałby znaki z czcionki zastępczej).
-import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES } from '../../../engine/src/index.ts';
+import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES, cropRect } from '../../../engine/src/index.ts';
 import type { GlyphProvider, Img, RenderState } from '../../../engine/src/index.ts';
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
@@ -84,7 +84,8 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
     case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params, glyphOnly: f.glyphOnly })), glyphStyles: [...GLYPH_STYLES], color: COLOR_PARAMS, lights: { params: LIGHT_PARAMS, ambient: AMBIENT_PARAM, max: MAX_LIGHTS, skip: [...NO_LIGHTS] } } satisfies PostDefs };
     case 'export': {
       if (!source) throw new Error('no source image');
-      const w = Math.round(source.w * req.scale), h = Math.round(source.h * req.scale);
+      const r0 = req.state.crop ? cropRect(source.w, source.h, req.state.crop) : { sw: source.w, sh: source.h };   // kadr zmienia wymiary eksportu
+      const w = Math.round(r0.sw * req.scale), h = Math.round(r0.sh * req.scale);
       if (!canvasFits(w, h)) throw new Error(`${LIMIT_ERROR}:${w}x${h}`);
       await ensure(rampText(req.state));
       const t = performance.now(); const r = render(source, req.state, { scale: req.scale, glyphs });

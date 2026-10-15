@@ -42,7 +42,7 @@ try {
     disabled: [...document.querySelectorAll<HTMLButtonElement>('[data-rail] button')].filter((b) => b.disabled).length,
     tools: !!document.querySelector('[data-ed-tools] [data-undo]'), fav: /ulubione/i.test(document.body.textContent ?? ''),
   }));
-  t('układ: 18 stylów w lewym panelu, szyna 5 ikon (Animacja wyłączona), narzędzia w pasku górnym, bez Ulubionych', L.styles === 18 && L.rail === 5 && L.disabled === 1 && L.tools && !L.fav, L);
+  t('układ: 18 stylów w lewym panelu, szyna 6 ikon (Animacja wyłączona, Kadr od kroku 7.3), narzędzia w pasku górnym, bez Ulubionych', L.styles === 18 && L.rail === 6 && L.disabled === 1 && L.tools && !L.fav, L);
 
   // Lewy panel
   const h0 = await hash(page);
@@ -159,6 +159,51 @@ try {
   await page.check('[data-fx-on="halftone"]'); await settle(page); const b4 = await hash(page); await page.uncheck('[data-fx-on="halftone"]'); await settle(page);
   t('Post FX: Halftone zmienia obraz, wyłączenie przywraca identyczny', b4 !== b0 && (await hash(page)) === b0);
   await pick(style0); await settle(page);
+
+  // Kadr (krok 7.3)
+  {
+    const ET = () => page.evaluate(() => { const t = (window as any).__editorTest; return { st: t.state(), v: t.view() }; });
+    const k0c = await hash(page);
+    await page.click('[data-ed-tools] [data-crop-open]'); const tabOn = await page.isVisible('[data-tabpanel="crop"] [data-cpad]');
+    await page.click('[data-aspect="1:1"]'); await settle(page); const a1 = await ET(); const cv1 = await page.evaluate(() => { const c = document.querySelector<HTMLCanvasElement>('[data-canvas]')!; return { w: c.width, h: c.height, cssW: parseFloat(c.style.width), cssH: parseFloat(c.style.height) }; });
+    const lp = await page.evaluate(() => document.querySelector<HTMLElement>('[data-lpad]')!.style.aspectRatio);
+    t('kadr: przycisk w pasku otwiera zakładkę; 1:1 → kwadrat w px źródła, płótno kwadratowe (piksele i wymiary na ekranie), obraz inny, pole świateł w proporcji kadru',
+      tabOn && Math.abs(a1.v.sw - a1.v.sh) <= 1 && Math.abs(cv1.w - cv1.h) <= 1 && Math.abs(cv1.cssW - cv1.cssH) <= 1 && (await hash(page)) !== k0c && lp.replace(/\s/g, '') === `${a1.v.sw}/${a1.v.sh}`, { v: a1.v, cv1, lp });
+    // przeciągnięcie środka przesuwa, rozmiar bez zmian; cofnij wraca
+    const pad = (await page.locator('[data-cpad]').boundingBox())!; const bx = (await page.locator('[data-crop-box]').boundingBox())!;
+    await page.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2); await page.mouse.down();
+    await page.mouse.move(bx.x + bx.width / 2 - pad.width * 0.1, bx.y + bx.height / 2, { steps: 4 }); await page.mouse.up(); await settle(page); const a2 = await ET();
+    t('kadr: przeciągnięcie przesuwa kadr w lewo, rozmiar ten sam', a2.v.sx < a1.v.sx && a2.v.sw === a1.v.sw && a2.v.sh === a1.v.sh, { a1: a1.v, a2: a2.v });
+    await page.click('[data-ed-tools] [data-undo]'); await settle(page); const a3 = await ET();
+    t('kadr: cofnij przywraca poprzednie położenie', a3.v.sx === a1.v.sx && a3.v.sy === a1.v.sy);
+    // narożnik przy 1:1 zostaje kwadratem
+    const bx2 = (await page.locator('[data-crop-box]').boundingBox())!;
+    await page.mouse.move(bx2.x + bx2.width - 3, bx2.y + bx2.height - 3); await page.mouse.down(); /* uchwyt narożnika: połowa wewnątrz pola */ await page.mouse.move(bx2.x + bx2.width * 0.6, bx2.y + bx2.height * 0.8, { steps: 4 }); await page.mouse.up(); await settle(page); const a4 = await ET();
+    t('kadr: narożnik zmniejsza kadr i przy 1:1 zostaje kwadrat', a4.v.sw < a1.v.sw && Math.abs(a4.v.sw - a4.v.sh) <= 1 && a4.v.sx === a1.v.sx && a4.v.sy === a1.v.sy, a4.v);
+    // Dowolne + pola w px
+    await page.click('[data-aspect="free"]'); await page.fill('[data-cf="w"]', '400'); await page.locator('[data-cf="w"]').dispatchEvent('change'); await settle(page);
+    await page.fill('[data-cf="x"]', '100'); await page.locator('[data-cf="x"]').dispatchEvent('change'); await settle(page); const a5 = await ET();
+    t('kadr: pola X i szerokość ustawiają kadr w px źródła (Dowolne: wysokość bez zmian)', a5.v.sw === 400 && a5.v.sx === 100 && a5.v.sh === a4.v.sh, a5.v);
+    // klawiatura
+    await page.focus('[data-crop-box]'); await page.keyboard.press('ArrowDown'); await settle(page); const a6 = await ET();
+    const srcH = await page.evaluate(() => (document.querySelector<HTMLInputElement>('[data-cf="h"]')!.max ? Number(document.querySelector<HTMLInputElement>('[data-cf="h"]')!.max) : 0));
+    t('kadr: strzałka w dół przesuwa o 1% wysokości zdjęcia', Math.abs(a6.v.sy - a5.v.sy - Math.round(srcH * 0.01)) <= 1, { from: a5.v.sy, to: a6.v.sy, srcH });
+    // eksport w wymiarach kadru, zgodny z renderem w skali 1
+    await page.click('[data-export]'); const sz = await page.textContent('[data-size="2"]'); await page.click('[data-cancel]');
+    const ex = await page.evaluate(async () => { const t = (window as any).__editorTest; const r = await t.exportBlob('png', 1); const b = await createImageBitmap(r.blob); const c = new OffscreenCanvas(b.width, b.height); const g = c.getContext('2d')!; g.drawImage(b, 0, 0);
+      const e = g.getImageData(0, 0, b.width, b.height).data; const rr = await t.renderAt(1); const d = new Uint8Array(rr.img.buffer); let diff = 0; for (let i = 0; i < d.length; i++) diff = Math.max(diff, Math.abs(d[i] - e[i])); return { w: r.w, h: r.h, diff, len: d.length === e.length }; });
+    t('kadr: eksport @1x ma wymiary kadru i te same piksele co render (PNG), etykieta @2x = kadr × 2', ex.w === a6.v.sw && ex.h === a6.v.sh && ex.len && ex.diff === 0 && sz === `${a6.v.sw * 2}×${a6.v.sh * 2} px`, { ex, sz, v: a6.v });
+    // reset → bajt w bajt jak bez kadru; cofnij → kadr wraca
+    await page.click('[data-crop-reset]'); await settle(page); const r0 = await ET(); const kr = await hash(page);
+    await page.click('[data-ed-tools] [data-undo]'); await settle(page); const r1 = await ET();
+    t('kadr: reset = brak kadru i obraz identyczny jak przed kadrowaniem; cofnij przywraca kadr', r0.st.crop === null && kr === k0c && !!r1.st.crop && r1.v.sw === a6.v.sw, { k: kr === k0c });
+    await page.click('[data-crop-reset]'); await settle(page);
+    const smp = await page.inputValue('[data-sample]'); await page.click('[data-aspect="4:5"]'); await settle(page); const had = !!(await ET()).st.crop;
+    await page.selectOption('[data-sample]', smp === '1' ? '2' : '1'); await settle(page); const after = await ET();
+    t('kadr: zmiana zdjęcia usuwa kadr (dotyczył poprzedniego zdjęcia)', had && after.st.crop === null);
+    await page.selectOption('[data-sample]', smp); await settle(page);
+    await page.click('[data-tab="style"]');
+  }
 
   // Porównanie
   await page.click('[data-ed-tools] [data-compare]');

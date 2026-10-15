@@ -1,5 +1,5 @@
 // Stan edytora i historia (cofnij/ponów). Stan to czyste dane (JSON), więc migawki są proste i porównywalne.
-import type { Light, RenderState } from '../../../engine/src/index.ts';
+import type { Crop, Light, RenderState } from '../../../engine/src/index.ts';
 import type { Values } from '../ui/param-panel.ts';
 
 export type EditorState = {
@@ -11,15 +11,18 @@ export type EditorState = {
   postFx: Record<string, Values>;
   /** Lights (docs/07): włączone, lista świateł (najwyżej 4), Ambient 0–100. */
   lights: { enabled: boolean; items: Light[]; ambient: number };
+  /** Kadr w ułamkach zdjęcia (null = całe) i wybrana proporcja (crop-ui.ts). */
+  crop: Crop | null; cropAspect: string;
 };
 
-export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {}, lights: { enabled: false, items: [], ambient: 100 } });
+export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {}, lights: { enabled: false, items: [], ambient: 100 }, crop: null, cropAspect: 'free' });
 
 export const toRenderState = (s: EditorState): RenderState => ({
   style: { id: s.style, params: s.params[s.style] ?? {} },
   postFx: Object.keys(s.postFx).length ? s.postFx : undefined,
   color: Object.keys(s.color).length ? s.color : undefined,
   lights: s.lights.enabled ? { lights: s.lights.items, ambient: s.lights.ambient } : undefined,
+  crop: s.crop ?? undefined,
 });
 
 /** Historia migawek: commit() zapisuje stan (pomija powtórzenia), undo()/redo() zwracają stan do przywrócenia. */

@@ -120,3 +120,11 @@ OK   Halftone: na jednolitej szarosci srednia jasnosc zachowana (|blad| <= 0,03)
 OK   Halftone: ton monotoniczny (0..255 co 15, kazdy ksztalt)
 OK   Halftone colour source: odcien komorki zachowany (G/R = 0,2 +-0,02, G = B)
 OK   Halftone: rozmiar w px skaluje sie (skala 2 po zmniejszeniu ~ skala 1, PSNR > 20 dB)  [26.7 dB]
+OK   kadr: brak kadru i kadr 0,0,1,1 = bajt w bajt to samo
+OK   kadr: render z kadrem = render wycietego zrodla, bajt w bajt (7 stylow, skala 1 i 2)
+OK   kadr: swiatla (pozycje wzgledem kadru), post FX i Color dzialaja na wycietym obrazie
+OK   kadr: wymiary wyniku = kadr w px x skala  [330x240 z 165x120]
+OK   kadr: wartosci spoza 0..1, zerowa szerokosc, NaN -> blad
+OK   kadr: bardzo maly kadr daje co najmniej 1x1 px i nie rzuca bledu
+OK   kadr: zmiana kadru na tym samym zrodle nie korzysta z nieaktualnej pamieci podrecznej
+OK   kadr: eksport tekstowy tez uwzglednia kadr
