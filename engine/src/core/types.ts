@@ -19,6 +19,7 @@ export type RenderCtx = {
   scale: number;                         // skala eksportu (1 = podglad)
   glyphs: GlyphProvider | null;          // maski znakow (tylko efekty tekstowe)
   info: EffectInfo;                      // efekt wpisuje tu np. liczbe komorek (do testow)
+  glyphFx?: { bloom: number; chroma: number } | null;   // charBloom/charChroma (src/post/glyphfx.ts); null = wyłączone
   px: (v: number) => number;             // v px przy skali 1x -> px przy biezacej skali (min 1)
 };
 export interface GlyphProvider {

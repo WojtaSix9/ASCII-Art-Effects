@@ -103,7 +103,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const styleSel = $<HTMLSelectElement>('[data-style]'), sampleSel = $<HTMLSelectElement>('[data-sample]'), panel = $<HTMLFormElement>('[data-panel]');
   const note = $('[data-note]'), meta = $('[data-meta]'), dialog = $<HTMLDialogElement>('[data-dialog]');
   const engine = sharedEngine();
-  let alive = true, defs: EffectMeta[] = [], post: PostDefs = { postFx: [], color: [], lights: { params: [], ambient: { id: 'ambient', label: 'Ambient', kind: 'range', default: 100 }, max: 4, skip: [] } };
+  let alive = true, defs: EffectMeta[] = [], post: PostDefs = { postFx: [], glyphStyles: [], color: [], lights: { params: [], ambient: { id: 'ambient', label: 'Ambient', kind: 'range', default: 100 }, max: 4, skip: [] } };
   let lights: ReturnType<typeof mountLights> | null = null;
   let state: EditorState = initialState('characters');
   const history = new History();
@@ -212,7 +212,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   };
   const selectStyle = (id: string) => {
     if (!defs.some((d) => d.id === id)) return;
-    state.style = id; buildStylePanel(); markStyle(); syncLightsTab(); syncUrl(); commit(); render();
+    state.style = id; buildStylePanel(); markStyle(); syncLightsTab(); syncGlyphFx(); syncUrl(); commit(); render();
   };
   /** Dither nie używa świateł (plik 01): zakładka Lights wyłączona, przy otwartej wracamy do Stylu. */
   const syncLightsTab = () => {
@@ -239,13 +239,27 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const buildPostFx = () => {
     fxBox.innerHTML = `<p class="pp-title">/ Post FX</p><p class="ed-hint">Kolejność stała: od góry do dołu.</p>${post.postFx.map((f) => `
       <div class="ed-fx" data-fx="${f.id}"><label class="ed-fx__on"><input type="checkbox" data-fx-on="${f.id}"${state.postFx[f.id] ? ' checked' : ''}> ${esc(f.name)}</label>
+      ${f.glyphOnly ? `<p class="ed-hint" data-fx-note hidden>Tylko style znakowe: Characters, Block, Braille.</p>` : ''}
       <form class="pp ed-fx__params" data-fx-params="${f.id}" onsubmit="return false"${state.postFx[f.id] ? '' : ' hidden'}></form></div>`).join('')}`;
     for (const f of post.postFx) if (state.postFx[f.id]) mountFx(f.id);
+    syncGlyphFx();
+  };
+  /** Character Bloom i Chromatic działają tylko w stylach glifowych (plik 01, sekcja 8). W innych są wyszarzone; ustawienia zostają
+   *  w stanie, więc po powrocie do stylu glifowego wracają (silnik i tak je pomija). */
+  const syncGlyphFx = () => {
+    const on = post.glyphStyles.includes(state.style);
+    for (const f of post.postFx) if (f.glyphOnly) {
+      const row = fxBox.querySelector<HTMLElement>(`[data-fx="${f.id}"]`); if (!row) continue;
+      row.classList.toggle('is-off', !on); row.querySelector<HTMLInputElement>('[data-fx-on]')!.disabled = !on;
+      row.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-fx-params] input, [data-fx-params] select').forEach((el) => { el.disabled = !on; });
+      row.querySelector<HTMLElement>('[data-fx-note]')!.hidden = on;
+    }
   };
   const mountFx = (id: string) => {
     const f = post.postFx.find((x) => x.id === id)!; const box = fxBox.querySelector<HTMLFormElement>(`[data-fx-params="${id}"]`)!;
     box.hidden = false;
     state.postFx[id] = mountParamPanel(box, '', f.params, state.postFx[id] ?? {}, (v) => { state.postFx[id] = v; render(); }, (v) => { state.postFx[id] = v; commit(); }, { sections: false })();
+    if (f.glyphOnly) syncGlyphFx();
   };
   fxBox.addEventListener('change', (e) => {
     const c = (e.target as HTMLElement).closest<HTMLInputElement>('[data-fx-on]'); if (!c) return;

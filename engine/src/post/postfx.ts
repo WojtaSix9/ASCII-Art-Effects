@@ -1,12 +1,37 @@
-// Darmowe post FX (plik 01, sekcja 8): 13 z 16. Brakuje: charBloom i charChroma (dzialaja per glif w trybach znakowych, wymagaja integracji z rysowaniem siatki) oraz post-halftone.
+// Darmowe post FX (plik 01, sekcja 8): 16 z 16. charBloom i charChroma nie są przebiegiem po klatce: rysuje je styl glifowy
+// (src/post/glyphfx.ts, wpięte w grid.ts), więc tu mają pusty apply i flagę glyphOnly.
 // Kolejnosc stala, niezalezna od kolejnosci wlaczania (plik 01). Wartosci w px skaluja sie ze skala eksportu.
 import type { Img, PostFxDef } from '../core/types.ts';
 import { color, range, select, seedParam } from '../core/params.ts';
-import { blur, clamp, hash01, lerp, lum, mulberry32, parseColor } from '../core/util.ts';
+import { blur, cellAverages, clamp, hash01, lerp, lum, mulberry32, parseColor } from '../core/util.ts';
 
 const smooth = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a || 1e-6), 0, 1); return t * t * (3 - 2 * t); };
 const sample = (d: Uint8ClampedArray, w: number, h: number, x: number, y: number, c: number) => { x = clamp(x - 0.5, 0, w - 1); y = clamp(y - 0.5, 0, h - 1); const x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1), tx = x - x0, ty = y - y0; return lerp(lerp(d[(y0 * w + x0) * 4 + c], d[(y0 * w + x1) * 4 + c], tx), lerp(d[(y1 * w + x0) * 4 + c], d[(y1 * w + x1) * 4 + c], tx), ty); };
 const PX = { unit: 'px', px: true } as const;
+
+/** Post-halftone (proj): siatka komórek wyrównana do osi, w każdej komórce jeden kształt, którego POLE jest równe udziałowi tonu
+ *  (koło: odwrotność pola koła przyciętego do kwadratu, tablica 257 wartości). Dzięki temu średni ton się zachowuje. */
+const circleInSquare = (r: number) => { const a = 0.5; if (r <= a) return Math.PI * r * r; if (r >= a * Math.SQRT2) return 1; return Math.PI * r * r - 4 * (r * r * Math.acos(a / r) - a * Math.sqrt(r * r - a * a)); };
+const DOT_R = (() => { const t = new Float32Array(257); for (let i = 0; i <= 256; i++) { const A = i / 256; let lo = 0, hi = Math.SQRT1_2; for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2; if (circleInSquare(m) < A) lo = m; else hi = m; } t[i] = (lo + hi) / 2; } return t; })();
+function halftonePost(img: Img, p: Record<string, any>, s: number): Img {
+  const cs = Math.max(2, Math.round(p.size * s)); const { w, h, data: d } = img; const a = cellAverages(img, cs, cs); const mono = p.colour === 'mono'; const shape = p.shape;
+  for (let cy = 0; cy < a.ny; cy++) for (let cx = 0; cx < a.nx; cx++) {
+    const o = cy * a.nx + cx; const L = a.L[o];
+    // source: jasne kształty na czerni, pole = jasność, kolor komórki znormalizowany do najjaśniejszego kanału (odcień bez zmian);
+    // mono: czarny tusz na bieli, pole = 1 − jasność.
+    const A = mono ? 1 - L : L; const mx = Math.max(a.R[o], a.G[o], a.B[o], 1e-3);
+    const fr = mono ? 0 : (a.R[o] / mx) * 255, fg = mono ? 0 : (a.G[o] / mx) * 255, fb = mono ? 0 : (a.B[o] / mx) * 255, bg = mono ? 255 : 0;
+    const half = cs / 2, ccx = cx * cs + half, ccy = cy * cs + half; const rad = DOT_R[Math.round(clamp(A, 0, 1) * 256)] * cs, sq = (Math.sqrt(clamp(A, 0, 1)) * cs) / 2, ln = (clamp(A, 0, 1) * cs) / 2;
+    const x1 = Math.min(w, (cx + 1) * cs), y1 = Math.min(h, (cy + 1) * cs);
+    for (let y = cy * cs; y < y1; y++) for (let x = cx * cs; x < x1; x++) {
+      const u = x + 0.5 - ccx, v = y + 0.5 - ccy; // kwadrat: iloczyn pokryć w osiach (dokładne pole prostokąta wyrównanego do pikseli), koło i linia: pole odległości
+      const k = A <= 0 ? 0 : A >= 1 ? 1 : shape === 'squares' ? clamp(0.5 + sq - Math.abs(u), 0, 1) * clamp(0.5 + sq - Math.abs(v), 0, 1) : clamp(0.5 - (shape === 'dots' ? Math.hypot(u, v) - rad : Math.abs(v) - ln), 0, 1); const i = (y * w + x) * 4;
+      d[i] = lerp(bg, fr, k); d[i + 1] = lerp(bg, fg, k); d[i + 2] = lerp(bg, fb, k);
+    }
+  }
+  return img;
+}
+const noop = (img: Img) => img;
 
 export const POSTFX: PostFxDef[] = [
   { id: 'advBlur', name: 'Blur', params: [range('amount', 'Amount', 20, 0, 100, { unit: '%' })], apply: (img, p, s) => (p.amount ? blur(img, (p.amount / 100) * 20 * s) : img) },
@@ -23,11 +48,13 @@ export const POSTFX: PostFxDef[] = [
       for (let i = 0; i < d.length; i += 4) { const l = lum(d[i], d[i + 1], d[i + 2]); const k = clamp((l - thr) / Math.max(1e-3, 1 - thr), 0, 1); bright[i] = lerp(d[i], t[0], ta) * k; bright[i + 1] = lerp(d[i + 1], t[1], ta) * k; bright[i + 2] = lerp(d[i + 2], t[2], ta) * k; bright[i + 3] = 255; }
       const bl = blur({ w, h, data: bright }, (p.blur / 100) * 30 * s); const k = p.intensity / 100 * 1.5;
       for (let i = 0; i < d.length; i += 4) for (let c = 0; c < 3; c++) d[i + c] = 255 - ((255 - d[i + c]) * (255 - bl.data[i + c] * k)) / 255; return img; } },
+  { id: 'charBloom', name: 'Character Bloom', glyphOnly: true, params: [range('intensity', 'Intensity', 50, 0, 100, { unit: '%' })], apply: noop },
   { id: 'chromatic', name: 'Chromatic', params: [range('offset', 'Offset', 6, 1, 40, PX), range('angle', 'Angle', 0, 0, 360, { unit: '°' }), range('radial', 'Radial', 0, 0, 100, { unit: '%' })],
     apply(img, p, s) { const { w, h, data: d } = img; const src = new Uint8ClampedArray(d); const a = (p.angle * Math.PI) / 180, ux = Math.cos(a), uy = Math.sin(a), off = p.offset * s, rk = p.radial / 100;
       const HD = Math.hypot(w / 2, h / 2);   // krok 6: stała, liczona raz
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = x + 0.5 - w / 2, dy = y + 0.5 - h / 2; const rr = Math.hypot(dx, dy) / HD; const k = off * (1 - rk + rk * rr * 2); const i = (y * w + x) * 4; const ox = rk > 0 && rr > 0 ? (dx / (rr * HD)) : ux, oy = rk > 0 && rr > 0 ? (dy / (rr * HD)) : uy;
         d[i] = sample(src, w, h, x + 0.5 + ox * k, y + 0.5 + oy * k, 0); d[i + 2] = sample(src, w, h, x + 0.5 - ox * k, y + 0.5 - oy * k, 2); } return img; } },
+  { id: 'charChroma', name: 'Character Chromatic', glyphOnly: true, params: [range('offset', 'Offset', 2, 1, 20, PX)], apply: noop },
   { id: 'rgbSplit', name: 'RGB Split', params: [range('offset', 'Offset', 5, 1, 20, PX), range('angle', 'Angle', 0, 0, 360, { unit: '°', level: 'advanced' })],
     apply(img, p, s) { const { w, h, data: d } = img; const src = new Uint8ClampedArray(d); const a = (p.angle * Math.PI) / 180, k = p.offset * s; const ox = Math.cos(a) * k, oy = Math.sin(a) * k;
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; d[i] = sample(src, w, h, x + 0.5 - ox, y + 0.5 - oy, 0); d[i + 2] = sample(src, w, h, x + 0.5 + ox, y + 0.5 + oy, 2); } return img; } },
@@ -45,6 +72,8 @@ export const POSTFX: PostFxDef[] = [
   { id: 'pixelate', name: 'Pixelate', params: [range('size', 'Size', 8, 2, 30, PX)],
     apply(img, p, s) { const bs = Math.max(2, Math.round(p.size * s)); const { w, h, data: d } = img;
       for (let by = 0; by < h; by += bs) for (let bx = 0; bx < w; bx += bs) { let r = 0, g = 0, b = 0, n = 0; const x1 = Math.min(w, bx + bs), y1 = Math.min(h, by + bs); for (let y = by; y < y1; y++) for (let x = bx; x < x1; x++) { const i = (y * w + x) * 4; r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; } for (let y = by; y < y1; y++) for (let x = bx; x < x1; x++) { const i = (y * w + x) * 4; d[i] = r / n; d[i + 1] = g / n; d[i + 2] = b / n; } } return img; } },
+  { id: 'halftone', name: 'Halftone', params: [range('size', 'Size', 6, 2, 20, PX), select('shape', 'Shape', 'dots', [['dots', 'Dots'], ['squares', 'Squares'], ['lines', 'Lines']]), select('colour', 'Colour', 'source', [['source', 'Source'], ['mono', 'Mono']])],
+    apply: (img, p, s) => halftonePost(img, p, s) },
   { id: 'filmDust', name: 'Film Dust', params: [range('density', 'Density', 30, 0, 100, { unit: '%' }), seedParam()],
     apply(img, p, s) { const { w, h, data: d } = img; const rnd = mulberry32(p.seed * 104729 + 3); const n = Math.ceil((p.density / 100) * (w * h) / 15000);
       for (let k = 0; k < n; k++) { const x = rnd() * w, y = rnd() * h, r = (0.6 + rnd() * 1.4) * s, len = rnd() < 0.3 ? (4 + rnd() * 10) * s : 0, a = rnd() * Math.PI, bright = rnd() < 0.7 ? 255 : 0, al = 0.4 + rnd() * 0.5;

@@ -9,7 +9,7 @@ import { HASH_CASES } from '../src/dev/hash-cases.ts';
 
 const src = testImage(300, 200);
 const out: Record<string, string> = {};
-for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX.map((f) => f.id))) {
+for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX)) {
   out[c.name] = createHash('sha1').update(render(src, c.state).img.data).digest('hex');
 }
 writeFileSync(new URL('../src/dev/fixtures/engine-hashes.json', import.meta.url), JSON.stringify(out, null, 2) + '\n');

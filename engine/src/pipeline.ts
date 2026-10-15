@@ -8,12 +8,14 @@ import { getEffect } from './registry.ts';
 import { POSTFX } from './post/postfx.ts';
 import { COLOR_PARAMS, applyColor } from './post/color.ts';
 import { applyLights, type LightsState } from './post/lights.ts';
+import { GLYPH_STYLES, type GlyphFx } from './post/glyphfx.ts';
 
 export type RenderState = { style: { id: string; params?: Record<string, any> }; postFx?: Record<string, Record<string, any> | true | false>; color?: Record<string, any>;
   /** Światła (plik 07): oświetlają źródło przed stylem. Dither ich nie używa (jak w oryginale, plik 01). */
   lights?: LightsState };
 /** Efekty bez świateł (plik 01, sekcja 1: Dither nie ma zakładki Lights). */
 export const NO_LIGHTS = new Set(['dither']);
+export { GLYPH_STYLES };
 export type RenderOpts = { scale?: number; glyphs?: GlyphProvider | null; strict?: boolean };
 export type RenderResult = { img: Img; info: EffectInfo };
 
@@ -28,13 +30,19 @@ function scaledSource(src: Img, scale: number, lights: RenderState['lights']): I
   if (lights) img = applyLights(img, lights);
   lastScaled = { src, scale, lights: key, img }; return img;
 }
+/** charBloom i charChroma rysuje styl glifowy (plik 01, sekcja 8: „per glif”); w innych stylach nic nie robią. */
+function glyphFxOf(styleId: string, state: RenderState, opts: RenderOpts): GlyphFx | null {
+  if (!GLYPH_STYLES.has(styleId)) return null; const on = (id: string) => { const c = state.postFx?.[id]; return c ? resolveParams(POSTFX.find((f) => f.id === id)!.params, c === true ? {} : c, opts.strict ?? true) : null; };
+  const b = on('charBloom'), c = on('charChroma'); const fx = { bloom: b ? b.intensity : 0, chroma: c ? c.offset : 0 };
+  return fx.bloom > 0 || fx.chroma > 0 ? fx : null;
+}
 function makeCtx(src: Img, state: RenderState, opts: RenderOpts): { ctx: RenderCtx; effect: ReturnType<typeof getEffect> } {
   const scale = opts.scale ?? 1; if (!(scale >= 0.1 && scale <= 8)) throw new Error('scale must be within 0.1..8');
   const effect = getEffect(state.style.id); const p = resolveParams(effect.params, state.style.params ?? {}, opts.strict ?? true);
   const info: EffectInfo = {};
   const scaled = scaledSource(src, scale, state.lights && !NO_LIGHTS.has(effect.id) ? state.lights : undefined);
   const prep = adjust(scaled, p.brightness ?? 0, p.contrast ?? 0);
-  return { effect, ctx: { src: scaled, prep, p, scale, glyphs: opts.glyphs ?? null, info, px: (v: number) => Math.max(1, Math.round(v * scale)) } };
+  return { effect, ctx: { src: scaled, prep, p, scale, glyphs: opts.glyphs ?? null, info, glyphFx: glyphFxOf(effect.id, state, opts), px: (v: number) => Math.max(1, Math.round(v * scale)) } };
 }
 export function render(src: Img, state: RenderState, opts: RenderOpts = {}): RenderResult {
   const { ctx, effect } = makeCtx(src, state, opts);

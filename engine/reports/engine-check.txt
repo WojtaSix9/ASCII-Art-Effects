@@ -63,7 +63,7 @@ OK   backdrop solid + coverage 0: caly obraz = kolor tla
 OK   backdrop original (100%): = zrodlo; none: alfa 0 wszedzie
 OK   backdrop blur: szybkie rozmycie bliskie pelnemu (PSNR > 35 dB; prog dobrany po pomiarze 36,5 dB), opacity 0 = kolor tla  [36.5 dB]
 OK   post FX: wartosci neutralne zostawiaja obraz bez zmian
-OK   post FX: 13 efektow, kazdy zmienia obraz przy parametrach domyslnych i zachowuje wymiary
+OK   post FX: 16 efektow (14 po klatce), kazdy po klatce zmienia obraz przy parametrach domyslnych i zachowuje wymiary
 OK   post FX: powtarzalnosc i zaleznosc od seeda (glitch, filmGrain, filmDust, noise)
 OK   post FX: wartosci w px skaluja sie ze skala (pixelate 8 px przy 2x = bloki 16 px)
 OK   post FX: kolejnosc stala, niezalezna od kolejnosci wlaczania
@@ -109,3 +109,14 @@ OK   Curves: krzywa przechodzi przez punkty, monotoniczna, bez przestrzelenia mi
 OK   Curves: krzywa kanalu R (odwrocona) zmienia tylko R
 OK   Kolejnosc: Levels, potem Curves (plik 01, sekcja 8.9)  [64 vs 64]
 OK   Curves: zle punkty -> blad (x nierosnace, poza 0..1, 1 punkt, 17 punktow)
+OK   glyph FX: wylaczone (false) i Bloom 0 = bajt w bajt jak bez nich (Characters, Block, Braille)
+OK   glyph FX: w stylach bez glifow nic nie zmieniaja (wszystkie pozostale efekty)
+OK   glyph FX: kazdy styl glifowy reaguje na Bloom i na Chroma osobno
+OK   glyph FX: bez znakow (coverage 0) tlo zostaje bajt w bajt - efekty dotycza tylko glifow
+OK   Character Chromatic: R przesuniete o +offset, B o -offset wzgledem G (dokladnie, +-1), przy skali 1 i 2 (offset w px rosnie ze skala)  [zle 0/0, piksele tuszu 18136]
+OK   Character Bloom: zaden piksel nie ciemnieje; srednia jasnosc 0 < 50 < 100  [0.212 0.363 0.514]
+OK   Character Bloom: udzial pikseli objetych poswiata podobny przy skali 1 i 2 (rzadkie znaki, coverage 8; roznica < 20%; promien liczony od komorki)  [24.6% vs 21.4%]
+OK   Halftone: na jednolitej szarosci srednia jasnosc zachowana (|blad| <= 0,03) dla 3 ksztaltow, 2 trybow, 5 tonow  [max 0.009 dots/mono/25:0.009]
+OK   Halftone: ton monotoniczny (0..255 co 15, kazdy ksztalt)
+OK   Halftone colour source: odcien komorki zachowany (G/R = 0,2 +-0,02, G = B)
+OK   Halftone: rozmiar w px skaluje sie (skala 2 po zmniejszeniu ~ skala 1, PSNR > 20 dB)  [26.7 dB]

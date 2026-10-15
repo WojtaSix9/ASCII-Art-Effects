@@ -1,12 +1,12 @@
 Przeglądarka: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36
-Data: 2026-10-15T09:26:15.770Z
+Data: 2026-10-15T09:51:25.065Z
 
 == Testy ==
 OK   Worker (module) uruchomiony, OffscreenCanvas dostępny
 OK   FontFaceSet w Workerze (self.fonts)
-OK   Geist Mono w Workerze: 6/6 podzbiorów wczytanych od razu  [42 ms]
+OK   Geist Mono w Workerze: 6/6 podzbiorów wczytanych od razu  [38 ms]
 OK   Noto Sans Mono (greek) i Noto Sans JP zarejestrowane, pobierane na żądanie  [Noto Sans Mono: 1, Noto Sans JP: 124]
-OK   Render identyczny z Node: 32/32 przypadków (17 efektów, 13 post FX, Color, Dither)
+OK   Render identyczny z Node: 35/35 przypadków (17 efektów, 16 post FX, Color, Dither)
 OK   Metoda pokrycia: kontrola „A” = Geist Mono  [Geist Mono]
 OK   Metoda pokrycia: kontrola U+10FFFD = brak (tofu)  [missing]
 OK   Każdy znak 16 presetów rysuje kod albo czcionka z npm (bez czcionek urządzenia): 154/154
@@ -37,49 +37,52 @@ math          0    6      4       0        0       0
 katakana      0    0      0      21        0       0
 
 == Czas w obie strony (pixel, zlecenie → Worker → ImageData → kanwa) ==
-600×400    render    4.8 ms, razem    5.4 ms, narzut 0.6 ms
-1600×1067  render   21.1 ms, razem   22.7 ms, narzut 1.7 ms
+600×400    render    5.1 ms, razem    6.0 ms, narzut 0.8 ms
+1600×1067  render   20.2 ms, razem   21.8 ms, narzut 1.6 ms
 
 == Czasy: 1600×1067, mediana z 3 po rozgrzewce; Chromium (Worker) vs Node 22, ta sama maszyna ==
 efekt                    Chromium     Node   > 100 ms w przeglądarce
-characters                  40 ms     78 ms   
-block-chars                 39 ms     58 ms   
-braille                     83 ms    133 ms   
-dots                        75 ms    124 ms   
-cross                      111 ms    147 ms   tak
-diamond                     46 ms     51 ms   
-lines                       60 ms     85 ms   
-diagonal                    73 ms     92 ms   
-pixel                       27 ms     30 ms   
-mosaic                      64 ms     41 ms   
-lego                       126 ms    241 ms   tak
-hexmosaic                  140 ms    140 ms   tak
-disco                       33 ms     37 ms   
-halftone                   334 ms    409 ms   tak
-posterize                   77 ms     71 ms   
-duotone                     55 ms     52 ms   
-gradientmap                 70 ms    267 ms   
-dither                      48 ms     70 ms   
-pixel + advBlur            271 ms    255 ms   tak
-pixel + vignette           114 ms    159 ms   tak
-pixel + scanLines           30 ms     31 ms   
-pixel + bloom              270 ms    348 ms   tak
-pixel + chromatic          162 ms    218 ms   tak
-pixel + rgbSplit           107 ms    133 ms   tak
-pixel + crtCurve           121 ms    168 ms   tak
-pixel + glitch              52 ms     31 ms   
-pixel + filmGrain           69 ms     64 ms   
-pixel + pixelate            44 ms     40 ms   
-pixel + filmDust            27 ms     32 ms   
-pixel + sharpen            190 ms    149 ms   tak
-pixel + noise               74 ms     66 ms   
+characters                  30 ms     55 ms   
+block-chars                 44 ms     45 ms   
+braille                     90 ms    126 ms   
+dots                        73 ms    119 ms   
+cross                       90 ms    181 ms   
+diamond                     32 ms     79 ms   
+lines                       44 ms    114 ms   
+diagonal                    60 ms    106 ms   
+pixel                       26 ms     48 ms   
+mosaic                      37 ms     52 ms   
+lego                       136 ms    207 ms   tak
+hexmosaic                  130 ms    114 ms   tak
+disco                       19 ms     25 ms   
+halftone                   223 ms    410 ms   tak
+posterize                   81 ms     72 ms   
+duotone                     41 ms     48 ms   
+gradientmap                 56 ms    137 ms   
+dither                      62 ms     64 ms   
+pixel + advBlur            148 ms    321 ms   tak
+pixel + vignette            86 ms    140 ms   
+pixel + scanLines           22 ms     28 ms   
+pixel + bloom              267 ms    355 ms   tak
+pixel + charBloom           25 ms     24 ms   
+pixel + chromatic          144 ms    239 ms   tak
+pixel + charChroma          31 ms     28 ms   
+pixel + rgbSplit            87 ms    121 ms   
+pixel + crtCurve           121 ms    124 ms   tak
+pixel + glitch              28 ms     34 ms   
+pixel + filmGrain           50 ms     50 ms   
+pixel + pixelate            28 ms     35 ms   
+pixel + halftone            71 ms     92 ms   
+pixel + filmDust            19 ms     30 ms   
+pixel + sharpen            123 ms    153 ms   tak
+pixel + noise               50 ms     79 ms   
 
 == Pamięć: partie po 36 renderów (18 efektów × skala 1 i 2) na 1600×1067, pełna ścieżka do kanwy, GC po każdej partii ==
 renderów      RSS Chromium   sterta Workera   sterta strony
-       0     494.6 MB      —      —
-      36     698.2 MB      —        105.8 MB
-      72     698.6 MB      —        105.8 MB
-     108     698.9 MB      —        105.8 MB
-     144     698.8 MB      —        105.8 MB
-     180     720.0 MB      —        105.8 MB
-     216     695.4 MB      —        105.8 MB
+       0     514.1 MB      —      —
+      36     666.1 MB      —        105.8 MB
+      72     725.2 MB      —        105.8 MB
+     108     700.1 MB      —        105.8 MB
+     144     699.6 MB      —        105.8 MB
+     180     723.6 MB      —        105.8 MB
+     216     822.5 MB      —        105.8 MB

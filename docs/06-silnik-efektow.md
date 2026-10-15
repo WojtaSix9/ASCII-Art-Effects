@@ -17,11 +17,11 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Eksport tekstowy** (Characters, Block, Braille) | `test` |
 | **Backdrop** (blur, solid, original, none, softness, opacity), parametry wspólne (coverage, brightness, contrast, invert, seed) | `test` |
 | **Color:** 8 presetów, tint + blend, saturation, vibrance, hue, grayscale, invert | `test` |
-| **Post FX: 13 z 16 darmowych:** blur, vignette, scan lines, bloom, chromatic, RGB split, CRT curvature, glitch, film grain, pixelate, film dust, sharpen, noise (stała kolejność) | `test` |
+| **Post FX: 16 z 16 darmowych:** blur, vignette, scan lines, bloom, chromatic, RGB split, CRT curvature, glitch, film grain, pixelate, halftone, film dust, sharpen, noise (stała kolejność) oraz Character Bloom i Character Chromatic (per glif, sekcja 10) | `test` |
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 73 efekty Faz 2–3; post FX Character Bloom, Character Chroma, Halftone (post); Lights; warstwa tekstu; Levels i Curves; Photo Filter i Gradient Map w zakładce Color; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 73 efekty Faz 2–3; warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -118,3 +118,30 @@ Kod: `engine/src/post/grade.ts`, parametry w `COLOR_PARAMS` (`post/color.ts`), U
 - **Curves:** krzywe RGB, R, G, B (do 16 punktów), interpolacja monotoniczna Fritscha–Carlsona (bez przestrzelenia między punktami, `docs`); kanały, potem RGB.
 - **Testy (`test`):** silnik 111 z 111 (m.in. wartości domyślne = bajt w bajt bez zmian, Levels monotoniczne dla 200 losowych ustawień, krzywa przez punkty bez przestrzelenia, kolejność Levels → Curves); dotychczasowe wyniki identyczne (212 przypadków + 21 ustawień Color); edytor 44 z 44 (m.in. dodawanie, przeciąganie, strzałki i Delete na krzywej, eksport z krzywą = render).
 - **`BRAK`:** zapamiętywanie zaznaczonego kanału krzywej przy cofnij/ponów; histogram pod krzywą; Levels osobno dla każdego kanału naraz (jest wybór jednego kanału albo RGB).
+
+## 10. Krok 7, punkt 2: Character Bloom, Character Chromatic, Halftone jako post FX (15 X 2026)
+
+Kod: `engine/src/post/glyphfx.ts` (oba efekty per glif), `engine/src/post/postfx.ts` (definicje i Halftone), `engine/src/effects/grid.ts` (`runGlyphGrid`).
+
+- **Gdzie działają charBloom i charChroma (`docs` + `proj`):** plik 01 mówi „tylko w trybach glifowych”. Za tryby glifowe uznałem style, które rysują znaki i mają eksport tekstowy: **Characters, Block, Braille** (`GLYPH_STYLES`). W pozostałych stylach wynik jest bajt w bajt taki sam (`test`). W edytorze są wtedy wyszarzone z podpowiedzią, a ustawienie zostaje w stanie.
+- **Jak (`proj`):** gdy któryś z nich jest włączony, styl rysuje znaki na przezroczystej warstwie, a nie wprost na tle. Potem `composeGlyphs` nakłada warstwę na tło:
+  - **Chromatic:** R tuszu przesunięte o +offset, B o −offset (px × skala, zaokrąglone), G na miejscu; **tło się nie przesuwa**. Domyślnie 2 px. Przy 3 px i komórce 10 px przesunięcie to pół znaku i efekt był bardzo mocny (`oko`).
+  - **Bloom:** rozmyty tusz (alfa przemnożona, promień 0,35 wysokości komórki) dodany trybem screen, wzmocnienie 2 × intensity. Tylko rozjaśnia.
+  - Kolejność stała: tusz z Chromą, potem poświata. Plik 01 mówi „rysowane per glif podczas malowania siatki”. U mnie to warstwa znaków składana po siatce. Skutek jest ten sam: efekt dotyczy tylko znaków i nie da się zmienić jego kolejności.
+  - Wyłączone albo Bloom 0 oznacza starą ścieżkę bez warstwy, więc wynik jest bajt w bajt jak dotąd.
+- **Halftone jako post FX (`proj`, plik 01 podaje tylko `size` 2–20, `shape` (dots), `colour` (source)):**
+  - Siatka komórek wyrównana do osi, kształty: Dots, Squares, Lines. **Pole kształtu = ton komórki**, dla koła przez odwrócenie pola koła przyciętego do kwadratu, więc średnia jasność się zachowuje (błąd ≤ 0,009 na jednolitej szarości, `test`).
+  - `source`: jasne kształty na czerni w kolorze komórki znormalizowanym do najjaśniejszego kanału, co zachowuje odcień, ale daje mocniejsze, „neonowe” kolory (`oko`).
+  - `mono`: czarny tusz na bieli.
+  - Miejsce w kolejności: po Pixelate (plik 01, punkt 5).
+- **Testy (`test`):**
+  - Silnik 122 z 122: 11 nowych; test „każdy post FX zmienia obraz” obejmuje teraz 14 efektów po klatce.
+    - Chroma: R(x) = G(x − dx) i B(x) = G(x + dx) przy skali 1 i 2, 0 niezgodnych.
+    - Bloom: żaden piksel nie ciemnieje; średnia rośnie z intensity; udział pikseli objętych poświatą 24,6% vs 21,4% przy skali 1 i 2.
+    - Halftone: monotoniczny ton, odcień zachowany, skala 2 vs 1 PSNR 26,7 dB.
+  - Mutacje: stały promień poświaty, Chroma bez skali, naiwny promień kropki, Halftone bez skali i ruszenie tła. Każda wykryta.
+  - Dotychczasowe 212 przypadków bajt w bajt bez zmian. Przeglądarka = Node: 35 z 35 (nowe: charBloom i charChroma na Braille, Halftone na Pixel Art).
+  - Edytor: 46 z 46.
+- **Czas (Node, 480×320, orientacyjnie):** Characters 63 ms, z Bloom 55 ms, Braille z oboma 47 ms, Halftone po Pixel Art 26 ms.
+- **`BRAK`:** porównanie z oryginałem (nie mam jego wyglądu tych efektów); kąt siatki Halftone (jest tylko wyrównana do osi); Chroma tylko w poziomie (oryginał podaje tylko `offset`).
+

@@ -139,7 +139,8 @@ const SRC = testImage(300, 200);
   const base = testImage(160, 100); const rp = (id: string, p: any, scale = 1) => { const src = { w: base.w, h: base.h, data: new Uint8ClampedArray(base.data) }; return POSTFX.find((f) => f.id === id)!.apply(src, resolveParams(POSTFX.find((f) => f.id === id)!.params, p), scale, 1); };
   const neutral: Record<string, any> = { advBlur: { amount: 0 }, vignette: { intensity: 0 }, scanLines: { intensity: 0 }, bloom: { intensity: 0 }, crtCurve: { intensity: 0 }, glitch: { intensity: 0 }, filmGrain: { intensity: 0 }, filmDust: { density: 0 }, sharpen: { amount: 0 }, noise: { amount: 0 } };
   ok('post FX: wartosci neutralne zostawiaja obraz bez zmian', Object.entries(neutral).every(([id, p]) => sha(rp(id, p)) === sha(base)), Object.entries(neutral).filter(([id, p]) => sha(rp(id, p)) !== sha(base)).map(([id]) => id).join(','));
-  ok(`post FX: ${POSTFX.length} efektow, kazdy zmienia obraz przy parametrach domyslnych i zachowuje wymiary`, POSTFX.every((f) => { const o = rp(f.id, {}); return o.w === 160 && o.h === 100 && sha(o) !== sha(base); }), POSTFX.filter((f) => sha(rp(f.id, {})) === sha(base)).map((f) => f.id).join(','));
+  const FRAME = POSTFX.filter((f) => !f.glyphOnly);   // charBloom/charChroma nie sa przebiegiem po klatce: sekcja 17
+  ok(`post FX: ${POSTFX.length} efektow (${FRAME.length} po klatce), kazdy po klatce zmienia obraz przy parametrach domyslnych i zachowuje wymiary`, POSTFX.length === 16 && FRAME.length === 14 && FRAME.every((f) => { const o = rp(f.id, {}); return o.w === 160 && o.h === 100 && sha(o) !== sha(base); }), FRAME.filter((f) => sha(rp(f.id, {})) === sha(base)).map((f) => f.id).join(','));
   ok('post FX: powtarzalnosc i zaleznosc od seeda (glitch, filmGrain, filmDust, noise)', ['glitch', 'filmGrain', 'filmDust', 'noise'].every((id) => sha(rp(id, { seed: 1 })) === sha(rp(id, { seed: 1 })) && sha(rp(id, { seed: 1 })) !== sha(rp(id, { seed: 2 }))));
   const pz = rp('pixelate', { size: 8 }, 2); let u = true; for (let by = 0; by < 96; by += 16) for (let bx = 0; bx < 144; bx += 16) { const v = pz.data[(by * 160 + bx) * 4]; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (pz.data[((by + y) * 160 + bx + x) * 4] !== v) u = false; }
   ok('post FX: wartosci w px skaluja sie ze skala (pixelate 8 px przy 2x = bloki 16 px)', u);
@@ -290,6 +291,40 @@ const SRC = testImage(300, 200);
   const exp2 = curveLut([[0, 0], [0.5, 0.25], [1, 1]])[levelsLut({ channel: 'rgb', inBlack: 0, inWhite: 128, gamma: 1, outBlack: 0, outWhite: 255 })[64]];
   ok('Kolejnosc: Levels, potem Curves (plik 01, sekcja 8.9)', at(C2, 64) === exp2, `${at(C2, 64)} vs ${exp2}`);
   ok('Curves: zle punkty -> blad (x nierosnace, poza 0..1, 1 punkt, 17 punktow)', [[[0.5, 0], [0.4, 1]], [[0, 0], [1, 1.2]], [[0, 0]], Array.from({ length: 17 }, (_, i) => [i / 16, i / 16])].every((bad) => throws(() => resolveParams(COLOR_PARAMS, { curves: { rgb: bad } }))));
+}
+// 17. Krok 7.2: Character Bloom, Character Chromatic (per glif) i Halftone jako post FX
+{
+  const { GLYPH_STYLES } = await import('../src/index.ts');
+  const ST = (id: string, params: any = {}, postFx: any = {}, scale = 1, src = SRC) => render(src, { style: { id, params }, postFx }, { glyphs: G, scale }).img;
+  const BOTH = { charBloom: { intensity: 80 }, charChroma: { offset: 4 } };
+  ok('glyph FX: wylaczone (false) i Bloom 0 = bajt w bajt jak bez nich (Characters, Block, Braille)', [...GLYPH_STYLES].every((id) => { const b = sha(ST(id)); return sha(ST(id, {}, { charBloom: false, charChroma: false })) === b && sha(ST(id, {}, { charBloom: { intensity: 0 } })) === b; }));
+  ok('glyph FX: w stylach bez glifow nic nie zmieniaja (wszystkie pozostale efekty)', EFFECTS.filter((e) => !GLYPH_STYLES.has(e.id)).every((e) => sha(ST(e.id)) === sha(ST(e.id, {}, BOTH))), EFFECTS.filter((e) => !GLYPH_STYLES.has(e.id) && sha(ST(e.id)) !== sha(ST(e.id, {}, BOTH))).map((e) => e.id).join(','));
+  ok('glyph FX: kazdy styl glifowy reaguje na Bloom i na Chroma osobno', [...GLYPH_STYLES].every((id) => { const b = sha(ST(id)); return sha(ST(id, {}, { charBloom: true })) !== b && sha(ST(id, {}, { charChroma: true })) !== b; }));
+  ok('glyph FX: bez znakow (coverage 0) tlo zostaje bajt w bajt - efekty dotycza tylko glifow', ['blur', 'solid', 'original'].every((bg) => sha(ST('characters', { coverage: 0, bgMode: bg })) === sha(ST('characters', { coverage: 0, bgMode: bg }, BOTH))));
+  // Chroma: biały tusz na czarnym tle -> R(x) = G(x - dx), B(x) = G(x + dx), dx = round(offset * skala)
+  const chromaShift = (scale: number) => { const o = ST('characters', { colorMode: 'mono', inkColor: '#ffffff', bgMode: 'solid', bgColor: '#000000' }, { charChroma: { offset: 3 } }, scale); const dx = Math.round(3 * scale); let bad = 0, n = 0;
+    for (let y = 0; y < o.h; y++) for (let x = dx; x < o.w - dx; x++) { const i = (y * o.w + x) * 4; if (Math.abs(o.data[i] - o.data[i - dx * 4 + 1]) > 1 || Math.abs(o.data[i + 2] - o.data[i + dx * 4 + 1]) > 1) bad++; if (o.data[i + 1]) n++; } return { bad, n }; };
+  const c1 = chromaShift(1), c2 = chromaShift(2);
+  ok('Character Chromatic: R przesuniete o +offset, B o -offset wzgledem G (dokladnie, +-1), przy skali 1 i 2 (offset w px rosnie ze skala)', c1.bad === 0 && c2.bad === 0 && c1.n > 1000, `zle ${c1.bad}/${c2.bad}, piksele tuszu ${c1.n}`);
+  // Bloom: tylko rozjasnia (screen), rosnie z intensywnoscia, zasieg rosnie z komorka (skala)
+  const mono = { colorMode: 'mono', inkColor: '#ffffff', bgMode: 'solid', bgColor: '#000000' };
+  const b0 = ST('characters', mono), b50 = ST('characters', mono, { charBloom: { intensity: 50 } }), b100 = ST('characters', mono, { charBloom: { intensity: 100 } });
+  let darker = 0; for (let i = 0; i < b0.data.length; i += 4) for (let c = 0; c < 3; c++) if (b50.data[i + c] < b0.data[i + c] || b100.data[i + c] < b50.data[i + c]) darker++;
+  ok('Character Bloom: zaden piksel nie ciemnieje; srednia jasnosc 0 < 50 < 100', darker === 0 && meanLum(b0) < meanLum(b50) && meanLum(b50) < meanLum(b100), `${meanLum(b0).toFixed(3)} ${meanLum(b50).toFixed(3)} ${meanLum(b100).toFixed(3)}`);
+  const glowFrac = (scale: number) => { const S = testImage(240, 160); const sp = { ...mono, coverage: 8, cellSize: 14 }; const a = ST('characters', sp, {}, scale, S), b = ST('characters', sp, { charBloom: { intensity: 60 } }, scale, S); let n = 0; for (let i = 0; i < a.data.length; i += 4) if (lum(b.data[i], b.data[i + 1], b.data[i + 2]) - lum(a.data[i], a.data[i + 1], a.data[i + 2]) > 4 / 255) n++; return n / (a.data.length / 4); };
+  const f1 = glowFrac(1), f2 = glowFrac(2);
+  ok('Character Bloom: udzial pikseli objetych poswiata podobny przy skali 1 i 2 (rzadkie znaki, coverage 8; roznica < 20%; promien liczony od komorki)', Math.abs(f2 - f1) < 0.2 * f1, `${(f1 * 100).toFixed(1)}% vs ${(f2 * 100).toFixed(1)}%`);
+  // Halftone (post FX): pole ksztaltu = ton, wiec srednia jasnosc zachowana; mono = wiecej tuszu w ciemnych; px skaluja sie
+  const HT = (img: Img, p: any, scale = 1) => POSTFX.find((f) => f.id === 'halftone')!.apply(cloneImg(img), resolveParams(POSTFX.find((f) => f.id === 'halftone')!.params, p), scale, 1);
+  let worst = 0; const wl: string[] = [];
+  for (const shape of ['dots', 'squares', 'lines']) for (const colour of ['source', 'mono']) for (const v of [25, 64, 128, 190, 230]) { const o = HT(uniform(120, 120, v), { size: 6, shape, colour }); const e = Math.abs(meanLum(o) - lum(v, v, v)); if (e > worst) { worst = e; wl.push(`${shape}/${colour}/${v}:${e.toFixed(3)}`); } }
+  ok('Halftone: na jednolitej szarosci srednia jasnosc zachowana (|blad| <= 0,03) dla 3 ksztaltow, 2 trybow, 5 tonow', worst <= 0.03, `max ${worst.toFixed(3)} ${wl.slice(-1)}`);
+  const ramp = (v: number) => meanLum(HT(uniform(60, 60, v), { colour: 'mono' }));
+  ok('Halftone: ton monotoniczny (0..255 co 15, kazdy ksztalt)', ['dots', 'squares', 'lines'].every((shape) => { let prev = -1; for (let v = 0; v <= 255; v += 15) { const m = meanLum(HT(uniform(60, 60, v), { shape, colour: 'mono' })); if (m < prev - 1e-6) return false; prev = m; } return true; }) && ramp(0) < 0.02 && ramp(255) > 0.98);
+  const red = HT(newImg(60, 60, [200, 40, 40, 255]), {}); let hueOk = true; for (let i = 0; i < red.data.length; i += 4) if (red.data[i] > 20 && (Math.abs(red.data[i + 1] / red.data[i] - 0.2) > 0.02 || red.data[i + 1] !== red.data[i + 2])) hueOk = false;
+  ok('Halftone colour source: odcien komorki zachowany (G/R = 0,2 +-0,02, G = B)', hueOk);
+  const ht1 = HT(testImage(240, 160), { size: 6 }), ht2 = resize(HT(testImage(480, 320), { size: 6 }, 2), 240, 160);
+  ok('Halftone: rozmiar w px skaluje sie (skala 2 po zmniejszeniu ~ skala 1, PSNR > 20 dB)', psnr(ht1, ht2) > 20, psnr(ht1, ht2).toFixed(1) + ' dB');
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

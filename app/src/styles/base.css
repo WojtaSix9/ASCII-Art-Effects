@@ -246,6 +246,7 @@ a { color: inherit; }
 .ed-fx__on { display: flex; align-items: center; gap: 8px; color: var(--text-2); cursor: pointer; }
 .ed-fx__on input { accent-color: var(--ed-fill); width: 16px; height: 16px; margin: 0; }
 .ed-fx__params .pp-sec { border-bottom: 0; padding: 4px 0 0 24px; }
+.ed-fx.is-off .ed-fx__on, .ed-fx.is-off .ed-fx__params { opacity: .45; cursor: not-allowed; }
 .ed-dialog { background: var(--ed-panel); color: var(--text); border: 1px solid var(--ed-sep-strong); padding: 20px 24px; min-width: 320px; }
 .ed-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 .ed-dialog fieldset { border: 0; padding: 0; margin: 0 0 16px; display: grid; gap: 6px; }

@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // Silnik efektów w Web Workerze. Glify: OffscreenCanvas + Geist Mono załadowany w Workerze przed pierwszym renderem
 // (inaczej cache masek w canvasGlyphs zapamiętałby znaki z czcionki zastępczej).
-import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS } from '../../../engine/src/index.ts';
+import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES } from '../../../engine/src/index.ts';
 import type { GlyphProvider, Img, RenderState } from '../../../engine/src/index.ts';
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
@@ -81,7 +81,7 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
   await init();
   switch (req.type) {
     case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params })) satisfies EffectMeta[] };
-    case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params })), color: COLOR_PARAMS, lights: { params: LIGHT_PARAMS, ambient: AMBIENT_PARAM, max: MAX_LIGHTS, skip: [...NO_LIGHTS] } } satisfies PostDefs };
+    case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params, glyphOnly: f.glyphOnly })), glyphStyles: [...GLYPH_STYLES], color: COLOR_PARAMS, lights: { params: LIGHT_PARAMS, ambient: AMBIENT_PARAM, max: MAX_LIGHTS, skip: [...NO_LIGHTS] } } satisfies PostDefs };
     case 'export': {
       if (!source) throw new Error('no source image');
       const w = Math.round(source.w * req.scale), h = Math.round(source.h * req.scale);
@@ -113,7 +113,7 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
     }
     case 'hashes': {
       const src = testImage(300, 200); const out: Record<string, string> = {};
-      for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX.map((f) => f.id))) out[c.name] = await sha1(render(src, c.state).img.data);
+      for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX)) out[c.name] = await sha1(render(src, c.state).img.data);
       return { data: out };
     }
     case 'bench': {

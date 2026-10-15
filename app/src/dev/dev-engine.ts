@@ -51,7 +51,7 @@ export function mountDevEngine(main: HTMLElement): () => void {
     const got = await client.call<Record<string, string>>({ type: 'hashes' });
     const exp = expectedHashes as Record<string, string>;
     const diff = Object.keys(exp).filter((k) => got[k] !== exp[k]);
-    check(`Render identyczny z Node: ${Object.keys(exp).length - diff.length}/${Object.keys(exp).length} przypadków (17 efektów, 13 post FX, Color, Dither)`, diff.length === 0, diff.join(', '));
+    check(`Render identyczny z Node: ${Object.keys(exp).length - diff.length}/${Object.keys(exp).length} przypadków (17 efektów, 16 post FX, Color, Dither)`, diff.length === 0, diff.join(', '));
 
     // 3. Pokrycie znaków presetów
     const cov = report.coverage = await client.call<CoverageRes>({ type: 'coverage' });

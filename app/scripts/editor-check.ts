@@ -145,6 +145,21 @@ try {
   await page.uncheck('[data-fx-on="vignette"]'); await settle(page);
   t('Post FX: Vignette zmienia obraz i pokazuje parametry; wyłączenie przywraca identyczny', p1 !== k0 && shown && (await hash(page)) === k0);
 
+  // Post FX per glif (krok 7.2): aktywne tylko w stylach glifowych; ustawienie przetrwa zmianę stylu
+  const style0 = await page.inputValue('[data-style]');
+  const pick = (id: string) => page.evaluate((v) => { const el = document.querySelector<HTMLSelectElement>('[data-style]')!; el.value = v; el.dispatchEvent(new Event('change')); }, id);   // select stylu jest w ukrytej zakładce Styl
+  const gstate = () => page.evaluate(() => { const r = document.querySelector('[data-fx="charChroma"]')!; return { dis: (r.querySelector('[data-fx-on]') as HTMLInputElement).disabled, note: !(r.querySelector('[data-fx-note]') as HTMLElement).hidden, inState: !!(window as any).__editorTest.state().postFx.charChroma }; });
+  await pick('braille'); await settle(page); const b0 = await hash(page);
+  const gOn = await gstate(); await page.check('[data-fx-on="charChroma"]'); await settle(page); const b1 = await hash(page);
+  await pick('pixel'); await settle(page); const gOff = await gstate();
+  await pick('braille'); await settle(page); const b2 = await hash(page); const gBack = await gstate();
+  await page.uncheck('[data-fx-on="charChroma"]'); await settle(page); const b3 = await hash(page);
+  t('Post FX: Character Chromatic zmienia Braille; w Pixel Art wyszarzony z podpowiedzią, ustawienie zostaje; po powrocie ten sam obraz; wyłączenie przywraca identyczny',
+    !gOn.dis && !gOn.note && b1 !== b0 && gOff.dis && gOff.note && gOff.inState && !gBack.dis && b2 === b1 && b3 === b0, { gOn, gOff, gBack, same: b2 === b1, back: b3 === b0 });
+  await page.check('[data-fx-on="halftone"]'); await settle(page); const b4 = await hash(page); await page.uncheck('[data-fx-on="halftone"]'); await settle(page);
+  t('Post FX: Halftone zmienia obraz, wyłączenie przywraca identyczny', b4 !== b0 && (await hash(page)) === b0);
+  await pick(style0); await settle(page);
+
   // Porównanie
   await page.click('[data-ed-tools] [data-compare]');
   const cmp = await page.evaluate(() => ({ pressed: document.querySelector('[data-compare]')!.getAttribute('aria-pressed'), vis: getComputedStyle(document.querySelector('[data-before]')!).display }));

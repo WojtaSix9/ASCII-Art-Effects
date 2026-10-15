@@ -5,6 +5,8 @@ import { backdrop, cellVisible } from '../core/compose.ts';
 import { cellAverages, clamp, hash01, lerp, over, parseColor } from '../core/util.ts';
 import { fillRect, paintSDF, paintSDFNear, sdBox } from '../core/raster.ts';
 import { CHARSETS } from '../data/charsets.ts';
+import { newImg } from '../core/types.ts';
+import { composeGlyphs } from '../post/glyphfx.ts';
 
 const CELL = (def = 10) => range('cellSize', 'Cell size', def, 3, 80, { unit: 'px', px: true });
 const COLOR_PARAMS = [select('colorMode', 'Colour', 'image', [['image', 'From image'], ['mono', 'Single colour']]), color('inkColor', 'Ink colour', '#ffffff')];
@@ -12,8 +14,8 @@ const GRID_COMMON = () => [...common('coverage', 'brightness', 'contrast', 'inve
 
 type Cell = { x0: number; y0: number; x1: number; y1: number; cx: number; cy: number; t: number; r: number; g: number; b: number };
 /** Wspolna petla: srednie komorek z `prep`, ton (z odwroceniem), kolor tuszu, coverage przez hasz; rysuje na tle. */
-function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void, tone?: (t: number) => number): Img {
-  const out = backdrop(ctx); const a = cellAverages(ctx.prep, cw, ch); const p = ctx.p; const ink = parseColor(p.inkColor ?? '#ffffff');
+function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void, tone?: (t: number) => number, target?: Img): Img {
+  const out = target ?? backdrop(ctx); const a = cellAverages(ctx.prep, cw, ch); const p = ctx.p; const ink = parseColor(p.inkColor ?? '#ffffff');
   ctx.info.cols = a.nx; ctx.info.rows = a.ny;
   for (let cy = 0; cy < a.ny; cy++) for (let cx = 0; cx < a.nx; cx++) {
     if (!cellVisible(hash01(cx, cy, p.seed ?? 1), p.coverage)) continue;
@@ -22,6 +24,13 @@ function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cel
     draw(out, { x0: cx * cw, y0: cy * ch, x1: Math.min(out.w, (cx + 1) * cw), y1: Math.min(out.h, (cy + 1) * ch), cx, cy, t: clamp(t, 0, 1), r: img[0], g: img[1], b: img[2] }, a);
   }
   return out;
+}
+/** Style glifowe: bez charBloom/charChroma rysują wprost na tle (wynik bez zmian); z nimi znaki idą na przezroczystą warstwę,
+ *  którą composeGlyphs nakłada na tło z poświatą i przesunięciem kanałów tylko dla znaków. */
+function runGlyphGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void): Img {
+  if (!ctx.glyphFx) return runGrid(ctx, cw, ch, draw);
+  const bg = backdrop(ctx); const ink = runGrid(ctx, cw, ch, draw, undefined, newImg(bg.w, bg.h, [0, 0, 0, 0]));
+  return composeGlyphs(bg, ink, ctx.glyphFx, ch, ctx.scale);
 }
 const charCell = (ctx: RenderCtx) => { const fs = ctx.px(ctx.p.cellSize); return { fs, cw: Math.max(1, Math.round(fs * 0.6)), ch: fs }; };
 
@@ -44,7 +53,7 @@ const characters: EffectDef = {
   render(ctx) {
     if (!ctx.glyphs) throw new Error('Characters needs a glyph provider (canvasGlyphs)'); const { fs, cw, ch } = charCell(ctx); const ramp = rampOf(ctx.p); const eb = edgeBoost(ctx, cellAverages(ctx.prep, cw, ch));
     const masks = new Map<string, Uint8Array>();   // krok 6: maska znaku raz na render, nie klucz tekstowy na każdą komórkę
-    return runGrid(ctx, cw, ch, (img, c, a) => {
+    return runGlyphGrid(ctx, cw, ch, (img, c, a) => {
       const t = eb ? clamp(c.t + eb[c.cy * a.nx + c.cx], 0, 1) : c.t; const chr = charAt(ramp, t); if (chr === ' ') return;
       let m = masks.get(chr); if (!m) { m = ctx.glyphs!.mask(chr, cw, ch, fs); masks.set(chr, m); } const w = c.x1 - c.x0;
       for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) { const v = m[(y - c.y0) * cw + (x - c.x0)]; if (v && x - c.x0 < w) over(img.data, (y * img.w + x) * 4, c.r, c.g, c.b, v / 255); }
@@ -78,7 +87,7 @@ const block: EffectDef = {
   params: [CELL(10), select('blockSet', 'Block set', 'quarter', [['full', 'Full'], ['half', 'Half'], ['quarter', 'Quarter'], ['shaded', 'Shaded']]), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
   render(ctx) {
     const { cw, ch } = charCell(ctx); const st = subTones(ctx, cw, ch); const hw = cw / 2, hh = ch / 2;
-    return runGrid(ctx, cw, ch, (img, c) => {
+    return runGlyphGrid(ctx, cw, ch, (img, c) => {
       const chr = blockChar(ctx, c, st(c.cx, c.cy)); const bits = chr === '█' ? 15 : chr === ' ' ? 0 : QUAD.indexOf(chr);
       if (ctx.p.blockSet === 'shaded') { if (chr !== ' ') fillRect(img, c.x0, c.y0, c.x1, c.y1, c.r, c.g, c.b, '░▒▓█'.indexOf(chr) / 4 + 0.25); return; }
       if (ctx.p.blockSet === 'half') { const top = chr === '▀' || chr === '█', bot = chr === '▄' || chr === '█'; if (top) fillRect(img, c.x0, c.y0, c.x1, c.y0 + hh, c.r, c.g, c.b); if (bot) fillRect(img, c.x0, c.y0 + hh, c.x1, c.y1, c.r, c.g, c.b); return; }
@@ -108,7 +117,7 @@ const braille: EffectDef = {
   params: [range('dotPitch', 'Dot pitch', 3, 1, 16, { unit: 'px', px: true }), range('threshold', 'Threshold', 50, 0, 100, { unit: '%' }), toggle('dither', 'Dither dots', true), ...COLOR_PARAMS.map((p) => (p.id === 'colorMode' ? { ...p, default: 'mono' } : p)), ...GRID_COMMON().map((p) => (p.id === 'bgMode' ? { ...p, default: 'solid' } : p)), seedParam()],
   render(ctx) {
     const { dw, dh, cw, ch } = brailleGeom(ctx); const sub = cellAverages(ctx.prep, dw, dh);
-    return runGrid(ctx, cw, ch, (img, c) => {
+    return runGlyphGrid(ctx, cw, ch, (img, c) => {
       const m = brailleMask(ctx, sub, c.cx, c.cy); const rad = Math.min(dw, dh) * 0.42;
       for (let r = 0; r < 4; r++) for (let q = 0; q < 2; q++) if (m & (1 << BIT[r][q])) { const mx = c.x0 + (q + 0.5) * dw, my = c.y0 + (r + 0.5) * dh; paintSDF(img, Math.floor(mx - rad - 1), Math.floor(my - rad - 1), Math.ceil(mx + rad + 1), Math.ceil(my + rad + 1), (x, y) => Math.hypot(x - mx, y - my) - rad, c.r, c.g, c.b); }
     });
