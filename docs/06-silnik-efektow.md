@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 37 efektów Fazy 3 (stan po kroku 9, partia 7; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 26 efektów Fazy 3 (stan po kroku 9, partia 9; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -565,3 +565,40 @@ Na tej podstawie:
 - Ogólny test skali 2× obejmuje nowe efekty (26–46 dB).
 - Test UI z `ONLY` (6 nowych efektów): 39 z 39. Przeglądarka = Node: 71 z 71.
 - Mutacji nie robiłem (decyzja o minimalizacji testów).
+
+## 21. Krok 9, partie 8 i 9 (Faza 3): glitch i sygnał, druk (15 X 2026)
+
+**Stan:** 65 z 91 efektów gotowych. Zostało 26 (Faza 3).
+
+**Narzędzia testowe (minimalizacja, decyzja użytkownika)**
+- `QUICK=1 node scripts/browser-engine.ts`: tylko testy funkcjonalne (hashe przeglądarka = Node, czcionki), bez czasów i pamięci. Pełny pomiar dalej bez `QUICK`.
+- Testy aplikacji dla obu partii uruchomione raz, wspólnie.
+
+**Glitch i sygnał** (`glitch3.ts`; `proj`, Forensics i Beacon `proj?`)
+- **Pixel Sort:** ciągi pikseli z jasnością w [low, high] (`maxLength` dzieli dłuższe) sortowane wg jasności albo odcienia; 4 kierunki.
+- **Forensics:** mapa szumu, ELA albo krawędzie w kolorowej mapie, plus nakładka (siatka, narożniki, krzyż; bez tekstu). ELA to przybliżenie: reszta od średniej bloku 8×8 i jej błąd kwantyzacji krokiem 24. Wzmocnienie obniżone, bo obraz był prawie cały biały (`oko`).
+- **Digital Distortion** (`glitch`): z seeda paski przesunięte z rozdzieleniem R/B, bloki przesunięte z zamianą kanałów, linie szumu.
+- **Datamosh** (`STATE` → deterministyczny): wektory ruchu bloków z gładkiego szumu, `keyframeInterval` kroków przesuwania bloków bez korekty.
+- **Lofi:** niska rozdzielczość, kwantyzacja do 2^bits, chroma uśredniona w blokach 8×8, pasy taśmy przesunięte w poziomie, rozlany kolor, szum.
+- **Beacon** (`STATE` → stała chwila): siatka kropek, pierścienie gaussowskie od źródła, jasność × obraz.
+- **Domyślne wartości po ocenie miniatur:** Pixel Sort górny próg 95%, Digital Distortion 65%, Datamosh 80% i 12 klatek.
+
+**Druk** (`print3.ts`, wszystko `proj`)
+- **Engraving:** linie pod kątem, wyginane wg mocno rozmytej jasności (`curvature`), grubość ∝ ciemność. Poprawka: linia cieńsza niż 1 px ma krycie × grubość (wcześniej biel miała ślad 0,5 px).
+- **Warhol:** siatka 2×2 / 3×3, kafelek = pomniejszony obraz posteryzowany do `levels`, kolory z palety kafelka (Pop / Neon / Pastel) i obrót odcienia.
+- **Cyanotype** (`blueprint`): błękit pruski → papier wg krzywej tonu; tryb krawędzi; plamy papieru i ziarno.
+- **Woodblock** (`ukiyoe`): wygładzenie 0,6% krótszego boku (1,5% gubiło kształty, `oko`), paleta z k-średnich albo edo, kontury na granicach plam, słoje i papier.
+- **Mezzotint:** krzywa S i ziarno (komórki w px źródła) z losowym progiem.
+- **Czas (Node, 600×400):** 17–189 ms.
+
+**Testy silnika (`test`, 264 z 264)** — po jednej kluczowej własności na efekt:
+- Pixel Sort: permutacja wiersza; posortowany przy pełnym zakresie;
+- glitch i Datamosh: zero = bez zmian; Datamosh nie zmienia płaskiego obrazu;
+- Lofi: 1 bit = kanały 0/255;
+- Forensics: płaski obraz = jednolita mapa;
+- Beacon: pierścień jaśniejszy niż przerwa;
+- Engraving i Cyanotype: biel = sam papier; Cyanotype: czerń = błękit pruski;
+- Warhol i Woodblock: liczba kolorów;
+- Mezzotint i Engraving: monotoniczność tonu.
+
+**Aplikacja:** przeglądarka = Node 82 z 82 (`QUICK`); test UI z `ONLY` (11 efektów) 39 z 39. Test „efekt wkrótce” brał Warhol, który już jest gotowy; teraz bierze pierwszy efekt o statusie `soon` z katalogu.

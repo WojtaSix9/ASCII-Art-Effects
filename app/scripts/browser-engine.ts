@@ -44,6 +44,11 @@ try {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(BASE + '/dev/engine');
   await page.waitForFunction(() => (window as any).__engineReport?.done || (window as any).__engineReport?.checks.some((c: any) => !c.ok), null, { timeout: 120_000 });
+  if (process.env.QUICK) {   // QUICK=1: tylko testy funkcjonalne (hashe, czcionki), bez czasów i pamięci; raport bez zmian
+    const r = await page.evaluate(() => (window as any).__engineReport); for (const c of r.checks) { if (!c.ok) failed++; console.log(`${c.ok ? 'OK  ' : 'FAIL'} ${c.name}${c.ok ? '' : `  [${c.info}]`}`); }
+    if (errors.length) { failed++; console.log('FAIL błędy w konsoli: ' + errors.join(' | ')); }
+    await browser.close(); server.kill(); process.exit(failed ? 1 : 0);
+  }
   await page.evaluate(() => (window as any).__engineDev.bench());
   const rss: { renders: number; rss: number; workerHeap: number | null; pageHeap: number | null }[] = [];
   rss.push({ renders: 0, rss: chromiumRss(), workerHeap: null, pageHeap: null });

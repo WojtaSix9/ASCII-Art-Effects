@@ -19,6 +19,7 @@ const gradient = (w: number, h: number): Img => { const i = newImg(w, h); for (l
 const meanLum = (i: Img) => { let s = 0; for (let p = 0; p < i.data.length; p += 4) s += lum(i.data[p], i.data[p + 1], i.data[p + 2]); return s / (i.data.length / 4); };
 const psnr = (a: Img, b: Img) => { let se = 0, n = 0; for (let i = 0; i < a.data.length; i += 4) for (let c = 0; c < 3; c++) { const d = a.data[i + c] - b.data[i + c]; se += d * d; n++; } return se === 0 ? 99 : 10 * Math.log10(65025 / (se / n)); };
 const throws = (f: () => unknown) => { try { f(); return false; } catch { return true; } };
+const colorsOf = (i: Img) => { const s = new Set<number>(); for (let p = 0; p < i.data.length; p += 4) s.add(i.data[p] << 16 | i.data[p + 1] << 8 | i.data[p + 2]); return s.size; };
 const uniq = (i: Img) => { const s = new Set<number>(); for (let p = 0; p < i.data.length; p += 4) s.add(i.data[p] << 16 | i.data[p + 1] << 8 | i.data[p + 2]); return s; };
 const R = (src: Img, id: string, params: Record<string, any> = {}, extra: any = {}) => render(src, { style: { id, params }, ...extra }, { glyphs: G });
 const SRC = testImage(300, 200);
@@ -27,7 +28,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 54, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 6 Fazy 3 (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 65, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 17 Fazy 3 (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -600,6 +601,27 @@ const SRC = testImage(300, 200);
   ok('Light Wind (kat 90°): smuga w dol od jasnego pasa slabnie z odlegloscia', lw.data[(30 * W + 80) * 4] > lw.data[(60 * W + 80) * 4] && lw.data[(60 * W + 80) * 4] > lw.data[(110 * W + 80) * 4] && lw.data[(30 * W + 80) * 4] > 0, `${lw.data[(30 * W + 80) * 4]} ${lw.data[(60 * W + 80) * 4]} ${lw.data[(110 * W + 80) * 4]}`);
   const r1 = render(S, { style: { id: 'dreamdust' } }), r2 = render(S, { style: { id: 'dreamdust' } }, { scale: 2 });
   ok('Dreamdust: deterministyczny (ten sam seed = ten sam obraz), liczba czastek przy skali 2 jak przy 1, tylko rozjasnia', sha(r1.img) === sha(D(S, 'dreamdust')) && r1.info.particles === r2.info.particles && sha(D(S, 'dreamdust', { seed: 2 })) !== sha(r1.img) && meanLum(r1.img) >= meanLum(S));
+}
+// 27. Krok 9, Faza 3: glitch i sygnal (po jednej kluczowej wlasnosci na efekt)
+{
+  const W = 160, H = 120; const D = (src: Img, id: string, p: any = {}) => render(src, { style: { id, params: p } }).img; const S = testImage(W, H); const flat = newImg(W, H, [90, 140, 200, 255]);
+  const ps = D(S, 'pixelsort', { thresholdLow: 0, thresholdHigh: 100 }); let perm = true, sorted = true;
+  for (let y = 0; y < H; y++) { const a: string[] = [], b: string[] = []; let prev = -1; for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; a.push(S.data.slice(i, i + 4).join()); b.push(ps.data.slice(i, i + 4).join()); const L = lum(ps.data[i], ps.data[i + 1], ps.data[i + 2]); if (L < prev - 1e-9) sorted = false; prev = L; } if (a.sort().join('|') !== b.sort().join('|')) perm = false; }
+  ok('Pixel Sort: kazdy wiersz to permutacja pikseli zrodla; przy progach 0–100% wiersz posortowany rosnaco', perm && sorted);
+  ok('Digital Distortion i Datamosh: intensywnosc/rozmaz 0 = bez zmian; Datamosh nie zmienia plaskiego obrazu; seed zmienia glitch', sha(D(S, 'glitch', { intensity: 0 })) === sha(S) && sha(D(S, 'datamosh', { smearAmount: 0 })) === sha(S) && sha(D(flat, 'datamosh')) === sha(flat) && sha(D(S, 'glitch', { seed: 1 })) !== sha(D(S, 'glitch', { seed: 2 })));
+  const lf = D(S, 'lofi', { colorBits: 1, noise: 0, tracking: 0, compressionArtifacts: 0 }); ok('Lofi: 1 bit koloru (bez szumu, tasmy, kompresji) -> kazdy kanal 0 albo 255', lf.data.every((v, k) => k % 4 === 3 || v === 0 || v === 255));
+  const fo = D(flat, 'forensics', { mode: 'noise', overlayLabels: false }); ok('Forensics: plaski obraz w trybie szumu -> jednolita mapa (kolor zera mapy)', colorsOf(fo) === 1);
+  const bc = D(newImg(W, H, [200, 200, 200, 255]), 'beacon', { pingSpeed: 50, dotSize: 4 }); const sp = 0.5 * 0.5 * Math.min(W, H); const at = (r: number) => { let m = 0; for (let x = Math.round(80 + r - 2); x <= Math.round(80 + r + 2); x++) m = Math.max(m, bc.data[(60 * W + x) * 4]); return m; };
+  ok('Beacon: kropki na pierscieniu jasniejsze niz w polowie miedzy pierscieniami', at(sp) > at(sp * 1.5), `${at(sp)} ${at(sp * 1.5)}`);
+}
+// 28. Krok 9, Faza 3: druk (po jednej kluczowej wlasnosci na efekt)
+{
+  const W = 160, H = 120; const D = (src: Img, id: string, p: any = {}) => render(src, { style: { id, params: p } }).img; const S = testImage(W, H); const g = (v: number) => newImg(W, H, [v, v, v, 255]);
+  const allC = (i: Img, c: number[]) => { for (let k = 0; k < i.data.length; k += 4) if (i.data[k] !== c[0] || i.data[k + 1] !== c[1] || i.data[k + 2] !== c[2]) return false; return true; };
+  ok('Engraving i Cyanotype: biel = sam papier (bez sladow linii); Cyanotype: czern = blekit pruski', allC(D(g(255), 'engraving'), parseColor('#f3ecdc')) && allC(D(g(255), 'blueprint', { grain: 0, paperStain: 0 }), [238, 242, 244]) && allC(D(g(0), 'blueprint', { grain: 0, paperStain: 0 }), [13, 43, 94]));
+  ok('Warhol: 2×2 i 3 poziomy -> najwyzej 12 kolorow; Woodblock bez konturu i faktur -> najwyzej colorCount kolorow', colorsOf(D(S, 'warhol', { grid: '2', levels: 3 })) <= 12 && colorsOf(D(S, 'ukiyoe', { outline: 0, woodGrain: 0, paperTexture: 0, colorCount: 5 })) <= 5);
+  const mz = [200, 140, 80].map((v) => meanLum(D(g(v), 'mezzotint'))); const en = [220, 140, 60].map((v) => meanLum(D(g(v), 'engraving')));
+  ok('Mezzotint i Engraving: ciemniejsza szarosc = ciemniejszy wynik', mz[0] > mz[1] && mz[1] > mz[2] && en[0] > en[1] && en[1] > en[2], `${mz.map((v) => v.toFixed(3))} | ${en.map((v) => v.toFixed(3))}`);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

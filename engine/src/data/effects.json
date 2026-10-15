@@ -231,7 +231,7 @@
     "description": "Sztych: linie o zmiennej grubości, pogrubiane w cieniach i cienkie w światłach, układające się wzdłuż form.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "warhol",
@@ -244,7 +244,7 @@
     "description": "Siatka 2×2 (lub 3×3) kopii obrazu, każda w innej kontrastowej, mocno posteryzowanej palecie (pop-art).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "blueprint",
@@ -257,7 +257,7 @@
     "description": "Monochromatyczny druk w odcieniach błękitu pruskiego z bielą, z plamami papieru i ziarnem.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "halftone",
@@ -283,7 +283,7 @@
     "description": "Japoński drzeworyt: płaskie plamy koloru z ograniczonej palety, ciemne kontury, faktura słojów drewna i papieru.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "posterize",
@@ -309,7 +309,7 @@
     "description": "Mezzotinta: ziarnisty, aksamitny szum o dużym kontraście, ciemne tło i jasne plamy światła.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "pointillize",
@@ -725,7 +725,7 @@
     "description": "Sortowanie pikseli w wierszach lub kolumnach wg jasności, w segmentach wyznaczonych progiem.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "forensics",
@@ -738,7 +738,7 @@
     "description": "Interpretacja: wizualizacja jak w analizie kryminalistycznej obrazu (mapa szumu, ELA, krawędzie, kolorowa mapa błędów, opcjonalnie etykiety nakładki).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "glitch",
@@ -751,7 +751,7 @@
     "description": "Przesunięcia poziome pasków, rozdzielenie RGB, bloki i szum, jak uszkodzony sygnał.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "datamosh",
@@ -764,7 +764,7 @@
     "description": "Rozmazywanie pikseli wg wektorów ruchu (jak uszkodzona kompresja wideo); na stillu symulowane przesunięciem bloków.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "lofi",
@@ -777,7 +777,7 @@
     "description": "Zniszczony nośnik: niska rozdzielczość, kwantyzacja kolorów, artefakty kompresji i błędy taśmy VHS.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "rgbsplit",
@@ -829,7 +829,7 @@
     "description": "Interpretacja: pole punktów światła, przez które przechodzi pulsujący sygnał od źródła (jak radar lub ping).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "disco",

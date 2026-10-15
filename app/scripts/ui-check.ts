@@ -193,9 +193,10 @@ try {
     t('/effects: klik w kafelek → edytor z efektem', (await page.inputValue('[data-style]')) === 'lego');
 
     // Nieznany efekt
-    await page.goto(BASE + '/editor?style=warhol'); await rendered(page, 'characters');
+    const soonId = ALL.find((e) => e.status !== 'ready')?.id ?? 'no-such-effect';   // pierwszy efekt „wkrótce” (lista się kurczy)
+    await page.goto(BASE + `/editor?style=${soonId}`); await rendered(page, 'characters');
     const n = await page.textContent('[data-note]');
-    t('edytor: ?style=warhol (efekt „wkrótce”) → komunikat i Characters', !!n?.includes('warhol') && new URL(page.url()).searchParams.get('style') === 'characters', n);
+    t(`edytor: ?style=${soonId} (efekt „wkrótce”) → komunikat i Characters`, !!n?.includes(soonId) && new URL(page.url()).searchParams.get('style') === 'characters', n);
 
     // Wąski ekran: bez poziomego przewijania strony, chipy przewijają się w pasku
     await page.setViewportSize({ width: 375, height: 800 });
