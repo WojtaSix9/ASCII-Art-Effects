@@ -53,3 +53,20 @@ export function bil(d: Uint8ClampedArray | Float32Array, w: number, h: number, x
   const a = d[(y0 * w + x0) * 4 + c], b = d[(y0 * w + x1) * 4 + c], e = d[(y1 * w + x0) * 4 + c], f = d[(y1 * w + x1) * 4 + c];
   return (a + (b - a) * tx) * (1 - ty) + (e + (f - e) * tx) * ty;
 }
+
+/** Voronoi z jednym punktem na komórkę siatki cs (punkt = (i + 0,5 + (hash − 0,5)·jitter)·cs, jitter 0–1). Przy cs ∝ wymiarom obrazu
+ *  układ nie zależy od skali eksportu. Na piksel: id komórki, odległość do punktu (f1) i do najbliższej granicy komórek (edge, px).
+ *  site(id) zwraca punkt komórki. Szukanie w 5×5 sąsiednich komórkach (przy jitter ≤ 1 wystarcza). */
+export function voronoi(w: number, h: number, cs: number, jitter: number, seed: number) {
+  const nx = Math.ceil(w / cs) + 4, ny = Math.ceil(h / cs) + 4; const px = new Float32Array(nx * ny), py = new Float32Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const gi = i - 2, gj = j - 2; px[j * nx + i] = (gi + 0.5 + (hash01(gi, gj, seed) - 0.5) * jitter) * cs; py[j * nx + i] = (gj + 0.5 + (hash01(gi, gj, seed + 17) - 0.5) * jitter) * cs; }
+  const id = new Int32Array(w * h), f1 = new Float32Array(w * h), edge = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const X = x + 0.5, Y = y + 0.5; const ci = Math.floor(X / cs) + 2, cj = Math.floor(Y / cs) + 2; let best = -1, bd = Infinity;
+    for (let j = cj - 2; j <= cj + 2; j++) for (let i = ci - 2; i <= ci + 2; i++) { const k = j * nx + i; const d = (px[k] - X) ** 2 + (py[k] - Y) ** 2; if (d < bd) { bd = d; best = k; } }
+    let e = Infinity; const ax = px[best], ay = py[best];
+    for (let j = cj - 2; j <= cj + 2; j++) for (let i = ci - 2; i <= ci + 2; i++) { const k = j * nx + i; if (k === best) continue; const bx = px[k] - ax, by = py[k] - ay; const L = Math.hypot(bx, by) || 1e-9; e = Math.min(e, ((ax + bx / 2 - X) * bx + (ay + by / 2 - Y) * by) / L); }
+    const p = y * w + x; id[p] = best; f1[p] = Math.sqrt(bd); edge[p] = e;
+  }
+  return { id, f1, edge, n: nx * ny, site: (k: number) => [px[k], py[k]] as const };
+}

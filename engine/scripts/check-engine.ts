@@ -10,6 +10,7 @@ import { blueNoise64, ALGORITHMS } from '../src/effects/dither.ts';
 import { applyColor } from '../src/post/color.ts';
 import { newImg, cloneImg } from '../src/core/types.ts';
 import { resolveParams } from '../src/core/params.ts';
+import { voronoi } from '../src/core/screen.ts';
 
 const G = canvasGlyphs((w: number, h: number) => createCanvas(w, h), '"DejaVu Sans Mono"');
 const res: [string, boolean, string][] = []; const ok = (n: string, c: boolean, d = '') => res.push([n, c, d]);
@@ -28,7 +29,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 75, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 27 Fazy 3 (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 82, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 + 34 Fazy 3 (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -654,6 +655,22 @@ const SRC = testImage(300, 200);
   const ramp = newImg(W, H, [0, 0, 0, 255]); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) ramp.data.fill(Math.round(40 + (x / (W - 1)) * 200), (y * W + x) * 4, (y * W + x) * 4 + 3);
   const ff = D(ramp, 'flowfield', { noiseScale: 0, lineCount: 300 }); let ex = 0, ey = 0; for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = (y * W + x) * 4; ex += Math.abs(ff.data[i + 4] - ff.data[i - 4]); ey += Math.abs(ff.data[i + W * 4] - ff.data[i - W * 4]); }
   ok('Flow Field: rampa pozioma bez szumu -> linie wzdluz izolinii (pionowe): zmiennosc w poziomie >> w pionie; seed zmienia uklad, ten sam seed nie', ex > 4 * ey && sha(D(S, 'flowfield', { seed: 1 })) !== sha(D(S, 'flowfield', { seed: 2 })) && sha(D(S, 'flowfield')) === sha(D(S, 'flowfield')), `${ex} ${ey}`);
+}
+// 31. Krok 9, Faza 3: szklo (po jednej kluczowej wlasnosci na efekt)
+{
+  const W = 160, H = 120; const D = (src: Img, id: string, p: any = {}) => render(src, { style: { id, params: p } }).img; const S = testImage(W, H); const flat = newImg(W, H, [180, 110, 60, 255]);
+  ok('Szklo: parametry zerowe = obraz bez zmian (Frosted bez rozmycia/ziarna z biala tinta, Shatter bez przesuniecia/obrotu/pekniec, Vitrine bez odbicia i ramy, Fluted bez refrakcji i cienia)',
+    sha(D(S, 'frostedglass', { blur: 0, frostGrain: 0, tint: '#ffffff' })) === sha(S) && sha(D(S, 'frostedglass', { opacity: 0 })) === sha(S) && sha(D(S, 'shatter', { displacement: 0, rotation: 0, crackLines: 0 })) === sha(S)
+    && sha(D(S, 'vitrine', { reflection: 0, frame: 0, tint: '#ffffff' })) === sha(S) && sha(D(S, 'flutedglass', { refractionStrength: 0, shading: 0 })) === sha(S) && sha(D(flat, 'flutedglass', { shading: 0 })) === sha(flat));
+  const tg = D(S, 'stainedglass', { leadThickness: 0, backlight: 0, cellCount: 60 }); const TV = voronoi(W, H, Math.sqrt((W * H) / 60), 0.85, 1 * 13 + 1); const first = new Map<number, string>(); let flatPanes = true;
+  for (let q = 0; q < W * H; q++) { const c = tg.data.slice(q * 4, q * 4 + 3).join(); const f = first.get(TV.id[q]); if (f === undefined) first.set(TV.id[q], c); else if (f !== c) flatPanes = false; }
+  ok('Tinted Glass: bez olowiu i podswietlenia kazda szyba (komorka Voronoi, seed 1) ma jeden kolor; rozne szyby rozne kolory', flatPanes && colorsOf(tg) > first.size * 0.8, `${first.size} szyb, ${colorsOf(tg)} kolorow`);
+  const vr = newImg(W, H, [0, 0, 0, 255]); for (let y = 0; y < H; y++) vr.data.fill(Math.round((y / (H - 1)) * 255), y * W * 4, (y + 1) * W * 4); for (let k = 3; k < vr.data.length; k += 4) vr.data[k] = 255;
+  const go = D(vr, 'glassorb', { backgroundBlur: 0, highlight: 0, radius: 40 }); const at = (x: number, y: number) => go.data[(y * W + x) * 4];
+  let outside = true; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (Math.hypot(x + 0.5 - 80, y + 0.5 - 60) > 49 && go.data[(y * W + x) * 4] !== vr.data[(y * W + x) * 4]) outside = false;
+  ok('Glass Orb: poza kula bez zmian (bez rozmycia tla); w kuli obraz odwrocony (rampa pionowa: nad srodkiem jasniej niz pod)', outside && at(80, 40) > at(80, 80), `${at(80, 40)} ${at(80, 80)}`);
+  const lg = (t: string, seed = 1) => sha(D(S, 'liquidglass', { texture: t, seed }));
+  ok('Liquid Glass: 10 tekstur daje 10 roznych obrazow; seed zmienia tekstury losowe (hammered), nie zmienia regularnych (cross)', new Set(['cross', 'hammered', 'diamond', 'hexagon', 'ripple', 'crackle', 'chevron', 'seedy', 'pixel', 'jello'].map((t) => lg(t))).size === 10 && lg('hammered', 1) !== lg('hammered', 2) && lg('cross', 1) === lg('cross', 2));
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

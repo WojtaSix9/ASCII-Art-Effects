@@ -985,7 +985,7 @@
     "description": "Szkło matowe: rozmycie z drobnym ziarnem.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "stainedglass",
@@ -998,7 +998,7 @@
     "description": "Witraż: komórki Voronoi w płaskich kolorach z ołowianymi obrysami i efektem podświetlenia.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "shatter",
@@ -1011,7 +1011,7 @@
     "description": "Rozbite szkło: fragmenty Voronoi przesunięte i obrócone, z liniami pęknięć od punktu uderzenia.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "vitrine",
@@ -1024,7 +1024,7 @@
     "description": "Interpretacja: obraz za szklaną taflą z odblaskami i ramką.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "glassorb",
@@ -1037,7 +1037,7 @@
     "description": "Obraz widziany przez szklaną kulę, z odwróceniem i refrakcją.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "flutedglass",
@@ -1050,7 +1050,7 @@
     "description": "Szkło żłobkowane: pionowe walcowate soczewki.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "liquidglass",
@@ -1063,7 +1063,7 @@
     "description": "Wspólny silnik z mapą normalnych tekstury szkła. 10 tekstur (parametr `texture`):",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "waves",

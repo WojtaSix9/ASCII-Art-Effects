@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-15T14:47:18.511Z",
+  "generated": "2026-10-15T14:55:28.567Z",
   "size": "960x668",
   "samples": {
     "1": {
@@ -473,6 +473,48 @@
       "bytes": 198996,
       "mode": "q0.8",
       "ms": 52
+    },
+    "stainedglass": {
+      "sample": 1,
+      "bytes": 62794,
+      "mode": "q0.8",
+      "ms": 503
+    },
+    "vitrine": {
+      "sample": 1,
+      "bytes": 49520,
+      "mode": "q0.8",
+      "ms": 265
+    },
+    "flutedglass": {
+      "sample": 1,
+      "bytes": 51888,
+      "mode": "q0.8",
+      "ms": 80
+    },
+    "frostedglass": {
+      "sample": 2,
+      "bytes": 29336,
+      "mode": "q0.8",
+      "ms": 119
+    },
+    "shatter": {
+      "sample": 2,
+      "bytes": 141256,
+      "mode": "q0.8",
+      "ms": 1123
+    },
+    "glassorb": {
+      "sample": 2,
+      "bytes": 32506,
+      "mode": "q0.8",
+      "ms": 111
+    },
+    "liquidglass": {
+      "sample": 2,
+      "bytes": 116522,
+      "mode": "q0.8",
+      "ms": 152
     }
   }
 }

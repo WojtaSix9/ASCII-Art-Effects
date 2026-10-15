@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 16 efektów Fazy 3 (stan po kroku 9, partia 11; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 9 efektów Fazy 3 (stan po kroku 9, partia 12; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -674,3 +674,38 @@ Na tej podstawie:
 - `hash-baseline`: 436 starych wyników identycznych bajt w bajt po zmianach we wspólnym `grid.ts` (eksport funkcji).
 - Miniatury starych efektów, które koder WebP zapisał od nowa z innymi bajtami, przywróciłem. W repo zmieniają się tylko miniatury nowych efektów.
 - **`BRAK`:** nie sprawdzałem, czy Mixed i Specimen w przeglądarce ładują wszystkie znaki (test „świeży Worker” obejmuje tylko Characters).
+
+## 24. Krok 9, partia 12 (Faza 3): Szkło
+
+**Stan:** 82 z 91 efektów gotowych, zostało 9 (Materiał i faktura).
+
+**Wspólne:** `voronoi()` w `core/screen.ts` — jeden punkt na komórkę siatki (z rozrzutem `jitter`). Na każdy piksel podaje: id komórki, odległość do punktu i odległość do najbliższej granicy (do dwusiecznej). Bok komórki ∝ √(pole / liczba komórek), więc eksport @2x ma ten sam układ.
+
+**Efekty** (`glass.ts`; `proj`, Vitrine `proj?`)
+- **Frosted Glass:** rozmyty obraz próbkowany z losowym przesunięciem (ziarno szronu, los w px źródła), lekkie rozjaśnienie, mnożenie przez `tint`. `opacity` = ile szkła nad ostrym obrazem.
+- **Tinted Glass** (`stainedglass`): witraż.
+  - Szyby to komórki Voronoi w średnim kolorze z nasyceniem × 1,4; ołów wzdłuż granic.
+  - Podświetlenie: jaśniej w środku szyby i w środku obrazu, plus faktura szkła.
+  - Poprawka po teście: faktura była dodawana także przy podświetleniu 0; teraz jest częścią podświetlenia.
+- **Shatter:**
+  - Odłamki Voronoi przesunięte od punktu uderzenia i obrócone, każdy z nieco inną jasnością.
+  - Szczelina z jasną krawędzią, pęknięcia promieniste (poszarpane szumem) i 3 przerywane pierścienie.
+  - Poprawki po ocenie wzrokowej: większe przesunięcie domyślne (3%), cieńsze szczeliny, mniej faliste i przerywane pierścienie.
+- **Vitrine** (interpretacja): szyba z tintą, odbiciem (obraz odwrócony w poziomie, rozmyty, screen), dwoma pasami odblasku pod `glareAngle` oraz ramą z fazą i cieniem na szybie.
+- **Glass Orb:**
+  - Przybliżenie soczewki kulistej, bez śledzenia promieni: f = 1 − 4(ior − 1)(0,6 + 0,4 r²). Przy ior 1 brak zniekształcenia; przy 1,5 obraz odwrócony i powiększony.
+  - Ciemniejszy brzeg, obwódka Fresnela, odblask; tło rozmyte.
+- **Fluted Glass:** żłobki jako soczewki walcowe. Próbka przesunięta o −u · siła · szerokość/2, cień ku krawędziom żłobka, wąski odblask. Pionowo albo poziomo.
+- **Liquid Glass:** 10 tekstur jako mapy wysokości (cross, hammered, diamond, hexagon, ripple, crackle, chevron, seedy, pixel, jello).
+  - Refrakcja = przesunięcie o gradient, odblask Blinna-Phonga, lekkie cieniowanie.
+  - Chevron i diamond mają ostre zbocza, więc mocno załamują przy domyślnych 8 px (`oko`, zostawione).
+- **Czas (Node, 600 px):** 30–680 ms (najwolniejszy Shatter z 12 pęknięciami).
+
+**Testy silnika (`test`, 295 z 295):**
+- parametry zerowe = obraz bez zmian (Frosted, Shatter, Vitrine, Fluted); Fluted nie zmienia płaskiego obrazu;
+- Tinted Glass: każda komórka Voronoi ma jeden kolor (81 szyb, 79 kolorów).
+  - Pierwsza wersja testu zakładała „kolorów ≤ cellCount” i była błędna: komórki z punktami spoza kadru też wchodzą w obraz.
+- Glass Orb: poza kulą bez zmian; w środku obraz odwrócony;
+- Liquid Glass: 10 tekstur = 10 różnych obrazów; seed zmienia tylko tekstury losowe.
+
+**Aplikacja (`test`):** przeglądarka = Node w 97 z 97 przypadków (`QUICK`); test UI z `ONLY` (7 efektów szkła): 39 z 39.
