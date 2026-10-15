@@ -8,7 +8,9 @@ import { sharedEngine } from '../engine/client.ts';
 import { LIMIT_ERROR, type EffectMeta, type ExportRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
 import { cropPixels, loadImage, paint, previewScale } from '../engine/preview.ts';
 import { CATEGORIES, matches } from '../effects/catalog.ts';
-import { mountParamPanel } from '../ui/param-panel.ts';
+import { mountParamPanel, type Values } from '../ui/param-panel.ts';
+import { mountCurves } from '../ui/curves-editor.ts';
+import type { Curves } from '../../../engine/src/post/grade.ts';
 import { ICON } from './icons.ts';
 import { lightsHtml, mountLights } from './lights-ui.ts';
 import { History, initialState, toRenderState, type EditorState } from './state.ts';
@@ -59,7 +61,9 @@ export const editorHtml = () => `
     </div>
     <div data-tabpanel="color" hidden>
       <form class="pp" data-color onsubmit="return false"></form>
-      <p><button type="button" class="ed-btn" data-color-reset>Resetuj Color</button></p>
+      <form class="pp" data-levels onsubmit="return false"></form>
+      <div class="pp-sec"><h3 class="pp-title">/ Curves</h3><div data-curves></div></div>
+      <p><button type="button" class="ed-btn" data-color-reset>Resetuj Color, Levels i Curves</button></p>
     </div>
     <div data-tabpanel="postfx" hidden><div data-postfx></div></div>
     <div data-tabpanel="lights" hidden>${lightsHtml()}</div>
@@ -218,8 +222,16 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   };
   styleSel.addEventListener('change', () => selectStyle(styleSel.value));
 
+  // Zakładka Color: sekcje Color (kolejność jak w oryginale, plik 01 sekcja 7), Levels, Curves; wszystkie piszą do state.color.
+  const COLOR_ORDER = ['preset', 'photoFilter', 'photoDensity', 'photoPreserve', 'tint', 'tintOpacity', 'blend', 'saturation', 'vibrance', 'hue', 'gradientMap', 'gradientAmount', 'grayscale', 'invertImage'];
   const buildColor = () => {
-    mountParamPanel($('[data-color]'), 'Color', post.color, state.color, (v) => { state.color = v; render(); }, (v) => { state.color = v; commit(); }, { sections: false });
+    const by = (ids: string[]) => ids.map((id) => post.color.find((d) => d.id === id)).filter((d): d is NonNullable<typeof d> => !!d);
+    const levelIds = post.color.filter((d) => d.id.startsWith('levels')).map((d) => d.id);
+    const merge = (v: Values) => { state.color = { ...state.color, ...v }; };
+    mountParamPanel($('[data-color]'), 'Color', by(COLOR_ORDER), state.color, (v) => { merge(v); render(); }, (v) => { merge(v); commit(); }, { sections: false });
+    mountParamPanel($('[data-levels]'), 'Levels', by(levelIds), state.color, (v) => { merge(v); render(); }, (v) => { merge(v); commit(); }, { sections: false });
+    const def = post.color.find((d) => d.id === 'curves')!.default as Curves;
+    mountCurves($('[data-curves]'), (state.color.curves as Curves | undefined) ?? def, (c) => { state.color = { ...state.color, curves: c }; render(); }, (c) => { state.color = { ...state.color, curves: c }; commit(); });
   };
   $('[data-color-reset]').addEventListener('click', () => { state.color = {}; buildColor(); commit(); render(); });
 

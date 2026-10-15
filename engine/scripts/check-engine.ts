@@ -5,7 +5,7 @@ import { writeFileSync } from 'node:fs';
 import { render, renderText, EFFECTS, POSTFX, COLOR_PARAMS, canvasGlyphs, getEffect, PALETTES } from '../src/index.ts';
 import type { Img } from '../src/index.ts';
 import { testImage } from './make-test-image.ts';
-import { blur, resize, lum, parseColor, hash01 } from '../src/core/util.ts';
+import { blur, resize, lum, parseColor, hash01, mulberry32 } from '../src/core/util.ts';
 import { blueNoise64, ALGORITHMS } from '../src/effects/dither.ts';
 import { applyColor } from '../src/post/color.ts';
 import { newImg, cloneImg } from '../src/core/types.ts';
@@ -249,6 +249,47 @@ const SRC = testImage(300, 200);
   ok('Krok 6: pamiec zrodla i tla - 12 renderow na tym samym zrodle (zmiany tla, skali, swiatel, post FX) = rendery na swiezej kopii', bad.length === 0, bad.join(','));
   const before = new Uint8ClampedArray(SRC.data); render(SRC, { style: { id: 'posterize', params: { levels: 32 } }, postFx: { noise: true }, color: { preset: 'bw' } }); render(SRC, { style: { id: 'pixel' }, postFx: { filmDust: true } });
   ok('Krok 6: render nie zmienia obrazu zrodlowego (post FX i Color dzialaja na kopii)', before.every((v, i) => v === SRC.data[i]));
+}
+// 16. Krok 7: Photo Filter, Gradient Map w Color, Levels, Curves
+{
+  const { curveLut, levelsLut } = await import('../src/post/grade.ts');
+  const ramp = gradient(256, 4); const col = (c: Record<string, any>) => applyColor(cloneImg(ramp), resolveParams(COLOR_PARAMS, c));
+  const colour = testImage(160, 100); const colC = (c: Record<string, any>) => applyColor(cloneImg(colour), resolveParams(COLOR_PARAMS, c));
+  ok('Color: nowe parametry domyslne = bez zmian (bajt w bajt)', sha(col({})) === sha(ramp) && sha(colC({ photoDensity: 0, photoFilter: 'warm' })) === sha(colour) && sha(colC({ gradientMap: 'heat', gradientAmount: 0 })) === sha(colour));
+  // Photo Filter
+  const meanCh = (i: Img, c: number) => { let s = 0; for (let p = c; p < i.data.length; p += 4) s += i.data[p]; return s / (i.data.length / 4); };
+  const warm = colC({ photoFilter: 'warm', photoDensity: 60, photoPreserve: false }), cool = colC({ photoFilter: 'cool', photoDensity: 60, photoPreserve: false });
+  ok('Photo Filter: Warming podnosi R/B, Cooling obniza R/B', meanCh(warm, 0) / meanCh(warm, 2) > meanCh(colour, 0) / meanCh(colour, 2) && meanCh(cool, 0) / meanCh(cool, 2) < meanCh(colour, 0) / meanCh(colour, 2));
+  const kept = colC({ photoFilter: 'blue', photoDensity: 50, photoPreserve: true }); let worst = 0;
+  for (let p = 0; p < kept.data.length; p += 4) { const a = lum(colour.data[p], colour.data[p + 1], colour.data[p + 2]), b = lum(kept.data[p], kept.data[p + 1], kept.data[p + 2]); worst = Math.max(worst, Math.abs(a - b)); }
+  // Prog: zaokraglenie kazdego kanalu do 8 bit to najwyzej 0,5/255; wagi luminancji sumuja sie do 1, wiec |dY| <= 0,00196 -> 0,003.
+  ok('Photo Filter: „Preserve luminosity” zachowuje jasnosc kazdego piksela (|dY| <= 0,003 = zaokraglenie 8 bit), takze dla Blue', worst <= 0.003, worst.toFixed(4));
+  // Gradient Map w Color
+  const gm = col({ gradientMap: 'mono', gradientAmount: 100 }); const { GRADIENT_PRESETS, gradientLut } = await import('../src/effects/pixel.ts'); const lutM = gradientLut(GRADIENT_PRESETS.mono);
+  ok('Color/Gradient Map: ramp szarosci 0..255 -> dokladnie kolory gradientu (amount 100)', [0, 64, 128, 200, 255].every((v) => { const o = v * 4; const j = Math.round(lum(ramp.data[o], ramp.data[o + 1], ramp.data[o + 2]) * 255) * 3; return gm.data[o] === lutM[j] && gm.data[o + 1] === lutM[j + 1] && gm.data[o + 2] === lutM[j + 2]; }));
+  // Levels
+  const at = (i: Img, x: number, c = 0) => i.data[x * 4 + c];
+  const L1 = col({ levelsInBlack: 50, levelsInWhite: 200 });
+  ok('Levels: wejscie 50..200 -> 50 i mniej = 0, 200 i wiecej = 255, srodek liniowo', at(L1, 30) === 0 && at(L1, 50) === 0 && at(L1, 200) === 255 && at(L1, 240) === 255 && Math.abs(at(L1, 125) - 128) <= 1, `${at(L1, 125)}`);
+  const L2 = col({ levelsOutBlack: 40, levelsOutWhite: 220 });
+  ok('Levels: wyjscie 40..220 -> 0 = 40, 255 = 220', at(L2, 0) === 40 && at(L2, 255) === 220);
+  const L3 = col({ levelsGamma: 2 }), L4 = col({ levelsGamma: 0.5 });
+  ok('Levels: gamma 2 rozjasnia srodek, 0,5 przyciemnia, konce bez zmian', at(L3, 128) > 160 && at(L4, 128) < 90 && at(L3, 0) === 0 && at(L3, 255) === 255, `${at(L3, 128)} ${at(L4, 128)}`);
+  const L5 = col({ levelsChannel: 'r', levelsInWhite: 128 });
+  ok('Levels: kanal R zmienia tylko R', at(L5, 100, 0) > 190 && at(L5, 100, 1) === 100 && at(L5, 100, 2) === 100);
+  ok('Levels: monotoniczne dla 200 losowych ustawien', (() => { const rnd = mulberry32(5); for (let k = 0; k < 200; k++) { const ib = Math.floor(rnd() * 200), iw = ib + 1 + Math.floor(rnd() * (254 - ib)); const lut = levelsLut({ channel: 'rgb', inBlack: ib, inWhite: iw, gamma: 0.1 + rnd() * 9, outBlack: Math.floor(rnd() * 100), outWhite: 155 + Math.floor(rnd() * 100) }); for (let v = 1; v < 256; v++) if (lut[v] < lut[v - 1]) return false; } return true; })());
+  // Curves
+  const pts: [number, number][] = [[0, 0], [0.25, 0.6], [0.5, 0.62], [1, 1]]; const cl = curveLut(pts);
+  const passes = pts.every(([x, y]) => Math.abs(cl[Math.round(x * 255)] - y * 255) <= 1);
+  let overshoot = 0; for (let i = 0; i < pts.length - 1; i++) { const lo = Math.round(pts[i][1] * 255), hi = Math.round(pts[i + 1][1] * 255); for (let v = Math.ceil(pts[i][0] * 255); v <= Math.floor(pts[i + 1][0] * 255); v++) overshoot = Math.max(overshoot, Math.min(lo, hi) - cl[v], cl[v] - Math.max(lo, hi)); }
+  let mono = true; for (let v = 1; v < 256; v++) if (cl[v] < cl[v - 1]) mono = false;
+  ok('Curves: krzywa przechodzi przez punkty, monotoniczna, bez przestrzelenia miedzy punktami (Fritsch-Carlson)', passes && mono && overshoot <= 1, `overshoot ${overshoot}`);
+  const C1 = col({ curves: { rgb: [[0, 0], [1, 1]], r: [[0, 1], [1, 0]], g: [[0, 0], [1, 1]], b: [[0, 0], [1, 1]] } });
+  ok('Curves: krzywa kanalu R (odwrocona) zmienia tylko R', at(C1, 0, 0) === 255 && at(C1, 255, 0) === 0 && at(C1, 77, 1) === 77 && at(C1, 77, 2) === 77);
+  const C2 = col({ levelsInWhite: 128, curves: { rgb: [[0, 0], [0.5, 0.25], [1, 1]], r: [[0, 0], [1, 1]], g: [[0, 0], [1, 1]], b: [[0, 0], [1, 1]] } });
+  const exp2 = curveLut([[0, 0], [0.5, 0.25], [1, 1]])[levelsLut({ channel: 'rgb', inBlack: 0, inWhite: 128, gamma: 1, outBlack: 0, outWhite: 255 })[64]];
+  ok('Kolejnosc: Levels, potem Curves (plik 01, sekcja 8.9)', at(C2, 64) === exp2, `${at(C2, 64)} vs ${exp2}`);
+  ok('Curves: zle punkty -> blad (x nierosnace, poza 0..1, 1 punkt, 17 punktow)', [[[0.5, 0], [0.4, 1]], [[0, 0], [1, 1.2]], [[0, 0]], Array.from({ length: 17 }, (_, i) => [i / 16, i / 16])].every((bad) => throws(() => resolveParams(COLOR_PARAMS, { curves: { rgb: bad } }))));
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

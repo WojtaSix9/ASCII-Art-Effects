@@ -38,6 +38,7 @@ function control(d: ParamDef, v: unknown): string {
     case 'seed':
       return `<div class="pp-row pp-inline"><label for="${id}">${esc(d.label)}</label><span class="pp-seed"><input id="${id}" data-p="${d.id}" type="number" min="${d.min}" max="${d.max}" step="1" value="${v}">
         <button type="button" data-random="${d.id}">Losuj</button></span></div>`;
+    case 'curves': return '';   // własny edytor: ui/curves-editor.ts
     case 'gradient': {
       const stops = v as { pos: number; color: string }[];
       return `<fieldset class="pp-row pp-gradient" data-gradient="${d.id}"><legend>${esc(d.label)}</legend>${stops.map((s, i) =>

@@ -1,7 +1,7 @@
 // Rdzen silnika (proj). Obraz = bufor RGBA 8 bit, bez DOM: dziala w Node i w przegladarce (Web Worker).
 export type Img = { w: number; h: number; data: Uint8ClampedArray };
 
-export type ParamKind = 'range' | 'select' | 'toggle' | 'color' | 'text' | 'seed' | 'gradient';
+export type ParamKind = 'range' | 'select' | 'toggle' | 'color' | 'text' | 'seed' | 'gradient' | 'curves';
 export type ParamDef = {
   id: string; label: string; kind: ParamKind; default: any;
   min?: number; max?: number; step?: number;

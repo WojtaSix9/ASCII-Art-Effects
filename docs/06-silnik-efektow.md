@@ -106,3 +106,15 @@ Kod: `app/src/engine/` (Worker, klient), strona testowa `/dev/engine`, wynik: `a
 - Pomiary w piaskownicy mają duży szum (±20–50% przy niezmienionym kodzie); porównania robiłem dwukrotnie, starą i nową wersją na zmianę.
 
 **Nie zrobione (`BRAK`):** WebGL (przy obecnych czasach zbędny dla podglądu); render „na zimno” dużych zdjęć (np. eksport @2x 3000 px) nadal trwa setki ms do sekund; Vignette, CRT Curvature, Braille i Halftone nie przyspieszyły istotnie; pomiar w Safari i na telefonach.
+
+## 9. Krok 7, punkt 1: Photo Filter, Gradient Map w Color, Levels, Curves (15 X 2026)
+
+Kod: `engine/src/post/grade.ts`, parametry w `COLOR_PARAMS` (`post/color.ts`), UI: zakładka Color w edytorze (`app/src/ui/curves-editor.ts`).
+
+- **Kolejność (`docs`, plik 01 sekcja 8.9):** preset → Photo Filter → hue → saturation/vibrance → Gradient Map → grayscale → tint → invert, potem **Levels → Curves** na gotowej klatce.
+- **Photo Filter (`proj`; lista oryginału nieznana):** 14 filtrów (Warming, Warming light, Cooling, Cooling light, Sepia, Red, Orange, Yellow, Green, Cyan, Blue, Violet, Magenta, Underwater), gęstość 0–100 (domyślnie 25), „Preserve luminosity”: luminancja dokładnie jak przed filtrem; gdy kanał wyszedłby poza 0–255, zmniejszane jest tylko nasycenie. Pierwsza wersja (samo skalowanie kanałów) zaniżała jasność o 0,017 dla filtra Blue; wykrył to test, po poprawce 0,0018 (granica zaokrągleń 8 bit 0,00196).
+- **Gradient Map w Color:** presety Heat, Ocean, Sunset, Mono (te same co efekt Gradient Map) i siła 0–100.
+- **Levels:** kanał RGB / R / G / B, wejście czarne/białe, gamma 0,1–9,99, wyjście czarne/białe.
+- **Curves:** krzywe RGB, R, G, B (do 16 punktów), interpolacja monotoniczna Fritscha–Carlsona (bez przestrzelenia między punktami, `docs`); kanały, potem RGB.
+- **Testy (`test`):** silnik 111 z 111 (m.in. wartości domyślne = bajt w bajt bez zmian, Levels monotoniczne dla 200 losowych ustawień, krzywa przez punkty bez przestrzelenia, kolejność Levels → Curves); dotychczasowe wyniki identyczne (212 przypadków + 21 ustawień Color); edytor 44 z 44 (m.in. dodawanie, przeciąganie, strzałki i Delete na krzywej, eksport z krzywą = render).
+- **`BRAK`:** zapamiętywanie zaznaczonego kanału krzywej przy cofnij/ponów; histogram pod krzywą; Levels osobno dla każdego kanału naraz (jest wybór jednego kanału albo RGB).

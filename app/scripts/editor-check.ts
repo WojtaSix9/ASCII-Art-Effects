@@ -86,6 +86,59 @@ try {
   await page.click('[data-color-reset]'); await settle(page);
   t('Color: Sepia zmienia obraz, „Resetuj Color” przywraca identyczny', k1 !== k0 && (await hash(page)) === k0);
 
+  // Krok 7: Photo Filter, Gradient Map, Levels, Curves w zakładce Color
+  {
+    const col = () => page.evaluate(() => (window as any).__editorTest.state().color);
+    await page.click('[data-tab="color"]');
+    const k0 = await hash(page);
+    const ids = await page.$$eval('[data-color] [data-p]', (els) => els.map((e) => (e as HTMLElement).dataset.p));
+    t('Color: kolejność jak w oryginale (preset, Photo Filter, tint, saturation, vibrance, hue, Gradient Map, grayscale, invert)',
+      JSON.stringify(ids) === JSON.stringify(['preset', 'photoFilter', 'photoDensity', 'photoPreserve', 'tint', 'tintOpacity', 'blend', 'saturation', 'vibrance', 'hue', 'gradientMap', 'gradientAmount', 'grayscale', 'invertImage']), ids);
+    await page.selectOption('[data-color] [data-p="photoFilter"]', 'warm'); await settle(page); const kw = await hash(page);
+    await setRange(page, '[data-color] [data-p="photoDensity"]', 0);
+    t('Photo Filter: Warming zmienia obraz, gęstość 0 = bez zmian (bajt w bajt)', kw !== k0 && (await hash(page)) === k0);
+    await page.selectOption('[data-color] [data-p="photoFilter"]', 'none'); await settle(page);
+    await page.selectOption('[data-color] [data-p="gradientMap"]', 'ocean'); await settle(page); const kg = await hash(page);
+    await page.selectOption('[data-color] [data-p="gradientMap"]', 'none'); await settle(page);
+    t('Color/Gradient Map: Ocean zmienia obraz, None przywraca', kg !== k0 && (await hash(page)) === k0);
+    await setRange(page, '[data-levels] [data-p="levelsGamma"]', 1.8); const kl = await hash(page);
+    t('Levels: gamma 1,8 zmienia obraz i trafia do stanu', kl !== k0 && (await col()).levelsGamma === 1.8);
+    await page.click('[data-ed-tools] [data-undo]'); await settle(page);
+    t('Levels: cofnij przywraca gammę 1 i obraz', (await hash(page)) === k0 && (await page.inputValue('[data-levels] [data-p="levelsGamma"]')) === '1');
+    // Curves
+    const cvPts = async (ch = 'rgb') => ((await col()).curves ?? { rgb: [[0, 0], [1, 1]] })[ch];
+    const cv = page.locator('[data-cv]'); await cv.scrollIntoViewIfNeeded(); const box = (await cv.boundingBox())!;
+    await cv.click({ position: { x: box.width * 0.3, y: box.height * 0.4 } }); await settle(page);
+    let pts = await cvPts();
+    t('Curves: kliknięcie dodaje punkt (ok. 0,30 → 0,60) i zmienia obraz', pts.length === 3 && Math.abs(pts[1][0] - 0.3) < 0.01 && Math.abs(pts[1][1] - 0.6) < 0.01 && (await hash(page)) !== k0, pts);
+    await page.keyboard.press('ArrowUp'); await page.keyboard.press('Shift+ArrowRight'); await settle(page);
+    pts = await cvPts(); const want = [Math.round(0.3 * 255 + 10) / 255, Math.round(0.6 * 255 + 1) / 255];
+    t('Curves: strzałka ↑ = +1/255, Shift+→ = +10/255', Math.abs(pts[1][0] - want[0]) < 1.5 / 255 && Math.abs(pts[1][1] - want[1]) < 1.5 / 255, pts[1]);
+    const bx = await page.inputValue('[data-px]'), by = await page.inputValue('[data-py]');
+    await page.fill('[data-py]', '40'); await page.locator('[data-py]').dispatchEvent('change'); await settle(page);
+    pts = await cvPts();
+    t('Curves: pole „Wyjście” ustawia punkt (40/255) i pokazuje wartości zaznaczonego', Math.abs(pts[1][1] - 40 / 255) < 1e-9 && Number(bx) > 0 && Number(by) > 0, { bx, by, p: pts[1] });
+    await page.mouse.move(box.x + pts[1][0] * box.width, box.y + (1 - pts[1][1]) * box.height); await page.mouse.down();
+    await page.mouse.move(box.x + 0.5 * box.width, box.y + 0.5 * box.height, { steps: 4 }); await page.mouse.up(); await settle(page);
+    pts = await cvPts();
+    t('Curves: przeciągnięcie przesuwa punkt na (0,5; 0,5)', Math.abs(pts[1][0] - 0.5) < 0.01 && Math.abs(pts[1][1] - 0.5) < 0.01, pts[1]);
+    await cv.focus(); await page.keyboard.press('Delete'); await settle(page);
+    t('Curves: Delete usuwa zaznaczony punkt (zostają 2 końce, obraz jak na starcie)', (await cvPts()).length === 2 && (await hash(page)) === k0);
+    await page.click('[data-ch="r"]'); await cv.click({ position: { x: box.width * 0.5, y: box.height * 0.2 } }); await settle(page);
+    const c = await col(); const kr = await hash(page);
+    t('Curves: kanał R ma własną krzywą, RGB bez zmian', c.curves.r.length === 3 && c.curves.rgb.length === 2 && kr !== k0, c.curves);
+    // Eksport uwzględnia korekty: PNG @1x = render w skali 1
+    const same = await page.evaluate(async () => {
+      const T = (window as any).__editorTest; const r = await T.renderAt(1); const png = await T.exportBlob('png', 1);
+      const bmp = await createImageBitmap(png.blob); const c2 = new OffscreenCanvas(bmp.width, bmp.height); const g = c2.getContext('2d')!; g.drawImage(bmp, 0, 0);
+      const dig = async (d: BufferSource) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', d))].join(',');
+      return (await dig(g.getImageData(0, 0, bmp.width, bmp.height).data)) === (await dig(new Uint8Array(r.img.buffer)));
+    });
+    t('Curves: eksport PNG @1x z krzywą R = render w skali 1', same);
+    await page.click('[data-color-reset]'); await settle(page);
+    t('„Resetuj Color, Levels i Curves” przywraca obraz bajt w bajt', (await hash(page)) === k0 && Object.keys(await col()).length === 0);
+  }
+
   // Post FX
   await page.click('[data-tab="postfx"]'); await page.check('[data-fx-on="vignette"]'); await settle(page);
   const p1 = await hash(page); const shown = await page.isVisible('[data-fx-params="vignette"] [data-p="intensity"]');

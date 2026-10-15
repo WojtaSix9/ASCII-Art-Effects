@@ -355,3 +355,12 @@ a { color: inherit; }
 .ed-light__ring { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; border: 1px dashed; opacity: 0.55; pointer-events: none; }
 .ed-lsel__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ed-lsel__head .pp-title { margin: 0; }
+
+/* Curves (krok 7) */
+.cv-chs { display: flex; gap: 6px; margin-bottom: 8px; }
+.cv-canvas { width: 100%; aspect-ratio: 1; display: block; outline: 1px solid var(--ed-sep-strong); cursor: crosshair; touch-action: none; }
+.cv-canvas:focus-visible { outline: 2px solid var(--focus); }
+.cv-point { display: flex; gap: 8px; align-items: end; margin-top: 8px; flex-wrap: wrap; }
+.cv-point label { display: grid; gap: 2px; font-size: 12px; color: var(--ed-label); }
+.cv-point input { width: 64px; background: var(--ed-field); color: var(--text); border: 1px solid var(--ed-sep-strong); padding: 4px 6px; font: inherit; }
+.cv-point[hidden] { display: none; }

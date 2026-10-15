@@ -1,5 +1,6 @@
 import type { ParamDef } from './types.ts';
 import { clamp, parseColor } from './util.ts';
+import { validateCurves } from '../post/grade.ts';
 
 export const range = (id: string, label: string, def: number, min: number, max: number, o: Partial<ParamDef> = {}): ParamDef => ({ id, label, kind: 'range', default: def, min, max, step: 1, level: 'main', ...o });
 export const select = (id: string, label: string, def: string, options: [string, string][], o: Partial<ParamDef> = {}): ParamDef => ({ id, label, kind: 'select', default: def, options: options.map(([value, label]) => ({ value, label })), level: 'main', ...o });
@@ -32,6 +33,7 @@ export function resolveParams(defs: ParamDef[], input: Record<string, any> = {},
       case 'toggle': v = !!v; break;
       case 'color': parseColor(v); v = String(v); break;
       case 'text': v = String(v); break;
+      case 'curves': v = validateCurves(v); break;
       case 'gradient': if (!Array.isArray(v) || v.length < 2) throw new Error(`parameter "${d.id}": gradient needs >= 2 stops`); v.forEach((s: any) => { parseColor(s.color); if (!(s.pos >= 0 && s.pos <= 1)) throw new Error('gradient stop pos must be 0..1'); }); break;
     }
     out[d.id] = v;
