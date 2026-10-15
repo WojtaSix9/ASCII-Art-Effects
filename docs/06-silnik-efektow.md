@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 49 efektów Faz 2–3 (stan po kroku 9, partia 4; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 44 efekty Faz 2–3 (stan po kroku 9, partia 5; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -449,3 +449,51 @@ Podgląd liczy się w rozdzielczości ekranu, więc zwykle kilka razy mniej piks
 - Przeglądarka = Node: 59 z 59.
 - Dotychczasowe hashe bez zmian.
 - `oko`: miniatury, a Sketch, Crosshatch i Pointillize także w 600 px.
+
+## 18. Krok 9, partia 5: reszta Fazy 2 bez Voxela (15 X 2026)
+
+**Stan:** 47 z 91 efektów gotowych. Zostały 44: Voxel (ostatni z Fazy 2) i 43 Fazy 3.
+
+**ASCII Studio** (`grid.ts`; kontrolki `docs`, plik 01 sekcja 9; interpretacje `proj`)
+- Kształty (koło, kwadrat, romb, trójkąt, plus) albo znaki z zestawu, w kolorze z palety. Paleta jest posortowana po jasności; „Original” = kolor obrazu.
+- Tło domyślnie czarne (`docs`).
+- **Mix (`proj?`):** jak mocno rozmiar kształtu zależy od tonu (0 = pełna komórka). Dokumentacja nie wyjaśnia znaczenia.
+- **Seed:** liczba poziomów tonu (3–8) i gamma, zgodnie z opisem „jedno ziarno steruje paletą, levels i gradingiem”.
+- **Blend Mode (normal / screen / multiply / overlay / add) i Opacity:** sposób nałożenia warstwy na tło.
+- Worker pobiera czcionkę także dla ASCII Studio w trybie znaków. Porównanie przeglądarka = Node obejmuje tylko domyślny tryb kształtów, bo znaki zależą od czcionki.
+
+**Pozostałe** (`phase2.ts`)
+- **LED Matrix** (kontrolki `docs`): typ diody (koło, kwadrat SMD, paski RGB, żarówka marquee), rozstaw, poświata, jasność, kolor per LED albo jeden (domyślnie bursztyn). Zgaszona dioda jest lekko widoczna.
+- **Low Poly:** triangulacja Delaunaya (Bowyer–Watson) punktów w ułamkach obrazu. Rozkład losowy albo 70% punktów wg siły krawędzi. Kolor trójkąta = średnia pikseli. Obrys.
+- **Truchet:** łuki, przekątne albo trójkąty, obrót z seeda, grubość wg ciemności; kolor z obrazu albo dwa kolory.
+- **Smudge:** jednostronny ślad (za pikselem) z wagami malejącymi wykładniczo, długość zmienna wg szumu, siła. Domyślna długość 70 px: przy 40 px efekt był na miniaturze ledwo widoczny (`oko`).
+
+**Czas (Node, 1600×1067)**
+
+| Efekt | Czas |
+|---|---|
+| Truchet | 0,13 s |
+| ASCII Studio | 0,13 s |
+| Low Poly (600 punktów) | 0,18 s |
+| Low Poly (4000 punktów) | 0,75 s |
+| LED Matrix | 0,37–0,42 s |
+| Smudge | 0,77 s |
+
+**Testy (`test`)**
+- Silnik 227 z 227, 12 nowych:
+  - ASCII Studio: pełne kwadraty mają tylko kolory palety; jaśniejszy ton nie daje ciemniejszego koloru; seed; krycie 0 = tło; tryb znaków;
+  - LED: jasność rośnie; czerń = zgaszone diody (15); tryb solid w kolorze ledColor; paski RGB przy czerwonym obrazie świecą tylko R;
+  - Low Poly: płaski kolor pokrywa cały obraz; trójkątów 1150 przy skali 1 i 2; warunek pustego okręgu Delaunaya dla 200 punktów;
+  - Truchet: piksele między tłem a linią; ciemniej = grubiej;
+  - Smudge: zero = bez zmian; obraz stały wzdłuż kierunku bez zmian; ślad tylko za krawędzią.
+- Mutacje, wszystkie wykryte:
+  - paleta bez sortowania (wymagała dopisania testu kolejności);
+  - LED solid jak per LED;
+  - zły test okręgu w Delaunayu;
+  - odwrócony Truchet;
+  - Smudge w złą stronę.
+- Dotychczasowe hashe bez zmian.
+- Przeglądarka = Node: 64 z 64.
+- Edytor 65 z 65, UI 39 z 39, smoke 63 z 63, dostępność 24 z 24.
+- **Miniatury:** ASCII Studio weszło na początek rejestru, więc zasada naprzemienności przypisała zdjęcia robocze kolejnych efektów na nowo (większość miniatur zmieniła zdjęcie, efekty bez zmian).
+- `oko`: wszystkie 5 efektów w 600 px oraz miniatury.

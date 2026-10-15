@@ -31,7 +31,9 @@ function init(): Promise<InitRes> {
 
 // Znaki rampy Characters dla danego stanu (do pobrania potrzebnych podzbiorów czcionek przed renderem).
 const CHAR_DEFAULTS = Object.fromEntries(getEffect('characters').params.map((p) => [p.id, p.default]));
+const STUDIO_DEFAULTS = Object.fromEntries(getEffect('asciiStudio').params.map((p) => [p.id, p.default]));
 function rampText(state: RenderState) {
+  if (state.style.id === 'asciiStudio') { const p = { ...STUDIO_DEFAULTS, ...state.style.params }; return p.glyph === 'characters' ? CHARSETS[p.charSet]?.ramp ?? '' : ''; }   // ASCII Studio w trybie znaków
   if (state.style.id !== 'characters') return '';
   const p = { ...CHAR_DEFAULTS, ...state.style.params };
   return p.charSet === 'custom' ? String(p.chars) : CHARSETS[p.charSet]?.ramp ?? '';

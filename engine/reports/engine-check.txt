@@ -1,4 +1,4 @@
-OK   rejestr: 42 efektow, unikalne id, domyslne parametry w zakresach
+OK   rejestr: 47 efektow, unikalne id, domyslne parametry w zakresach
 OK   rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)
 OK   dither: 15 algorytmow i 15 palet
 OK   characters: wymiary zrodla, dwa renderowania identyczne, alfa 255  [21506a75c5]
@@ -9,6 +9,7 @@ OK   cross: wymiary zrodla, dwa renderowania identyczne, alfa 255  [c298bca07c]
 OK   diamond: wymiary zrodla, dwa renderowania identyczne, alfa 255  [779976ce18]
 OK   lines: wymiary zrodla, dwa renderowania identyczne, alfa 255  [adce98051c]
 OK   diagonal: wymiary zrodla, dwa renderowania identyczne, alfa 255  [7da0c45db3]
+OK   asciiStudio: wymiary zrodla, dwa renderowania identyczne, alfa 255  [ad3c6e14b2]
 OK   pixel: wymiary zrodla, dwa renderowania identyczne, alfa 255  [7b3e2b556d]
 OK   mosaic: wymiary zrodla, dwa renderowania identyczne, alfa 255  [bee82afb5c]
 OK   lego: wymiary zrodla, dwa renderowania identyczne, alfa 255  [27ab6ae78e]
@@ -43,6 +44,10 @@ OK   crosshatch: wymiary zrodla, dwa renderowania identyczne, alfa 255  [4f03995
 OK   halftonecmyk: wymiary zrodla, dwa renderowania identyczne, alfa 255  [ef80f4103d]
 OK   stippling: wymiary zrodla, dwa renderowania identyczne, alfa 255  [56d4dbf34f]
 OK   pointillize: wymiary zrodla, dwa renderowania identyczne, alfa 255  [236b98d7d5]
+OK   ledmatrix: wymiary zrodla, dwa renderowania identyczne, alfa 255  [342d0b999c]
+OK   lowpoly: wymiary zrodla, dwa renderowania identyczne, alfa 255  [cbd71883ed]
+OK   truchet: wymiary zrodla, dwa renderowania identyczne, alfa 255  [593207e357]
+OK   smudge: wymiary zrodla, dwa renderowania identyczne, alfa 255  [83bc3afb02]
 OK   parametry: wartosc ponad zakres jest obcinana (cellSize 9999 = 80)
 OK   parametry: nieznany klucz, zla opcja select, NaN, zly kolor rzucaja blad
 OK   pipeline: nieznany efekt, skala poza 0,1..8, nieznany post FX rzucaja blad
@@ -51,8 +56,8 @@ OK   coverage: 100% = 400 komorek, 0% = 0, malejaco  [100:400 80:331 50:214 0:0]
 OK   coverage: deterministyczne wycinanie (komorki widoczne przy 50% to podzbior widocznych przy 80%)
 OK   seed: ten sam seed = te same komorki, inny seed = inne  [214 vs 189]
 OK   seed: dither whiteNoise zalezy od seeda, blueNoise nie
-OK   skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich 42 efektow
-OK   skala 2x: obraz po zmniejszeniu podobny do renderu 1x (PSNR > 14 dB)  [min 17.6 dB; characters:21dB block-chars:40dB braille:28dB dots:45dB cross:46dB diamond:43dB lines:47dB diagonal:43dB pixel:40dB mosaic:18dB lego:25dB hexmosaic:44dB disco:50dB halftone:31dB posterize:23dB duotone:30dB gradientmap:26dB dither:18dB pinch:29dB spherize:29dB twirl:29dB zigzag:29dB ripple:29dB polar:32dB shear:30dB motionblur:41dB tiltshift:33dB gaussianblur:50dB radialblur:45dB rgbsplit:27dB scanline:29dB crt:32dB thermal:34dB edgeglow:32dB lens:32dB risograph:29dB comic:27dB sketch:34dB crosshatch:28dB halftonecmyk:30dB stippling:33dB pointillize:43dB]
+OK   skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich 47 efektow
+OK   skala 2x: obraz po zmniejszeniu podobny do renderu 1x (PSNR > 14 dB)  [min 17.6 dB; characters:21dB block-chars:40dB braille:28dB dots:45dB cross:46dB diamond:43dB lines:47dB diagonal:43dB asciiStudio:41dB pixel:40dB mosaic:18dB lego:25dB hexmosaic:44dB disco:50dB halftone:31dB posterize:23dB duotone:30dB gradientmap:26dB dither:18dB pinch:29dB spherize:29dB twirl:29dB zigzag:29dB ripple:29dB polar:32dB shear:30dB motionblur:41dB tiltshift:33dB gaussianblur:50dB radialblur:45dB rgbsplit:27dB scanline:29dB crt:32dB thermal:34dB edgeglow:32dB lens:32dB risograph:29dB comic:27dB sketch:34dB crosshatch:28dB halftonecmyk:30dB stippling:33dB pointillize:43dB ledmatrix:40dB lowpoly:22dB truchet:42dB smudge:33dB]
 OK   Characters: jasniejszy ton = gestszy znak (indeks w rampie nierosnacy), 0 -> spacja, 255 -> @  [13,11,10,8,6,5,3,2,0]
 OK   Characters: invert odwraca mapowanie
 OK   Characters: tekst ma rows x cols z renderu, kazda linia cols znakow  [50x20]
@@ -102,7 +107,7 @@ OK   Color: 8 presetow zmienia obraz, wartosci w zakresie 0..255
 OK   Color tint: opacity 100 + multiply czerni czerwony kanal gdy tint = #00ffff
 OK   effects.json: 91 efektow, 10 kategorii, unikalne id, faza 1 = 18
 OK   effects.json: status ready <=> efekt jest w silniku, kategoria zgodna z definicja silnika
-OK   effects.json: faza kazdego z 42 efektow silnika zgodna z rejestrem; cala Faza 1 (18) gotowa
+OK   effects.json: faza kazdego z 47 efektow silnika zgodna z rejestrem; cala Faza 1 (18) gotowa
 OK   Braille rysowany: 256 znakow x 3 rozmiary, kropka widoczna <=> bit ustawiony
 OK   Znaki rysowane: gestosc nierosnaca wzdluz rampy (braille: liczba kropek; dots, geometric: pole tuszu przy 12x20 i 24x40)
 OK   Pary lustrzane ▲▼ i △▽: identyczne pole tuszu  [0.00%, 0.00%]
@@ -208,3 +213,15 @@ OK   Sketch: linia tylko przy krawedzi (|x − 80| <= 3)  [79,80]
 OK   Stippling: liczba kropek przy skali 2 jak przy 1 (+-2%); seed i rozklad zmieniaja wynik  [878 / 875]
 OK   Stippling: ciemniej = wiecej kropek (biel 0)  [368 849 1369]
 OK   Pointillize: plaski kolor -> kazdy piksel miedzy tlem a tym kolorem (+-3); liczba plamek przy skali 2 identyczna  [0]
+OK   ASCII Studio: kwadraty na pelna komorke (mix 0) -> kazdy piksel w kolorze palety  [0 spoza]
+OK   ASCII Studio: paleta wg jasnosci - jasniejszy ton = nie ciemniejszy kolor (gradient)
+OK   ASCII Studio: seed zmienia wynik (poziomy i gamma), ten sam seed - ten sam; krycie 0 = samo tlo
+OK   ASCII Studio: tryb znakow dziala (dostawca glifow) i rozni sie od ksztaltow
+OK   LED Matrix: jasniejszy obraz = jasniejszy panel; czern = tylko zgaszone diody (wartosc 15)  [0.071 0.212 0.389]
+OK   LED Matrix solid: zapalone diody w kolorze ledColor (proporcja G/R +-0,03)
+OK   LED Matrix RGB stripe: czerwony obraz zapala tylko paski R  [0]
+OK   Low Poly: plaski kolor -> caly obraz w tym kolorze (kazdy piksel nalezy do trojkata)
+OK   Low Poly: trojkatow ok. 2x punktow (600 -> 1000–1300), przy skali 2 tyle samo  [1150 / 1150]
+OK   Low Poly: triangulacja Delaunaya - zaden punkt nie lezy wewnatrz okregu opisanego (200 losowych punktow)
+OK   Truchet: dwa kolory -> piksele miedzy tlem a linia; ciemniejszy obraz = grubsze linie (wiecej jasnego koloru linii)  [0 0.502 0.236]
+OK   Smudge: strength 0 = bez zmian; obraz staly wzdluz kierunku bez zmian; slad tylko za krawedzia (lewa strona nietknieta, prawa przyciemniona)

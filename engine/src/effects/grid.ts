@@ -5,6 +5,7 @@ import { backdrop, cellVisible } from '../core/compose.ts';
 import { cellAverages, clamp, hash01, lerp, over, parseColor } from '../core/util.ts';
 import { fillRect, paintSDF, paintSDFNear, sdBox } from '../core/raster.ts';
 import { CHARSETS } from '../data/charsets.ts';
+import { PALETTES } from '../data/palettes.ts';
 import { newImg } from '../core/types.ts';
 import { composeGlyphs } from '../post/glyphfx.ts';
 
@@ -196,4 +197,43 @@ const diagonal: EffectDef = {
     });
   },
 };
-export const GRID_EFFECTS: EffectDef[] = [characters, block, braille, dots, cross, diamond, lines, diagonal];
+
+// ---------- ASCII Studio (plik 01 sekcja 9, plik 02; docs: kontrolki; wzory i interpretacje: proj) ----------
+// Glyph: kształty albo znaki; kolor komórki z palety wg tonu (paleta posortowana po jasności; „Original” = kolor obrazu).
+// Shape + Mix (proj?): mix = jak mocno rozmiar kształtu zależy od tonu (0 = pełna komórka, 100 = w pełni wg tonu).
+// Seed (docs: „jedno ziarno steruje paletą, levels i gradingiem”): z seeda liczba poziomów tonu (3–8) i gamma (0,7–1,5).
+// Blend Mode + Opacity (proj): jak warstwa znaków/kształtów nakłada się na tło (domyślnie czarne).
+const BLENDS: [string, string][] = [['normal', 'Normal'], ['screen', 'Screen'], ['multiply', 'Multiply'], ['overlay', 'Overlay'], ['add', 'Add']];
+const blendCh = (m: string, b: number, s: number) => m === 'screen' ? 255 - ((255 - b) * (255 - s)) / 255 : m === 'multiply' ? (b * s) / 255 : m === 'overlay' ? (b < 128 ? (2 * b * s) / 255 : 255 - (2 * (255 - b) * (255 - s)) / 255) : m === 'add' ? Math.min(255, b + s) : s;
+const studioShape = (sh: string, dx: number, dy: number, r: number) => sh === 'circle' ? Math.hypot(dx, dy) - r : sh === 'square' ? Math.max(Math.abs(dx), Math.abs(dy)) - r
+  : sh === 'diamond' ? (Math.abs(dx) + Math.abs(dy)) / Math.SQRT2 - r * 0.9 : sh === 'triangle' ? Math.max(Math.abs(dx) * 0.866 + dy * 0.5, -dy) - r * 0.5 : Math.min(sdBox(dx, dy, r, r * 0.3), sdBox(dx, dy, r * 0.3, r));
+const asciiStudio: EffectDef = {
+  id: 'asciiStudio', name: 'ASCII Studio', category: 'ASCII & Text', engine: 'GRID', phase: 2, needsGlyphs: true,
+  description: 'Designed shapes or characters coloured through a palette, on black by default; one seed sets levels and grading.',
+  params: [CELL(10), select('glyph', 'Glyph', 'shapes', [['shapes', 'Shapes'], ['characters', 'Characters']]), select('shape', 'Shape', 'circle', [['circle', 'Circle'], ['square', 'Square'], ['diamond', 'Diamond'], ['triangle', 'Triangle'], ['plus', 'Plus']]),
+    range('mix', 'Mix', 70, 0, 100, { unit: '%' }), select('charSet', 'Chars', 'standard', Object.entries(CHARSETS).map(([k, v]) => [k, v.name] as [string, string])),
+    select('palette', 'Palette', 'cyberpunk', Object.entries(PALETTES).map(([k, v]) => [k, v.name] as [string, string])), select('blendMode', 'Blend mode', 'normal', BLENDS), range('opacity', 'Opacity', 100, 0, 100, { unit: '%' }),
+    ...GRID_COMMON().map((p) => (p.id === 'bgMode' ? { ...p, default: 'solid' } : p)), seedParam()],
+  render(ctx) {
+    const p = ctx.p; const chars = p.glyph === 'characters'; if (chars && !ctx.glyphs) throw new Error('ASCII Studio (characters) needs a glyph provider (canvasGlyphs)');
+    const { fs, cw, ch } = chars ? charCell(ctx) : { fs: 0, cw: ctx.px(p.cellSize), ch: ctx.px(p.cellSize) };
+    const levels = 3 + Math.floor(hash01(p.seed, 0, 91) * 6), gamma = 0.7 + hash01(p.seed, 1, 91) * 0.8;
+    const pal = PALETTES[p.palette].colors?.map(parseColor).sort((a, b) => (a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722) - (b[0] * 0.2126 + b[1] * 0.7152 + b[2] * 0.0722)) ?? null;
+    const tone = (t: number) => Math.round(Math.pow(clamp(t, 0, 1), gamma) * (levels - 1)) / (levels - 1);
+    const ramp = CHARSETS[p.charSet].ramp.length >= 2 ? CHARSETS[p.charSet].ramp : CHARSETS[p.charSet].ramp + ' '; const masks = new Map<string, Uint8Array>(); const mix = p.mix / 100;
+    const bg = backdrop(ctx); const layer = runGrid(ctx, cw, ch, (img, c) => {
+      const t = tone(c.t); const col = pal ? pal[Math.round(t * (pal.length - 1))] : [c.r, c.g, c.b];
+      if (chars) {
+        const chr = charAt(ramp, t); if (chr === ' ') return; let m = masks.get(chr); if (!m) { m = ctx.glyphs!.mask(chr, cw, ch, fs); masks.set(chr, m); } const w = c.x1 - c.x0;
+        for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) { const v = m[(y - c.y0) * cw + (x - c.x0)]; if (v && x - c.x0 < w) over(img.data, (y * img.w + x) * 4, col[0], col[1], col[2], v / 255); }
+        return;
+      }
+      const { mx, my, half } = centre(c); const r = half * lerp(1, Math.sqrt(t), mix); if (r < 0.15) return; const sh = p.shape;
+      paintSDFNear(img, c.x0, c.y0, c.x1, c.y1, mx, my, (r + 1) * 1.5, (x, y) => studioShape(sh, x - mx, y - my, r), col[0], col[1], col[2]);
+    }, undefined, newImg(bg.w, bg.h, [0, 0, 0, 0]));
+    const k = p.opacity / 100, m = p.blendMode, d = bg.data, L = layer.data;
+    for (let i = 0; i < d.length; i += 4) { const a = (L[i + 3] / 255) * k; if (!a) continue; for (let q = 0; q < 3; q++) d[i + q] = lerp(d[i + q], blendCh(m, d[i + q], L[i + q]), a); if (d[i + 3] < 255) d[i + 3] = Math.max(d[i + 3], L[i + 3] * k); }
+    return bg;
+  },
+};
+export const GRID_EFFECTS: EffectDef[] = [characters, block, braille, dots, cross, diamond, lines, diagonal, asciiStudio];

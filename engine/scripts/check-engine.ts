@@ -27,7 +27,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 42, bad.join(', '));   // 18 Fazy 1 + 7 zniekształceń + 4 rozmycia + 6 glitch/światło + 7 druk (krok 9)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 47, bad.join(', '));   // 18 Fazy 1 + 29 Fazy 2 (krok 9; bez Voxela)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -533,6 +533,43 @@ const SRC = testImage(300, 200);
   const pc = [235, 120, 40], bg = parseColor('#f4f1ea'); const pt = D(flat(pc[0], pc[1], pc[2]), 'pointillize'); let bad = 0;
   for (let k = 0; k < pt.data.length; k += 4) { const t = (pt.data[k + 1] - bg[1]) / (pc[1] - bg[1]); for (const c of [0, 2]) if (Math.abs(pt.data[k + c] - lerp(bg[c], pc[c], clamp(t, 0, 1))) > 3) { bad++; break; } }
   ok('Pointillize: plaski kolor -> kazdy piksel miedzy tlem a tym kolorem (+-3); liczba plamek przy skali 2 identyczna', bad === 0 && R(S, 'pointillize').info.dots === R(S, 'pointillize', {}, 2).info.dots, `${bad}`);
+}
+// 24. Krok 9: reszta Fazy 2 (ASCII Studio, LED Matrix, Low Poly, Truchet, Smudge)
+{
+  const W = 160, H = 120; const R = (src: Img, id: string, p: any = {}, scale = 1) => render(src, { style: { id, params: p } }, { scale, glyphs: G });
+  const D = (src: Img, id: string, p: any = {}, scale = 1) => R(src, id, p, scale).img; const flat = (r: number, g: number, b: number) => newImg(W, H, [r, g, b, 255]); const S = testImage(W, H);
+  const colors = (i: Img) => { const s = new Set<number>(); for (let k = 0; k < i.data.length; k += 4) s.add(i.data[k] << 16 | i.data[k + 1] << 8 | i.data[k + 2]); return s; };
+  // ASCII Studio
+  const pal = new Set(PALETTES.cyberpunk.colors!.map((c) => { const [r, g, b] = parseColor(c); return r << 16 | g << 8 | b; }));
+  const st = D(S, 'asciiStudio', { shape: 'square', mix: 0 }); const stc = [...colors(st)];
+  ok('ASCII Studio: kwadraty na pelna komorke (mix 0) -> kazdy piksel w kolorze palety', stc.every((c) => pal.has(c)), `${stc.filter((c) => !pal.has(c)).length} spoza`);
+  const gs = D(gradient(W, H), 'asciiStudio', { shape: 'square', mix: 0 }); const colL = (x: number) => lum(gs.data[(60 * W + x) * 4], gs.data[(60 * W + x) * 4 + 1], gs.data[(60 * W + x) * 4 + 2]); let up = true; for (let x = 10; x < W; x += 10) if (colL(x) < colL(x - 10) - 1e-9) up = false;
+  ok('ASCII Studio: paleta wg jasnosci - jasniejszy ton = nie ciemniejszy kolor (gradient)', up && colL(155) > colL(5));
+  ok('ASCII Studio: seed zmienia wynik (poziomy i gamma), ten sam seed - ten sam; krycie 0 = samo tlo', sha(D(S, 'asciiStudio', { seed: 1 })) === sha(D(S, 'asciiStudio', { seed: 1 })) && sha(D(S, 'asciiStudio', { seed: 1 })) !== sha(D(S, 'asciiStudio', { seed: 4 })) && colors(D(S, 'asciiStudio', { opacity: 0 })).size === 1);
+  ok('ASCII Studio: tryb znakow dziala (dostawca glifow) i rozni sie od ksztaltow', sha(D(S, 'asciiStudio', { glyph: 'characters' })) !== sha(D(S, 'asciiStudio')));
+  // LED Matrix
+  const lm = [40, 120, 220].map((v) => meanLum(D(flat(v, v, v), 'ledmatrix', { glow: 0 })));
+  ok('LED Matrix: jasniejszy obraz = jasniejszy panel; czern = tylko zgaszone diody (wartosc 15)', lm[0] < lm[1] && lm[1] < lm[2] && Math.max(...D(flat(0, 0, 0), 'ledmatrix', { glow: 0 }).data.filter((_, k) => k % 4 !== 3)) === 15, lm.map((v) => v.toFixed(3)).join(' '));
+  const lsol = D(flat(200, 200, 200), 'ledmatrix', { colorMode: 'solid', ledColor: '#ffb000', glow: 0 }); let hue = true; for (let k = 0; k < lsol.data.length; k += 4) { const r = lsol.data[k], g = lsol.data[k + 1], b = lsol.data[k + 2]; if (r > 40 && (Math.abs(g / r - 176 / 255) > 0.03 || b > 15)) hue = false; }
+  ok('LED Matrix solid: zapalone diody w kolorze ledColor (proporcja G/R +-0,03)', hue);
+  const rgb = D(flat(255, 0, 0), 'ledmatrix', { ledType: 'stripe', glow: 0 }); let gOn = 0; for (let k = 0; k < rgb.data.length; k += 4) if (rgb.data[k + 1] > 15 || rgb.data[k + 2] > 15) gOn++;
+  ok('LED Matrix RGB stripe: czerwony obraz zapala tylko paski R', gOn === 0, `${gOn}`);
+  // Low Poly
+  const lp = D(flat(30, 160, 90), 'lowpoly'); ok('Low Poly: plaski kolor -> caly obraz w tym kolorze (kazdy piksel nalezy do trojkata)', colors(lp).size === 1 && lp.data[0] === 30 && lp.data[1] === 160);
+  const t1 = R(S, 'lowpoly', { distribution: 'random' }).info.triangles as number, t2 = R(S, 'lowpoly', { distribution: 'random' }, 2).info.triangles as number;
+  ok('Low Poly: trojkatow ok. 2x punktow (600 -> 1000–1300), przy skali 2 tyle samo', t1 >= 1000 && t1 <= 1300 && t1 === t2, `${t1} / ${t2}`);
+  const { delaunay } = await import('../src/effects/phase2.ts'); const rr = mulberry32(3); const pp = Float64Array.from({ length: 400 }, () => rr()); const tt = delaunay(pp); let emptyCirc = true;
+  for (let k = 0; k < tt.length && emptyCirc; k += 3) { const [a, b, c] = [tt[k], tt[k + 1], tt[k + 2]].map((i) => [pp[2 * i], pp[2 * i + 1]]); const D2 = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1])); const ux = ((a[0] ** 2 + a[1] ** 2) * (b[1] - c[1]) + (b[0] ** 2 + b[1] ** 2) * (c[1] - a[1]) + (c[0] ** 2 + c[1] ** 2) * (a[1] - b[1])) / D2, uy = ((a[0] ** 2 + a[1] ** 2) * (c[0] - b[0]) + (b[0] ** 2 + b[1] ** 2) * (a[0] - c[0]) + (c[0] ** 2 + c[1] ** 2) * (b[0] - a[0])) / D2; const r2 = (a[0] - ux) ** 2 + (a[1] - uy) ** 2; for (let i = 0; i < 200; i++) if ((pp[2 * i] - ux) ** 2 + (pp[2 * i + 1] - uy) ** 2 < r2 - 1e-9) { emptyCirc = false; break; } }
+  ok('Low Poly: triangulacja Delaunaya - zaden punkt nie lezy wewnatrz okregu opisanego (200 losowych punktow)', emptyCirc && tt.length / 3 > 350);
+  // Truchet
+  const tr = D(flat(120, 120, 120), 'truchet', { colors: 'mono' }); const bg = parseColor('#101010'), fg = parseColor('#f2efe6'); let trBad = 0; for (let k = 0; k < tr.data.length; k += 4) { const t = (tr.data[k] - bg[0]) / (fg[0] - bg[0]); for (const c of [1, 2]) if (Math.abs(tr.data[k + c] - lerp(bg[c], fg[c], clamp(t, 0, 1))) > 3) { trBad++; break; } }
+  const ink = (v: number) => meanLum(D(flat(v, v, v), 'truchet', { colors: 'mono' }));
+  ok('Truchet: dwa kolory -> piksele miedzy tlem a linia; ciemniejszy obraz = grubsze linie (wiecej jasnego koloru linii)', trBad === 0 && ink(40) > ink(200), `${trBad} ${ink(40).toFixed(3)} ${ink(200).toFixed(3)}`);
+  // Smudge
+  const rows = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; rows.data[o] = rows.data[o + 1] = rows.data[o + 2] = 128 + 100 * Math.sin(y / 3); }
+  const step = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; const v = x < 80 ? 30 : 230; step.data[o] = step.data[o + 1] = step.data[o + 2] = v; }
+  const sm = D(step, 'smudge', { angle: 0, length: 30, noise: 0 }); let leftSame = true; for (let y = 0; y < H; y++) for (let x = 0; x < 80; x++) if (sm.data[(y * W + x) * 4] !== 30) leftSame = false;
+  ok('Smudge: strength 0 = bez zmian; obraz staly wzdluz kierunku bez zmian; slad tylko za krawedzia (lewa strona nietknieta, prawa przyciemniona)', sha(D(S, 'smudge', { strength: 0 })) === sha(S) && sha(D(rows, 'smudge', { angle: 0 })) === sha(rows) && leftSame && sm.data[(60 * W + 85) * 4] < 200 && sm.data[(60 * W + 150) * 4] === 230);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

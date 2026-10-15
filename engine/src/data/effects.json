@@ -23,7 +23,7 @@
     "description": "Obraz złożony z zaprojektowanych kształtów lub znaków, kolorowanych przez paletę, domyślnie na czarnym tle.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "block-chars",
@@ -153,7 +153,7 @@
     "description": "Matryca świecących diod z bloomem: czarny panel, jasne miejsca rozlewają światło.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "dither",
@@ -426,7 +426,7 @@
     "description": "Triangulacja Delaunaya z losowych punktów, każdy trójkąt wypełniony średnim kolorem.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "droste",
@@ -452,7 +452,7 @@
     "description": "Kafelki Truchet: w każdej komórce losowo obrócony łuk lub linia, wybierane i grubione wg jasności.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "isoextrude",
@@ -556,7 +556,7 @@
     "description": "Rozmazanie pociągnięciem: piksele ciągnięte w kierunku, jak palec po mokrej farbie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "pinch",
