@@ -21,7 +21,7 @@ Oznaczenia: `test` = sprawdzone testem (Node 22, piaskownica), `oko` = oceniłem
 | **Skala eksportu:** ten sam render w skali 1–8× (wartości w px mnożone przez skalę) | `test` |
 | **Rejestr 91 efektów** `src/data/effects.json` wygenerowany z pliku 02 (id, nazwa, kategoria, silnik, złożoność, opis, faza, status `ready`/`soon`) | `test` |
 
-**Nie ma (`BRAK`):** 44 efekty Faz 2–3 (stan po kroku 9, partia 5; było 73); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
+**Nie ma (`BRAK`):** 43 efekty Fazy 3 (Faza 2 kompletna po kroku 9; było 73 efekty Faz 2–3); warstwa tekstu; animacje; testy w Safari i Firefoksie; ocena na prawdziwych zdjęciach. Integracja z przeglądarką (Worker, OffscreenCanvas, webfont) i test w Chromium: sekcja 7.
 
 ## 2. API (`src/index.ts`)
 
@@ -497,3 +497,35 @@ Podgląd liczy się w rozdzielczości ekranu, więc zwykle kilka razy mniej piks
 - Edytor 65 z 65, UI 39 z 39, smoke 63 z 63, dostępność 24 z 24.
 - **Miniatury:** ASCII Studio weszło na początek rejestru, więc zasada naprzemienności przypisała zdjęcia robocze kolejnych efektów na nowo (większość miniatur zmieniła zdjęcie, efekty bez zmian).
 - `oko`: wszystkie 5 efektów w 600 px oraz miniatury.
+
+## 19. Krok 9, partia 6: Voxel; Faza 2 kompletna (15 X 2026)
+
+**Stan:** 48 z 91 efektów gotowych: cała Faza 1 (18) i cała Faza 2 (30). Zostały 43 efekty Fazy 3.
+
+**Voxel** (`3d`, `engine/src/effects/voxel.ts`; kontrolki `docs`, plik 01 sekcja 9; geometria i domyślne wartości `proj`)
+- Izometryczne sześciany (rzut 30°, bez perspektywy) na siatce heksagonalnej. Sylwetka sześcianu o krawędzi s to sześciokąt o promieniu s. Rozstaw √3·s × 1,5·s, co drugi rząd przesunięty, więc sześciany przylegają bez szczelin.
+- Trzy ściany: góra (romb nad liniami y = −|x|/√3), jasna i ciemna. Każda ma osobny odcień (domyślnie 100% / 78% / 52%).
+- `lightFlip` zamienia jasną i ciemną. Odstęp, obrys (25% koloru ściany), tryb mieszania (jak w ASCII Studio) i tło (domyślnie czarne).
+- Kolor: obraz rozmyty o 0,5·s w środku sześcianu.
+- Domyślna krawędź 22 px (ok. 40 sześcianów w poprzek zdjęcia 1500 px; dokumentacja zaleca ok. 32 na start). Przy 14 px miniatura była nieczytelna (`oko`).
+- Czas: 0,05–0,17 s na obraz 600 px.
+
+**Testy (`test`)**
+- Silnik 234 z 234, 6 nowych:
+  - płaski kolor: 92,8% pikseli w jednym z trzech odcieni, każda ściana ≈ 1/3 powierzchni (0,319 / 0,332 / 0,349);
+  - `lightFlip` zamienia ściany;
+  - `topShade` 0 daje czarne góry;
+  - odstęp odsłania tło, a bez odstępu nie ma szczelin;
+  - liczba sześcianów przy skali 2 = przy skali 1 (68);
+  - obrys przyciemnia.
+- Mutacje (zła granica górnej ściany, zły rozstaw rzędów, ignorowany `lightFlip`, rozmiar bez skali): wszystkie wykryte.
+- Dotychczasowe hashe bez zmian; różnią się tylko Smudge, celowo, po zmianie domyślnej długości.
+
+**Przed Fazą 3 do decyzji (plik 02, sekcja 13)**
+1. Czy v1 obejmuje wszystkie 91 efektów.
+2. Interpretacje niejednoznacznych nazw (`proj?`): Specimen, Forms, Forensics, Beacon, Vitrine, Marble, Molten Metal.
+3. Efekty `STATE` (Flow Field, Datamosh, Dreamdust, Beacon). W oryginale zależą od poprzednich klatek, a v1 nie ma animacji. Propozycja: deterministyczna symulacja stałej liczby kroków z seeda, więc jeden obraz wynikowy.
+
+**Czas testów**
+- Pełne testy aplikacji trwają ok. 10–12 minut, bo test UI renderuje w edytorze każdy z 48 efektów.
+- Przy 91 efektach będzie to ok. 20 minut. Do rozważenia: w teście UI tylko efekty zmienione od ostatniego przebiegu albo próbka.

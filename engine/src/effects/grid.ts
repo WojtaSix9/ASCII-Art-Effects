@@ -203,8 +203,8 @@ const diagonal: EffectDef = {
 // Shape + Mix (proj?): mix = jak mocno rozmiar kształtu zależy od tonu (0 = pełna komórka, 100 = w pełni wg tonu).
 // Seed (docs: „jedno ziarno steruje paletą, levels i gradingiem”): z seeda liczba poziomów tonu (3–8) i gamma (0,7–1,5).
 // Blend Mode + Opacity (proj): jak warstwa znaków/kształtów nakłada się na tło (domyślnie czarne).
-const BLENDS: [string, string][] = [['normal', 'Normal'], ['screen', 'Screen'], ['multiply', 'Multiply'], ['overlay', 'Overlay'], ['add', 'Add']];
-const blendCh = (m: string, b: number, s: number) => m === 'screen' ? 255 - ((255 - b) * (255 - s)) / 255 : m === 'multiply' ? (b * s) / 255 : m === 'overlay' ? (b < 128 ? (2 * b * s) / 255 : 255 - (2 * (255 - b) * (255 - s)) / 255) : m === 'add' ? Math.min(255, b + s) : s;
+export const BLENDS: [string, string][] = [['normal', 'Normal'], ['screen', 'Screen'], ['multiply', 'Multiply'], ['overlay', 'Overlay'], ['add', 'Add']];
+export const blendCh = (m: string, b: number, s: number) => m === 'screen' ? 255 - ((255 - b) * (255 - s)) / 255 : m === 'multiply' ? (b * s) / 255 : m === 'overlay' ? (b < 128 ? (2 * b * s) / 255 : 255 - (2 * (255 - b) * (255 - s)) / 255) : m === 'add' ? Math.min(255, b + s) : s;
 const studioShape = (sh: string, dx: number, dy: number, r: number) => sh === 'circle' ? Math.hypot(dx, dy) - r : sh === 'square' ? Math.max(Math.abs(dx), Math.abs(dy)) - r
   : sh === 'diamond' ? (Math.abs(dx) + Math.abs(dy)) / Math.SQRT2 - r * 0.9 : sh === 'triangle' ? Math.max(Math.abs(dx) * 0.866 + dy * 0.5, -dy) - r * 0.5 : Math.min(sdBox(dx, dy, r, r * 0.3), sdBox(dx, dy, r * 0.3, r));
 const asciiStudio: EffectDef = {

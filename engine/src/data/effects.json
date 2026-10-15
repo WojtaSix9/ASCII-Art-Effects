@@ -127,7 +127,7 @@
     "description": "Izometryczne sześciany na siatce heksagonalnej z osobnym cieniowaniem ścian (góra, jasna, ciemna).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "soon"
+    "status": "ready"
   },
   {
     "id": "hexmosaic",

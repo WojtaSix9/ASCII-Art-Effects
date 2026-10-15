@@ -27,7 +27,7 @@ const SRC = testImage(300, 200);
 {
   const ids = EFFECTS.map((e) => e.id); let bad: string[] = [];
   for (const e of EFFECTS) for (const p of e.params) { if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max! && p.min! < p.max!)) bad.push(`${e.id}.${p.id} range`); if (p.kind === 'select' && !p.options!.some((o) => o.value === p.default)) bad.push(`${e.id}.${p.id} select`); }
-  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 47, bad.join(', '));   // 18 Fazy 1 + 29 Fazy 2 (krok 9; bez Voxela)
+  ok(`rejestr: ${EFFECTS.length} efektow, unikalne id, domyslne parametry w zakresach`, new Set(ids).size === ids.length && bad.length === 0 && EFFECTS.length === 48, bad.join(', '));   // 18 Fazy 1 + 30 Fazy 2 (krok 9)
   ok('rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)', ['characters', 'block-chars', 'braille', 'dots', 'cross', 'diamond', 'lines', 'diagonal', 'pixel', 'mosaic', 'lego', 'hexmosaic', 'disco', 'halftone', 'posterize', 'duotone', 'gradientmap', 'dither'].every((x) => ids.includes(x)));
   ok('dither: 15 algorytmow i 15 palet', ALGORITHMS.length === 15 && Object.keys(PALETTES).length === 15);
 }
@@ -570,6 +570,25 @@ const SRC = testImage(300, 200);
   const step = newImg(W, H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const o = (y * W + x) * 4; const v = x < 80 ? 30 : 230; step.data[o] = step.data[o + 1] = step.data[o + 2] = v; }
   const sm = D(step, 'smudge', { angle: 0, length: 30, noise: 0 }); let leftSame = true; for (let y = 0; y < H; y++) for (let x = 0; x < 80; x++) if (sm.data[(y * W + x) * 4] !== 30) leftSame = false;
   ok('Smudge: strength 0 = bez zmian; obraz staly wzdluz kierunku bez zmian; slad tylko za krawedzia (lewa strona nietknieta, prawa przyciemniona)', sha(D(S, 'smudge', { strength: 0 })) === sha(S) && sha(D(rows, 'smudge', { angle: 0 })) === sha(rows) && leftSame && sm.data[(60 * W + 85) * 4] < 200 && sm.data[(60 * W + 150) * 4] === 230);
+}
+// 25. Krok 9: Voxel (`3d`)
+{
+  const W = 180, H = 140; const R = (src: Img, p: any = {}, scale = 1) => render(src, { style: { id: '3d', params: p } }, { scale });
+  const flat = newImg(W, H, [200, 120, 60, 255]); const sh = (k: number) => [200, 120, 60].map((v) => Math.round(v * k));
+  const vx = R(flat, { outline: 0, cubeSize: 14 }).img; const cnt = [0, 0, 0]; let other = 0; const fc = [sh(1), sh(0.78), sh(0.52)];
+  for (let k = 0; k < vx.data.length; k += 4) { const j = fc.findIndex((c) => Math.abs(vx.data[k] - c[0]) <= 1 && Math.abs(vx.data[k + 1] - c[1]) <= 1 && Math.abs(vx.data[k + 2] - c[2]) <= 1); if (j < 0) other++; else cnt[j]++; }
+  const tot = cnt[0] + cnt[1] + cnt[2];
+  ok('Voxel: plaski kolor -> ponad 90% pikseli w jednym z 3 odcieni scian (gora 100%, jasna 78%, ciemna 52%)', tot / (W * H) > 0.9, `${(100 * tot / (W * H)).toFixed(1)}%`);
+  ok('Voxel: kazda sciana zajmuje ok. 1/3 powierzchni (+-0,04) - poprawna geometria izometryczna', cnt.every((c) => Math.abs(c / tot - 1 / 3) <= 0.04), cnt.map((c) => (c / tot).toFixed(3)).join(' '));
+  // odwrocenie swiatla: lewa i prawa sciana zamieniaja odcienie, gora bez zmian
+  const vf = R(flat, { outline: 0, lightFlip: true, cubeSize: 14 }).img; const at = (i: Img, x: number, y: number) => [...i.data.slice((y * W + x) * 4, (y * W + x) * 4 + 3)];
+  // srodek szescianu (i=1, j=2) przy cubeSize 14: cx = √3·14, cy = 2·21 = 42; punkty po lewej i prawej ponizej srodka
+  const cx = Math.round(Math.sqrt(3) * 14), cy = 42; const lN = at(vx, cx - 5, cy + 5), rN = at(vx, cx + 5, cy + 5), lF = at(vf, cx - 5, cy + 5), rF = at(vf, cx + 5, cy + 5);
+  ok('Voxel: lightFlip zamienia jasna i ciemna sciane (lewa <-> prawa)', lN.join() === rF.join() && rN.join() === lF.join() && lN.join() !== rN.join(), `${lN} ${rN} | ${lF} ${rF}`);
+  ok('Voxel: topShade 0 -> gorne sciany czarne (punkt nad srodkiem szescianu)', at(R(flat, { outline: 0, topShade: 0, cubeSize: 14 }).img, cx, cy - 6).every((v) => v === 0));
+  const sp = R(flat, { spacing: 6, outline: 0 }).img; let bg = 0; for (let k = 0; k < sp.data.length; k += 4) if (sp.data[k] === 0 && sp.data[k + 1] === 0) bg++;
+  ok('Voxel: odstep > 0 odslania tlo (czarne), odstep 0 nie', bg > W * H * 0.05 && (() => { let z = 0; for (let k = 0; k < vx.data.length; k += 4) if (vx.data[k] === 0 && vx.data[k + 1] === 0) z++; return z === 0; })(), `${bg}`);
+  const S = testImage(W, H); ok('Voxel: liczba szescianow przy skali 2 taka sama jak przy 1; obrys przyciemnia', R(S).info.cubes === R(S, {}, 2).info.cubes && meanLum(R(S, { outline: 2 }).img) < meanLum(R(S, { outline: 0 }).img), `${R(S).info.cubes} / ${R(S, {}, 2).info.cubes}`);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

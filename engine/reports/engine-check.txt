@@ -1,4 +1,4 @@
-OK   rejestr: 47 efektow, unikalne id, domyslne parametry w zakresach
+OK   rejestr: 48 efektow, unikalne id, domyslne parametry w zakresach
 OK   rejestr: nazwy efektow zgodne z katalogiem (18 efektow Fazy 1 z pliku 02)
 OK   dither: 15 algorytmow i 15 palet
 OK   characters: wymiary zrodla, dwa renderowania identyczne, alfa 255  [21506a75c5]
@@ -48,6 +48,7 @@ OK   ledmatrix: wymiary zrodla, dwa renderowania identyczne, alfa 255  [342d0b99
 OK   lowpoly: wymiary zrodla, dwa renderowania identyczne, alfa 255  [cbd71883ed]
 OK   truchet: wymiary zrodla, dwa renderowania identyczne, alfa 255  [593207e357]
 OK   smudge: wymiary zrodla, dwa renderowania identyczne, alfa 255  [83bc3afb02]
+OK   3d: wymiary zrodla, dwa renderowania identyczne, alfa 255  [7bca1f799a]
 OK   parametry: wartosc ponad zakres jest obcinana (cellSize 9999 = 80)
 OK   parametry: nieznany klucz, zla opcja select, NaN, zly kolor rzucaja blad
 OK   pipeline: nieznany efekt, skala poza 0,1..8, nieznany post FX rzucaja blad
@@ -56,8 +57,8 @@ OK   coverage: 100% = 400 komorek, 0% = 0, malejaco  [100:400 80:331 50:214 0:0]
 OK   coverage: deterministyczne wycinanie (komorki widoczne przy 50% to podzbior widocznych przy 80%)
 OK   seed: ten sam seed = te same komorki, inny seed = inne  [214 vs 189]
 OK   seed: dither whiteNoise zalezy od seeda, blueNoise nie
-OK   skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich 47 efektow
-OK   skala 2x: obraz po zmniejszeniu podobny do renderu 1x (PSNR > 14 dB)  [min 17.6 dB; characters:21dB block-chars:40dB braille:28dB dots:45dB cross:46dB diamond:43dB lines:47dB diagonal:43dB asciiStudio:41dB pixel:40dB mosaic:18dB lego:25dB hexmosaic:44dB disco:50dB halftone:31dB posterize:23dB duotone:30dB gradientmap:26dB dither:18dB pinch:29dB spherize:29dB twirl:29dB zigzag:29dB ripple:29dB polar:32dB shear:30dB motionblur:41dB tiltshift:33dB gaussianblur:50dB radialblur:45dB rgbsplit:27dB scanline:29dB crt:32dB thermal:34dB edgeglow:32dB lens:32dB risograph:29dB comic:27dB sketch:34dB crosshatch:28dB halftonecmyk:30dB stippling:33dB pointillize:43dB ledmatrix:40dB lowpoly:22dB truchet:42dB smudge:33dB]
+OK   skala 2x: wymiary x2 i identyczna liczba komorek (cols, rows, cells) dla wszystkich 48 efektow
+OK   skala 2x: obraz po zmniejszeniu podobny do renderu 1x (PSNR > 14 dB)  [min 17.6 dB; characters:21dB block-chars:40dB braille:28dB dots:45dB cross:46dB diamond:43dB lines:47dB diagonal:43dB asciiStudio:41dB pixel:40dB mosaic:18dB lego:25dB hexmosaic:44dB disco:50dB halftone:31dB posterize:23dB duotone:30dB gradientmap:26dB dither:18dB pinch:29dB spherize:29dB twirl:29dB zigzag:29dB ripple:29dB polar:32dB shear:30dB motionblur:41dB tiltshift:33dB gaussianblur:50dB radialblur:45dB rgbsplit:27dB scanline:29dB crt:32dB thermal:34dB edgeglow:32dB lens:32dB risograph:29dB comic:27dB sketch:34dB crosshatch:28dB halftonecmyk:30dB stippling:33dB pointillize:43dB ledmatrix:40dB lowpoly:22dB truchet:42dB smudge:33dB 3d:36dB]
 OK   Characters: jasniejszy ton = gestszy znak (indeks w rampie nierosnacy), 0 -> spacja, 255 -> @  [13,11,10,8,6,5,3,2,0]
 OK   Characters: invert odwraca mapowanie
 OK   Characters: tekst ma rows x cols z renderu, kazda linia cols znakow  [50x20]
@@ -107,7 +108,7 @@ OK   Color: 8 presetow zmienia obraz, wartosci w zakresie 0..255
 OK   Color tint: opacity 100 + multiply czerni czerwony kanal gdy tint = #00ffff
 OK   effects.json: 91 efektow, 10 kategorii, unikalne id, faza 1 = 18
 OK   effects.json: status ready <=> efekt jest w silniku, kategoria zgodna z definicja silnika
-OK   effects.json: faza kazdego z 47 efektow silnika zgodna z rejestrem; cala Faza 1 (18) gotowa
+OK   effects.json: faza kazdego z 48 efektow silnika zgodna z rejestrem; cala Faza 1 (18) gotowa
 OK   Braille rysowany: 256 znakow x 3 rozmiary, kropka widoczna <=> bit ustawiony
 OK   Znaki rysowane: gestosc nierosnaca wzdluz rampy (braille: liczba kropek; dots, geometric: pole tuszu przy 12x20 i 24x40)
 OK   Pary lustrzane ▲▼ i △▽: identyczne pole tuszu  [0.00%, 0.00%]
@@ -225,3 +226,9 @@ OK   Low Poly: trojkatow ok. 2x punktow (600 -> 1000–1300), przy skali 2 tyle 
 OK   Low Poly: triangulacja Delaunaya - zaden punkt nie lezy wewnatrz okregu opisanego (200 losowych punktow)
 OK   Truchet: dwa kolory -> piksele miedzy tlem a linia; ciemniejszy obraz = grubsze linie (wiecej jasnego koloru linii)  [0 0.502 0.236]
 OK   Smudge: strength 0 = bez zmian; obraz staly wzdluz kierunku bez zmian; slad tylko za krawedzia (lewa strona nietknieta, prawa przyciemniona)
+OK   Voxel: plaski kolor -> ponad 90% pikseli w jednym z 3 odcieni scian (gora 100%, jasna 78%, ciemna 52%)  [92.8%]
+OK   Voxel: kazda sciana zajmuje ok. 1/3 powierzchni (+-0,04) - poprawna geometria izometryczna  [0.319 0.332 0.349]
+OK   Voxel: lightFlip zamienia jasna i ciemna sciane (lewa <-> prawa)  [156,94,47 104,62,31 | 104,62,31 156,94,47]
+OK   Voxel: topShade 0 -> gorne sciany czarne (punkt nad srodkiem szescianu)
+OK   Voxel: odstep > 0 odslania tlo (czarne), odstep 0 nie  [5711]
+OK   Voxel: liczba szescianow przy skali 2 taka sama jak przy 1; obrys przyciemnia  [30 / 30]
