@@ -25,6 +25,7 @@ try {
     { path: '/', h1: 'Zdjęcie jako ASCII, piksele i druk', title: 'ASCII Art Effects', layout: 'site', current: null },
     { path: '/effects', h1: 'Efekty', title: 'Efekty · ASCII Art Effects', layout: 'site', current: 'Efekty' },
     { path: '/how-to', h1: 'Jak używać', title: 'Jak używać · ASCII Art Effects', layout: 'site', current: 'Jak używać' },
+    { path: '/licenses', h1: 'Licencje', title: 'Licencje · ASCII Art Effects', layout: 'site', current: null },
     { path: '/editor', h1: 'Edytor', title: 'Edytor · ASCII Art Effects', layout: 'editor', current: null },
   ];
   for (const r of ROUTES) {
@@ -36,7 +37,22 @@ try {
     t(`${r.path}: HTTP 200, h1, tytuł`, resp?.status() === 200 && h1 === r.h1 && title === r.title, `${resp?.status()} "${h1}" "${title}"`);
     t(`${r.path}: układ ${r.layout}`, r.layout === 'site' ? hasNav === 1 && hasEd === 0 : hasNav === 0 && hasEd === 1);
     t(`${r.path}: aria-current`, JSON.stringify(cur) === JSON.stringify(r.current ? [r.current] : []), JSON.stringify(cur));
+    const foot = await page.locator('footer.foot').count();
+    t(`${r.path}: stopka ${r.layout === 'site' ? 'jest' : 'brak (edytor)'}`, foot === (r.layout === 'site' ? 1 : 0));
   }
+
+  // Krok 8: /how-to (5 kroków, linki wewnętrzne działają), /licenses (6 czcionek, tekst OFL ładowany po otwarciu), stopka
+  await page.goto(BASE + '/how-to', { waitUntil: 'networkidle' });
+  const ht = await page.evaluate(() => ({ steps: [...document.querySelectorAll('.howto-step h2 .label')].map((e) => e.textContent), links: [...document.querySelectorAll('main a[href^="/"]')].map((a) => a.getAttribute('href')) }));
+  t('/how-to: 5 kroków (/krok 1–5) i skróty klawiszowe', ht.steps.join(',') === '/krok 1,/krok 2,/krok 3,/krok 4,/krok 5,/skróty', ht.steps.join(','));
+  t('/how-to: linki wewnętrzne prowadzą do istniejących stron (/effects, /editor)', ht.links.length >= 2 && ht.links.every((l) => ['/effects', '/editor'].includes(l!)), ht.links.join(','));
+  await page.click('footer.foot a[href="/licenses"]'); await page.waitForSelector('h1:text("Licencje")');
+  const lic = await page.locator('details.lic').count(); await page.click('details.lic >> nth=4 >> summary');
+  await page.waitForFunction(() => document.querySelectorAll('details.lic')[4].querySelector('pre')!.textContent!.length > 1000);
+  const ltxt = await page.locator('details.lic >> nth=4 >> pre').textContent();
+  t('/licenses: link w stopce, 6 czcionek, pełny tekst OFL ładowany po otwarciu (Playfair Display)', lic === 6 && !!ltxt?.includes('SIL OPEN FONT LICENSE') && !!ltxt?.includes('Playfair Display'), String(lic));
+  const ext = await page.evaluate(() => [...document.querySelectorAll('footer a[href^="http"]')].map((a) => a.getAttribute('href')));
+  t('stopka: link do ascii.rest (brief 00, sekcja 7)', ext.includes('https://ascii.rest'), ext.join(','));
 
   // Tokeny zastosowane
   await page.goto(BASE + '/how-to', { waitUntil: 'networkidle' });
@@ -102,11 +118,20 @@ try {
   // Wąski ekran: bez poziomego przewijania
   for (const w of [375, 320]) {
     await page.setViewportSize({ width: w, height: 800 });
-    for (const p of ['/', '/effects', '/how-to', '/editor']) {
+    for (const p of ['/', '/effects', '/how-to', '/licenses', '/editor']) {
       await page.goto(BASE + p, { waitUntil: 'networkidle' });
       const sw = await page.evaluate(() => document.documentElement.scrollWidth);
       t(`${w}px ${p}: brak poziomego przewijania`, sw <= w, `scrollWidth ${sw}`);
-      if (p === '/editor') continue;
+      if (p === '/editor') {
+        await page.waitForFunction(() => (window as any).__editorTest?.isIdle(), null, { timeout: 30000 });
+        const ed = await page.evaluate(() => { const c = document.querySelector('[data-canvas]')!.getBoundingClientRect(), r = document.querySelector('[data-rail]')!.getBoundingClientRect(), tb = document.querySelector('.ed-toolbar')!.getBoundingClientRect();
+          return { cw: c.width, ch: c.height, below: tb.top >= c.bottom - 1 && r.top >= tb.bottom - 1, rail: r.width }; });
+        t(`${w}px /editor: płótno na ≥ 80% szerokości, pasek narzędzi pod płótnem, zakładki pod paskiem`, ed.cw >= 0.8 * w && ed.ch > 100 && ed.below, JSON.stringify(ed));
+        await page.click('[data-tab="color"]'); const vis = await page.isVisible('[data-tabpanel="color"] [data-color]');
+        await page.mouse.wheel(0, 2000); await page.waitForTimeout(100); const top = await page.evaluate(() => document.querySelector('[data-rail]')!.getBoundingClientRect().top);
+        t(`${w}px /editor: zakładka Color działa, szyna zakładek zostaje u góry przy przewijaniu panelu`, vis && Math.abs(top) <= 1, `vis ${vis}, top ${top}`);
+        continue;
+      }
       // Nagłówek: wszystkie elementy w całości wewnątrz, linki widoczne i klikalne
       const hdr = await page.evaluate(() => {
         const h = document.querySelector('header.nav')!.getBoundingClientRect();

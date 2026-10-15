@@ -9,7 +9,8 @@ import '@fontsource/geist/600.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import { startRouter, type Page } from './router.ts';
-import { home, effects, howTo, editor, notFound } from './pages/pages.ts';
+import { home, effects, howTo, licenses, editor, notFound } from './pages/pages.ts';
+import { footerHtml } from './pages/info.ts';
 
 // Strona deweloperska ładowana na żądanie, żeby silnik i dane testowe nie trafiały do głównego pakietu.
 const devEngine: Page = {
@@ -35,7 +36,7 @@ const devThumbs: Page = {
   },
 };
 
-const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/editor': editor, '/dev/engine': devEngine, '/dev/thumbs': devThumbs };
+const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/licenses': licenses, '/editor': editor, '/dev/engine': devEngine, '/dev/thumbs': devThumbs };
 
 const brand = `<a class="nav__brand" href="/"><span class="nav__logo" aria-hidden="true">▚▞</span>ASCII Art Effects</a>`;
 
@@ -62,7 +63,7 @@ startRouter(routes, notFound, (page, url) => {
   const chrome = page.layout === 'editor' ? editorTop() : siteNav(path);
   const body = `<main id="main" class="${page.mainClass ?? 'page'}">${page.render(url)}</main>`;
   app.innerHTML = `<a class="skip-link" href="#main">Przejdź do treści</a>${chrome}${
-    page.layout === 'editor' ? `<div class="ed-body">${body}</div>` : body}`;
+    page.layout === 'editor' ? `<div class="ed-body">${body}</div>` : body + footerHtml()}`;
   document.title = page.title;
   cleanup?.(); cleanup = page.mount?.(app.querySelector('main')!, url);
   // Po nawigacji w aplikacji przenosimy fokus na nagłówek, żeby czytnik ekranu ogłosił nową stronę.

@@ -4,6 +4,7 @@ import { tilesHtml } from '../home/tiles.ts';
 import { effectListHtml } from '../home/effect-list.ts';
 import { effectsHtml, mountEffects } from '../effects/effects-page.ts';
 import { editorHtml, mountEditor } from '../editor/editor.ts';
+import { howToHtml, licensesHtml, mountLicenses } from './info.ts';
 
 // Szkielet (krok 1). Treści BRAK: do napisania i zatwierdzenia w kolejnych krokach (05, sekcje 5–8).
 const stub = (label: string, heading: string, note: string) => () =>
@@ -18,8 +19,12 @@ export const effects: Page = {
   render: effectsHtml, mount: (main, url) => mountEffects(main, url),
 };
 export const howTo: Page = {
-  title: 'Jak używać · ASCII Art Effects', layout: 'site',
-  render: stub('/jak-używać', 'Jak używać', 'Instrukcja powstanie w kroku 8.'),
+  title: 'Jak używać · ASCII Art Effects', layout: 'site', mainClass: 'page page-prose',
+  render: howToHtml,
+};
+export const licenses: Page = {
+  title: 'Licencje · ASCII Art Effects', layout: 'site', mainClass: 'page page-prose',
+  render: licensesHtml, mount: (main) => mountLicenses(main),
 };
 export const editor: Page = {
   title: 'Edytor · ASCII Art Effects', layout: 'editor', mainClass: 'page-editor',

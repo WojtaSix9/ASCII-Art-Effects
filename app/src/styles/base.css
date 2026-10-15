@@ -260,9 +260,12 @@ a { color: inherit; }
   .ed-styles { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 760px) {
-  .ed { grid-template-columns: 1fr; grid-template-rows: auto 55vh auto auto; height: auto; }
+  /* Wąsko (krok 8, proj): płótno z paskiem narzędzi pod spodem, niżej szyna zakładek (przyklejona przy przewijaniu) i panel.
+     Lewy panel stylów ukryty: styl wybiera się listą w zakładce Styl. */
+  .ed { grid-template-columns: 1fr; grid-template-rows: none; height: auto; }
   .ed-left { display: none; }
-  .ed-rail { flex-direction: row; justify-content: center; padding: 6px; border-left: 0; border-top: 1px solid var(--ed-sep-strong); }
+  .ed-center { height: max(320px, 62vh); grid-template-rows: minmax(0, 1fr) auto; }
+  .ed-rail { flex-direction: row; justify-content: center; padding: 6px; border-left: 0; border-top: 1px solid var(--ed-sep-strong); position: sticky; top: 0; z-index: 6; }
   .ed-panel { border-left: 0; }
   .ed-top__tools .ed-sep { display: none; }
 }
@@ -394,3 +397,26 @@ a { color: inherit; }
 .ed-chip:disabled { opacity: 0.45; cursor: not-allowed; }
 .ed-ttext { width: 100%; box-sizing: border-box; resize: vertical; background: var(--ed-field); color: var(--text); border: 1px solid var(--ed-sep-strong); padding: 6px 8px; font: inherit; margin: 6px 0; }
 .ed-tsel[hidden] { display: none; }
+
+/* Krok 8: /how-to, /licenses, stopka */
+.prose { max-width: 68ch; line-height: 1.6; }
+.prose h2 { font-family: var(--font-mono); font-weight: 500; font-size: 18px; color: var(--text); margin: 32px 0 8px; }
+.prose h2 .label { display: block; margin-bottom: 4px; }
+.prose ul { padding-left: 20px; margin: 8px 0; }
+.prose li { margin: 4px 0; }
+.prose a:not(.btn-outline) { color: var(--text); }
+.prose b { color: var(--text); font-weight: 600; }
+.prose code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text); }
+.howto-step { border-top: 1px solid var(--line); }
+.howto-step p { margin: 0 0 8px; }
+.howto-keys { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 8px 0 24px; }
+.howto-keys dt, .howto-keys dd { margin: 0; }
+kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); background: var(--chip); border: 1px solid var(--line); padding: 1px 6px; white-space: nowrap; }
+.lic { border-top: 1px solid var(--line); padding: 10px 0; }
+.lic summary { cursor: pointer; }
+.lic__text { white-space: pre-wrap; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); max-height: 360px; overflow: auto; background: var(--chip); padding: 12px; margin: 10px 0 0; }
+.foot { border-top: 1px solid var(--line); padding: 24px; color: var(--muted); font-size: 13px; text-align: center; }
+.foot p { margin: 4px auto; max-width: none; }
+.foot a { color: var(--text-2); }
+.foot__brand { font-family: var(--font-mono); color: var(--text-2); }
+@media (max-width: 700px) { .howto-keys { grid-template-columns: 1fr; gap: 2px; } .howto-keys dd { margin-bottom: 8px; } }

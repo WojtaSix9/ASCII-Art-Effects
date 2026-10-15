@@ -243,3 +243,38 @@ Projekt i decyzje użytkownika: `docs/08-tekst-projekt.md`.
 - Brak obrotu i paska tła (decyzja).
 - Licencje krojów do stopki: krok 8.
 - Nie sprawdzone w Safari i Firefoksie ani na ekranach dotykowych.
+
+## 13. Krok 8: /how-to, stopka z licencjami, dostępność, widoki wąskie (15 X 2026)
+
+**`/how-to` (`proj`, treść do akceptacji)**
+- 5 kroków (`/krok 1–5`) i skróty klawiszowe; każdy krok opisuje to, co edytor robi dziś.
+- Kod: `app/src/pages/info.ts`.
+
+**Stopka i licencje**
+- Stopka na stronach serwisu (bez edytora): informacja, że obrazy liczą się w przeglądarce, link do `/licenses`, „czcionki OFL-1.1”, podziękowania: ascii.rest (MIT), zgodnie z briefem 00, sekcja 7.
+- `/licenses`: 6 czcionek; pełny tekst OFL z katalogu `LICENSES/` ładowany po rozwinięciu (osobny plik w buildzie).
+- Uzupełnione braki z kroku 7.4: `LICENSES/OFL-1.1-Playfair-Display.txt`, `LICENSES/OFL-1.1-Bebas-Neue.txt` i dwa wiersze w `THIRD_PARTY_NOTICES.md`.
+
+**Dostępność (`test`)**
+- `npm run test:a11y` (`app/scripts/a11y-check.ts`): axe-core 4.10.3, reguły WCAG 2.0/2.1 A i AA.
+- Zakres: `/`, `/effects`, `/how-to`, `/licenses`, 404 oraz edytor z każdą zakładką (ze światłem, efektem Post FX i napisem) i z oknem eksportu, przy 1440 i 375 px.
+- Wynik: 24 z 24 bez naruszeń.
+- Kontrola, że audyt działa: wstrzyknięty obrazek bez `alt`, przycisk bez nazwy i szary tekst zostały wykryte.
+- Ręcznie, skryptem: przejście klawiszem Tab po każdej zakładce edytora. Każdy osiągnięty element ma widoczny obrys fokusu. Osiągalne są światła, krzywa, ramka kadru i ramki napisów. `prefers-reduced-motion` był już obsłużony.
+- Axe sprawdza tylko część WCAG. Nie było testu z czytnikiem ekranu (`BRAK`).
+
+**Widoki wąskie (`proj`, 05 sekcja 9: edytor desktop-first)**
+- Błąd: poniżej 760 px płótno miało ok. 40 px szerokości, bo wiersze siatki nie pasowały do elementów po ukryciu lewego panelu.
+- Teraz od góry:
+  - płótno na całą szerokość (62% wysokości ekranu, co najmniej 320 px);
+  - pasek Wczytaj/Losuj/Eksport;
+  - szyna zakładek przyklejona do góry przy przewijaniu;
+  - panel.
+- Lewy panel stylów jest ukryty (styl wybiera się listą w zakładce Styl). `/how-to` to opisuje.
+- Testy smoke (375 i 320 px): płótno ≥ 80% szerokości, kolejność elementów, przyklejona szyna, brak poziomego przewijania. Mutacja (stary układ) wykryta.
+- Strony `/`, `/effects`, `/how-to`, `/licenses`: bez poziomego przewijania przy 375 i 320 px (`test`), wygląd sprawdzony na zrzutach (`oko`).
+
+**`BRAK`**
+- Dolne arkusze zamiast panelu pod płótnem (05 sekcja 9 dopuszcza to w v1).
+- Test na prawdziwym telefonie, w Safari i Firefoksie.
+- Czytnik ekranu.

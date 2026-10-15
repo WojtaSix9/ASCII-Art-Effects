@@ -13,10 +13,12 @@
     "test:engine": "node scripts/browser-engine.ts",
     "fixtures": "node scripts/gen-dev-fixtures.ts",
     "test:ui": "node scripts/ui-check.ts",
+    "test:a11y": "node scripts/a11y-check.ts",
     "thumbs": "node scripts/thumbs.ts",
     "test:editor": "node scripts/editor-check.ts"
   },
   "devDependencies": {
+    "axe-core": "^4.10.3",
     "playwright": "^1.56.1",
     "typescript": "^5.9.3",
     "vite": "^8.3.4"
