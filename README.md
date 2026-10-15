@@ -27,15 +27,18 @@ npm run build                       # sprawdzenie typów + build do app/dist
 npm run check:tokens                # kontrast tokenów kolorów (WCAG)
 npm run smoke                       # test w Chromium (Playwright) na zbudowanej wersji; najpierw npm run build
 npm run test:engine                 # silnik w przeglądarce (/dev/engine): zgodność z Node, pokrycie znaków, czasy, pamięć
-npm run test:ui                     # hero (suwak, chipy, skala podglądu) i panel parametrów w edytorze
+npm run test:ui                     # hero, kafelki, miniatury, panel parametrów w edytorze
+npm run thumbs                      # wygeneruj miniatury efektów do public/thumbs/ (po npm run build)
 npm run fixtures                    # odśwież oczekiwane skróty z Node po zmianie silnika
 ```
 
 Stronę `/dev/engine` można też otworzyć ręcznie w dowolnej przeglądarce (np. Safari na iPhonie), żeby sprawdzić silnik na danym urządzeniu.
 
-## Zdjęcie robocze
+## Zdjęcia robocze i miniatury
 
-Jedno zdjęcie zasila hero, edytor (i później miniatury): `app/public/sample/photo.jpg`, opis w `app/src/config/sample.ts`. **Teraz jest tam obraz syntetyczny** (placeholder z `npm run sample:placeholder`). Podmiana: wgraj własne zdjęcie lub CC0 pod tą samą nazwą (ok. 1600 px szerokości, < 500 KB), popraw `alt` i ustaw `placeholder: false`.
+Dwa zdjęcia robocze, używane naprzemiennie: `app/public/sample/photo-1.jpg` i `photo-2.jpg`, konfiguracja (opis, punkt kadrowania) w `app/src/config/sample.ts`. Hero bierze zdjęcie 2, edytor ma przełącznik (`?sample=1|2`), miniatury efektów idą na zmianę.
+
+Miniatury: `app/public/thumbs/<id>.webp` (960×668) i `manifest.json`. Po podmianie zdjęcia: `npm run build && npm run thumbs` (Chromium przez Playwright) albo ręcznie: otwórz `/dev/thumbs`, pobierz `thumbs.zip` i rozpakuj do `app/public/thumbs/`. `npm run test:ui` sprawdza, czy miniatury pasują do bieżących zdjęć.
 
 ## Deploy (Vercel)
 

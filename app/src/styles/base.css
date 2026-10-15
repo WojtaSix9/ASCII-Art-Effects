@@ -180,3 +180,32 @@ a { color: inherit; }
   .ed-layout { grid-template-columns: 1fr; grid-template-rows: 55vh auto; height: auto; }
   .ed-panel { border-left: 0; border-top: 1px solid var(--ed-sep-strong); }
 }
+
+/* Kafelki (05, sekcja 5.2) */
+.tiles { max-width: 1600px; margin: 0 auto; padding: 24px 0 64px; border-top: 1px solid var(--line); }
+.tiles__head { max-width: 1200px; margin: 0 auto; padding: 40px 24px 32px; }
+.tiles__head h2 { font-family: var(--font-mono); font-weight: 500; font-size: clamp(24px, 3vw, 34px); margin: 8px 0 8px; }
+.tiles__head p:not(.label) { color: var(--text-2); margin: 0; }
+.tiles__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-block: 1px solid var(--line); }
+.tile { background: var(--bg); }
+.tile a { display: block; height: 100%; text-decoration: none; color: inherit; }
+.tile__media { position: relative; display: block; aspect-ratio: 960 / 668; overflow: hidden; background: #000; }
+.tile__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile__before, .tile__tag { opacity: 0; transition: opacity 200ms ease; }
+.tile__tag {
+  position: absolute; top: 12px; left: 12px; padding: 3px 7px; background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(255, 255, 255, 0.25);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+}
+@media (hover: hover) {
+  .tile a:hover .tile__before, .tile a:hover .tile__tag { opacity: 1; }
+}
+.tile a:focus-visible { outline-offset: -2px; }
+.tile a:focus-visible .tile__before, .tile a:focus-visible .tile__tag { opacity: 1; }
+.tile__body { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "title title" "desc desc" "arrow ."; gap: 6px; padding: 16px 20px 20px; }
+.tile__title { grid-area: title; font-weight: 600; }
+.tile__desc { grid-area: desc; color: var(--text-3); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile__arrow { grid-area: arrow; font-family: var(--font-mono); color: var(--text-2); }
+.tile a:hover .tile__arrow { color: var(--text); }
+.tiles__more { text-align: center; margin: 40px 0 0; }
+@media (max-width: 1000px) { .tiles__grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .tiles__grid { grid-template-columns: 1fr; } .tiles__head { padding: 32px 16px 24px; } }

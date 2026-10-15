@@ -1,0 +1,136 @@
+{
+  "generated": "2026-10-15T06:32:05.890Z",
+  "size": "960x668",
+  "samples": {
+    "1": {
+      "src": "/sample/photo-1.jpg",
+      "sha1": "fcc62a6a4359ff2d27e9d831be20a2cd2e205974",
+      "crop": {
+        "sx": 0,
+        "sy": 0,
+        "sw": 1500,
+        "sh": 1044
+      }
+    },
+    "2": {
+      "src": "/sample/photo-2.jpg",
+      "sha1": "3a3c536187aebf807b02e698fd43860c1784ae4b",
+      "crop": {
+        "sx": 32,
+        "sy": 0,
+        "sw": 1437,
+        "sh": 1000
+      }
+    }
+  },
+  "thumbs": {
+    "characters": {
+      "sample": 1,
+      "bytes": 146634,
+      "mode": "q0.8",
+      "ms": 179
+    },
+    "dots": {
+      "sample": 1,
+      "bytes": 193198,
+      "mode": "q0.8",
+      "ms": 157
+    },
+    "pixel": {
+      "sample": 1,
+      "bytes": 7304,
+      "mode": "q1",
+      "ms": 45
+    },
+    "lego": {
+      "sample": 1,
+      "bytes": 19196,
+      "mode": "q1",
+      "ms": 114
+    },
+    "dither": {
+      "sample": 1,
+      "bytes": 18934,
+      "mode": "q1",
+      "ms": 56
+    },
+    "posterize": {
+      "sample": 1,
+      "bytes": 66608,
+      "mode": "q1",
+      "ms": 56
+    },
+    "diamond": {
+      "sample": 1,
+      "bytes": 189002,
+      "mode": "q0.8",
+      "ms": 235
+    },
+    "diagonal": {
+      "sample": 1,
+      "bytes": 231040,
+      "mode": "q0.8",
+      "ms": 210
+    },
+    "gradientmap": {
+      "sample": 1,
+      "bytes": 68596,
+      "mode": "q0.8",
+      "ms": 63
+    },
+    "block-chars": {
+      "sample": 2,
+      "bytes": 79098,
+      "mode": "q0.8",
+      "ms": 177
+    },
+    "braille": {
+      "sample": 2,
+      "bytes": 9714,
+      "mode": "q1",
+      "ms": 92
+    },
+    "mosaic": {
+      "sample": 2,
+      "bytes": 66982,
+      "mode": "q1",
+      "ms": 74
+    },
+    "hexmosaic": {
+      "sample": 2,
+      "bytes": 162126,
+      "mode": "q0.8",
+      "ms": 240
+    },
+    "halftone": {
+      "sample": 2,
+      "bytes": 362400,
+      "mode": "q0.8",
+      "ms": 282
+    },
+    "cross": {
+      "sample": 2,
+      "bytes": 205280,
+      "mode": "q0.8",
+      "ms": 265
+    },
+    "lines": {
+      "sample": 2,
+      "bytes": 59316,
+      "mode": "q0.8",
+      "ms": 240
+    },
+    "disco": {
+      "sample": 2,
+      "bytes": 30262,
+      "mode": "q1",
+      "ms": 53
+    },
+    "duotone": {
+      "sample": 2,
+      "bytes": 109944,
+      "mode": "q0.8",
+      "ms": 74
+    }
+  }
+}

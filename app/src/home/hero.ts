@@ -1,6 +1,6 @@
 // Hero strony głównej (05, sekcja 5.1): suwak przed/po na zdjęciu roboczym, chipy efektów, render na żywo w Workerze.
-import effects from '../../../engine/src/data/effects.json';
-import { SAMPLE } from '../config/sample.ts';
+import effects from '../../../engine/src/data/effects.json' with { type: 'json' };
+import { HERO_SAMPLE as SAMPLE } from '../config/sample.ts';
 import { sharedEngine } from '../engine/client.ts';
 import { coverRect, cropPixels, loadImage, paint, previewScale, type Rect } from '../engine/preview.ts';
 
@@ -81,7 +81,7 @@ export function mountHero(root: HTMLElement): () => void {
     if (!img) return;
     const W = stage.clientWidth, H = stage.clientHeight; if (!W || !H) return;
     const key = `${W}x${H}x${devicePixelRatio}`; if (key === sized) return; sized = key;
-    crop = coverRect(img.naturalWidth, img.naturalHeight, W, H);
+    crop = coverRect(img.naturalWidth, img.naturalHeight, W, H, SAMPLE.focus);
     scale = previewScale(crop.sw, crop.sh, W, H);
     const bw = Math.round(crop.sw * scale), bh = Math.round(crop.sh * scale);
     before.width = bw; before.height = bh;

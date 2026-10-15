@@ -8,10 +8,11 @@ export async function loadImage(src: string) {
   const img = new Image(); img.decoding = 'async'; img.src = src; await img.decode(); return img;
 }
 
-/** Kadr źródła wypełniający pole W×H (jak object-fit: cover), wyśrodkowany. */
-export function coverRect(iw: number, ih: number, W: number, H: number): Rect {
+/** Kadr źródła wypełniający pole W×H (jak object-fit: cover), możliwie wyśrodkowany na punkcie `focus` (0–1). */
+export function coverRect(iw: number, ih: number, W: number, H: number, focus = { x: 0.5, y: 0.5 }): Rect {
   const k = Math.max(W / iw, H / ih); const sw = Math.min(iw, Math.round(W / k)), sh = Math.min(ih, Math.round(H / k));
-  return { sx: Math.round((iw - sw) / 2), sy: Math.round((ih - sh) / 2), sw, sh };
+  const at = (f: number, full: number, part: number) => Math.round(Math.min(full - part, Math.max(0, f * full - part / 2)));
+  return { sx: at(focus.x, iw, sw), sy: at(focus.y, ih, sh), sw, sh };
 }
 
 /** Skala renderu podglądu: tyle pikseli, ile pokaże ekran (CSS × devicePixelRatio), bez powiększania ponad źródło. */

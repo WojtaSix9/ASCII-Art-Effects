@@ -25,7 +25,17 @@ const devEngine: Page = {
   },
 };
 
-const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/editor': editor, '/dev/engine': devEngine };
+const devThumbs: Page = {
+  title: 'Miniatury · ASCII Art Effects', layout: 'site',
+  render: () => '<p class="label">/dev</p><h1 tabindex="-1">Miniatury efektów</h1><p>Ładowanie…</p>',
+  mount(main) {
+    let stop: (() => void) | undefined; let gone = false;
+    import('./dev/thumbs.ts').then((m) => { if (gone) return; main.innerHTML = m.thumbsHtml(); stop = m.mountThumbs(main); });
+    return () => { gone = true; stop?.(); };
+  },
+};
+
+const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/editor': editor, '/dev/engine': devEngine, '/dev/thumbs': devThumbs };
 
 const brand = `<a class="nav__brand" href="/"><span class="nav__logo" aria-hidden="true">▚▞</span>ASCII Art Effects</a>`;
 
