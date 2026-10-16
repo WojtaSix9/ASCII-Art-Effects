@@ -63,3 +63,13 @@ Przy 240 klatkach Risograph w 1600 px to ok. 5 min.
 - **Pamięć:**
   - zmierzono tylko serię 1092 renderów (RSS Chromium 581–717 MB, bez wzrostu liniowego);
   - nie mierzono kodowania wideo ani trzymania wielu klatek naraz.
+
+### Po kroku 0: porządki (zgoda użytkownika)
+
+- **Miniatury:** `npm run thumbs` od nowa, bez przywracania starych plików. `test:ui` 39/39 (wcześniej 38/39). Wniosek na przyszłość: miniatur nie przywracam ręcznie, a test UI uruchamiam po ostatniej zmianie plików.
+- **Favicon (`proj`):** `app/public/favicon.svg` to znaki logo „▚▞” narysowane prostokątami, biały wzór na tle `--bg`, bez zależności od czcionki. Dodatkowo PNG 32 px i `apple-touch-icon.png` 180 px wygenerowane z SVG. Linki w `index.html`. Sprawdzone: obraz PNG obejrzany, pliki trafiają do `dist`, `smoke` 63/63. W karcie przeglądarki ani na iOS nie sprawdzone (`BRAK`).
+- **Usunięte duplikaty** `docs/03-modul-animowane-sceny (1).md` i `docs/04-eksport (1).md`. Były identyczne z plikami w `docs/v2/`.
+
+### Uwaga użytkownika (do zapamiętania, nie naprawiać teraz)
+
+Na podglądzie w boksie przed/po zdjęcie „przed” i „po” czasem się różnią. Użytkownik i tak zmieni zdjęcia przykładowe. Przyczyny nie badałem (`BRAK`). Wrócić do tego przy wymianie zdjęć.
