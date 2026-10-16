@@ -492,3 +492,42 @@ Po jednej własności na efekt:
 | z ditheringiem | 16,8 MB | 8,6 s |
 
 Na oko: pasma na niebie znikają, zostaje drobny, regularny wzór.
+
+## Podgląd na Vercel (zgoda użytkownika)
+
+- Wdrożenie typu preview gałęzi `etap2-animacje` @ `f054109`; **produkcja bez zmian**.
+- Adres stały dla gałęzi: `https://ascii-art-effects-git-etap2-animacje-wojta-six9.vercel.app`; tego wdrożenia: `ascii-art-effects-8vu5ji5bf-wojta-six9.vercel.app`.
+- Stan READY (Vercel, `test`). Otworzyć ze środowiska sesji się nie da (blokada sieci), a projekt ma Vercel Authentication, więc wymaga zalogowania.
+
+## Krok 6: odczyt kodu ascii.rest (przed implementacją)
+
+**Źródło:**
+- `github.com/bas3line/ascii` @ `8fd792e` (16 X 2026); licencja MIT, `Copyright (c) 2026 bas3line`;
+- sklonowane poza repozytorium, tylko do odczytu; nic nie skopiowane.
+
+**Glint (`site/src/lib/logo-file.ts`, `kod`):**
+- ukośny pas o połowie szerokości 5 komórek, przesunięty o 0,9 komórki na wiersz (pochyła kreska);
+- przechodzi przez zasięg tuszu w 2 s, co `every` s (≥ 2,5 s), pierwszy po 0,5 s;
+- siła k = smoothstep(1 − d/5);
+- znak z zestawu „pełnych” (`8dbqpPYOo0`, w stylu shade `-=+*#%@`) przy k > 0,55 zamienia się na `/`;
+- kolor bierze jeden z 3 poziomów palety: bez zmian, rozjaśniony 35% lub 70% w stronę bieli (k > 0,25 i k > 0,6).
+
+**Scan (`kod`):**
+- pozioma linia biegnie z góry na dół przez zasięg tuszu w 2 s, co `every` s;
+- „głowa” 2 wiersze: znaki zamienione na szum `#$%&*+<=>?@[]{}` z prawdopodobieństwem 3/4 (hasz komórki i „tiku”; szum zmienia się co drugą klatkę);
+- „ogon” 5 wierszy: kolor rozjaśniony 35%.
+
+**Paleta logo:**
+- 6 poziomów na kolor: bazowy, +35%, +70%, oraz te same dla ciemnego tła;
+- przy limicie formatu 64 kolorów daje to najwyżej 10 kolorów obrazu.
+
+**Format `piece` (`src/types.ts`, aktualny):**
+- `meta` = { name, category, note, cols, rows, fps, options?, clock?, palette? (≤ 64 #rrggbb), ground?, cell?, **loop?**, **still?** } plus `default(options) → Frame(t, env)`.
+- Względem pliku 03 (commit z 8 X) doszły `loop` (okres w s, potrzebny ich SVG) i `still` (klatka dla `prefers-reduced-motion`).
+- Biblioteka ma dziś 240 piece’ów.
+
+**SVG (`src/svg.ts`, `kod`):**
+- pętla próbkowana 15 razy na sekundę; każda różna klatka to grupa wierszy `<text>` pokolorowanych odcinkami;
+- CSS pokazuje grupy po kolei; wiersze rozciągnięte do siatki (`textLength`), więc pasują w każdej czcionce o stałej szerokości;
+- czcionka systemowa (`ui-monospace, …`), bez osadzania;
+- przy `prefers-reduced-motion` jedna klatka.
