@@ -91,7 +91,8 @@ export const editorHtml = () => `
       <label data-anim-only><input type="radio" name="format" value="mp4"> MP4 <span class="ed-hint">(wideo H.264, pętla z zakładki Animation)</span></label></fieldset>
     <fieldset data-for="anim" hidden><legend>Rozmiar animacji</legend>
       <label for="ed-gif-side" class="sr-only">Dłuższy bok</label>
-      <select id="ed-gif-side" name="side"><option value="480">480 px</option><option value="720">720 px</option><option value="1080" selected>1080 px</option></select>
+      <select id="ed-gif-side" name="side"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select>
+      <label data-gif-only><input type="checkbox" name="dither"> Dithering <span class="ed-hint">(mniej pasm na gradientach, większy plik)</span></label>
       <p class="ed-hint" data-anim-info></p></fieldset>
     <div class="ed-anim__bar" data-export-bar hidden><span></span></div>
     <fieldset data-for="still"><legend>Skala</legend>
@@ -374,7 +375,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const animDims = () => { const v = view(); const side = Number((form.elements.namedItem('side') as HTMLSelectElement).value); const k = Math.min(1, side / Math.max(v.sw, v.sh)); return { k, w: Math.round(v.sw * k), h: Math.round(v.sh * k) }; };
   const syncExportForm = () => {
     const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif' || fmt === 'mp4';
-    $('[data-for="anim"]').hidden = !anim; $('[data-for="still"]').hidden = anim;
+    $('[data-for="anim"]').hidden = !anim; $('[data-for="still"]').hidden = anim; $('[data-gif-only]').hidden = fmt !== 'gif';
     if (anim) { const d = animDims(); const n = Math.round(state.anim.loopSeconds * state.anim.fps);
       $('[data-anim-info]').textContent = `${fmt === 'mp4' ? `${d.w - (d.w & 1)}×${d.h - (d.h & 1)}` : `${d.w}×${d.h}`} px, ${n} klatek (${state.anim.loopSeconds} s × ${state.anim.fps} fps).${fmt === 'gif' ? ' Szum i ziarno powiększają plik.' : ''}`; }
     const go = $<HTMLButtonElement>('[data-go]'); go.disabled = false;
@@ -417,8 +418,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   /** Eksport animacji (GIF, MP4): n = długość × fps klatek, faza i/n, w Workerze; postęp i anulowanie.
    *  codec tylko dla testów (Chromium z Playwrighta nie ma H.264, więc kontener sprawdzamy na VP9). */
   const startAnim = (format: 'gif' | 'mp4', onProgress: (done: number, total: number) => void, codec?: 'avc' | 'vp9') => {
-    const d = animDims(); const n = Math.max(2, Math.round(state.anim.loopSeconds * state.anim.fps));
-    return engine.callLong<ExportRes>({ type: 'exportAnim', state: toRenderState(state, true), scale: d.k, frames: n, fps: state.anim.fps, format, codec }, onProgress);
+    const d = animDims(); const n = Math.max(2, Math.round(state.anim.loopSeconds * state.anim.fps)); const dither = (form.elements.namedItem('dither') as HTMLInputElement).checked;
+    return engine.callLong<ExportRes>({ type: 'exportAnim', state: toRenderState(state, true), scale: d.k, frames: n, fps: state.anim.fps, format, codec, dither }, onProgress);
   };
   const exportAnim = async (format: 'gif' | 'mp4', msg: HTMLElement, go: HTMLButtonElement) => {
     const F = format.toUpperCase(); const bar = $('[data-export-bar]'), fill = bar.firstElementChild as HTMLElement; go.disabled = true; bar.hidden = false; fill.style.width = '0';

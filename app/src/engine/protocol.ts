@@ -9,7 +9,7 @@ export type Req =
   | { type: 'postDefs' }                                             // definicje Post FX i Color
   | { type: 'export'; state: RenderState; scale: number; format: 'png' | 'jpeg'; quality?: number }
   /** Etap 2: animacja (stan z ruchem), n klatek faz i/n, fps; postęp przychodzi wiadomościami Progress. */
-  | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' | 'mp4'; codec?: 'avc' | 'vp9' }
+  | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' | 'mp4'; codec?: 'avc' | 'vp9'; dither?: boolean }
   | { type: 'mp4Support'; w: number; h: number }                     // czy Worker zakoduje H.264 (i VP9, testy) w tych wymiarach
   | { type: 'webcodecs' }                                              // dev: tabela VideoEncoder.isConfigSupported
   | { type: 'cancel'; target: number }                                  // przerywa zlecenie `target` (exportAnim) przy najbliższej klatce

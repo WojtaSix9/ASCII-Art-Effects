@@ -1,6 +1,8 @@
 // Etap 2, krok 4: moduł GIF (src/engine/gif.ts) w Node: rozkład opóźnień i struktura pliku odczytana parserem bloków GIF.
 // Uruchomienie: node scripts/gif-check.ts
-import { gifDelays, paletteFrames, flattenOnBlack, encodeGif } from '../src/engine/gif.ts';
+import { gifDelays, paletteFrames, flattenOnBlack, encodeGif, orderedDither } from '../src/engine/gif.ts';
+import * as gifenc from 'gifenc';
+const G = ((gifenc as any).GIFEncoder ? gifenc : (gifenc as any).default) as typeof gifenc;
 import { render } from '../../engine/src/index.ts';
 import { testImage } from '../../engine/scripts/make-test-image.ts';
 
@@ -43,6 +45,20 @@ t(`plik GIF: GIF89a ${W}×${H}, paleta globalna 256, pętla w nieskończoność 
 t(`koszt: ${N} klatek + ${paletteFrames(N).length} do palety = ${calls} renderów; postęp rośnie do końca`, calls === N + paletteFrames(N).length && prog[prog.length - 1] === calls && prog.every((v, i) => v === i + 1), { calls, size: bytes.length });
 let cancelErr = ''; try { await encodeGif(frame, N, W, H, FPS, () => {}, () => true); } catch (e) { cancelErr = (e as Error).message; }
 t('przerwanie: cancelled() → błąd CANCELLED przed końcem', cancelErr === 'CANCELLED', cancelErr);
+
+// 3. dithering uporządkowany (Bayer 8×8)
+const zero = () => new Uint8ClampedArray(8 * 8 * 4).fill(128); const a1 = orderedDither(zero(), 8, 8), a2 = orderedDither(zero(), 8, 8);
+const offs = Array.from({ length: 64 }, (_, i) => a1[i * 4] - 128); const mean = offs.reduce((s, v) => s + v, 0) / 64;
+t('dithering: wzór zależy tylko od pozycji (dwie klatki identyczne); 64 progi Bayera po zaokrągleniu przy amplitudzie 24 dają ≥ 24 różnych przesunięć; średnia ≈ 0, zakres ±12', a1.join() === a2.join() && new Set(offs).size >= 24 && Math.abs(mean) < 1 && Math.max(...offs.map(Math.abs)) <= 12, { mean, uniq: new Set(offs).size, max: Math.max(...offs) });
+/* gradient 256×32 (szary), paleta 8 poziomów szarości: bez ditheringu pasma, z ditheringiem średnia w blokach 8×8 bliżej gradientu */
+const GW = 256, GH = 32; const grad = () => { const d = new Uint8ClampedArray(GW * GH * 4); for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) { const i = (y * GW + x) * 4; d[i] = d[i + 1] = d[i + 2] = x; d[i + 3] = 255; } return d; };
+const pal = Array.from({ length: 8 }, (_, k) => [k * 36, k * 36, k * 36]);
+const blockErr = (dith: boolean) => { const src = grad(); const d = grad(); if (dith) orderedDither(d, GW, GH); const idx = G.applyPalette(d, pal); let e = 0, n = 0;
+  for (let by = 0; by < GH; by += 8) for (let bx = 0; bx < GW; bx += 8) { let q = 0, s = 0; for (let y = by; y < by + 8; y++) for (let x = bx; x < bx + 8; x++) { q += pal[idx[y * GW + x]][0]; s += src[(y * GW + x) * 4]; } e += Math.abs(q - s) / 64; n++; } return +(e / n).toFixed(2); };
+const e0 = blockErr(false), e1 = blockErr(true);
+t('dithering zmniejsza pasma: na gradiencie przy palecie 8 szarości błąd średniej w blokach 8×8 mniejszy niż bez ditheringu', e1 < e0, { bez: e0, z: e1 });
+const plain = await encodeGif(frame, 6, W, H, FPS), dith = await encodeGif(frame, 6, W, H, FPS, () => {}, () => false, true); const gp = parseGif(plain), gd = parseGif(dith);
+t('GIF z ditheringiem: ta sama struktura (6 ramek, paleta globalna, pętla); rozmiar zapisany do raportu', gd.images === 6 && gd.gct === 256 && gd.loop === 0 && gd.localTables === 0, { bez: plain.length, z: dith.length });
 
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${info ? `  [${info}]` : ''}`);
 console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`); process.exit(res.every((r) => r[1]) ? 0 : 1);

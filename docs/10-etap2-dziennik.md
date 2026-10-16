@@ -468,3 +468,27 @@ Po jednej własności na efekt:
 
 - Płynności odtwarzania w aplikacji na prawdziwym sprzęcie.
 - Wyglądu GIF i MP4 dla tych efektów (ścieżka eksportu jest wspólna i sprawdzona na RGB Split).
+
+## Krok 5a: GIF domyślnie 720 px, opcjonalny dithering (decyzja użytkownika)
+
+- **Okno eksportu:** rozmiar animacji domyślnie **720 px** (480 / 720 / 1080). Dla GIF pole „Dithering”, domyślnie wyłączone.
+- **Dithering uporządkowany Bayer 8×8** (`proj`), amplituda ±12 (`DITHER_AMP` 24).
+  - Przesunięcie zależy tylko od pozycji piksela, więc wzór jest stały w każdej klatce.
+  - Dyfuzja błędu (Floyd-Steinberg) dałaby w animacji migoczące ziarno i większy plik, dlatego jej nie użyłem.
+  - Amplituda dobrana na oko.
+
+**Testy (`test`):**
+- `test:gif` 10/10, 3 nowe:
+  - wzór taki sam w dwóch klatkach, średnia 0, zakres ±12;
+  - na gradiencie 256 px przy palecie 8 szarości błąd średniej w blokach 8×8 spada z 9,19 (bez) do 3,52 (z ditheringiem), czyli mniej pasm;
+  - GIF z ditheringiem ma tę samą strukturę.
+- `test:editor` 80/80: domyślne 720 px, plik `…-720px.gif`, `ImageDecoder` 720 px.
+
+**Pomiar** (RGB Split, zdjęcie 1, 4 s × 24 fps, 720×553):
+
+| wariant | rozmiar | czas |
+|---|---|---|
+| bez ditheringu | 12,6 MB | 7,7 s |
+| z ditheringiem | 16,8 MB | 8,6 s |
+
+Na oko: pasma na niebie znikają, zostaje drobny, regularny wzór.

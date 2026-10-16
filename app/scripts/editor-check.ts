@@ -391,11 +391,11 @@ try {
   await page.selectOption('[data-loop-params] [data-p="fps"]', '12'); await settle(page);
   await page.click('[data-export]'); const gifVisible = !(await page.isHidden('[data-anim-only]'));
   await page.check('input[name="format"][value="gif"]'); const info = await page.textContent('[data-anim-info]'); const stillHidden = await page.isHidden('[data-for="still"]');
-  t('eksport: GIF tylko dla efektów z ruchem; po wyborze GIF rozmiar 480/720/1080 (domyślnie 1080) i opis pętli', gifHiddenChars && gifVisible && stillHidden && !!info?.startsWith('1080×') && info.includes('12 klatek (1 s × 12 fps)'), { gifHiddenChars, gifVisible, info });
+  t('eksport: GIF tylko dla efektów z ruchem; po wyborze GIF rozmiar 480/720/1080 (domyślnie 720) i opis pętli', gifHiddenChars && gifVisible && stillHidden && !!info?.startsWith('720×') && info.includes('12 klatek (1 s × 12 fps)'), { gifHiddenChars, gifVisible, info });
   const [gdl] = await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.click('[data-go]')]);
   await page.waitForFunction(() => document.querySelector('[data-export-msg]')?.textContent?.startsWith('Gotowe'), null, { timeout: 120_000 });
   const gmsg = await page.textContent('[data-export-msg]'); await page.click('[data-cancel]');
-  t('eksport GIF z okna: pasek postępu, plik ascii-art-rgbsplit-1080px.gif, komunikat z rozmiarem', gdl.suggestedFilename() === 'ascii-art-rgbsplit-1080px.gif' && !!gmsg?.includes('MB'), { file: gdl.suggestedFilename(), gmsg });
+  t('eksport GIF z okna: pasek postępu, plik ascii-art-rgbsplit-720px.gif, komunikat z rozmiarem', gdl.suggestedFilename() === 'ascii-art-rgbsplit-720px.gif' && !!gmsg?.includes('MB'), { file: gdl.suggestedFilename(), gmsg });
   const G = await page.evaluate(async () => {
     const T = (window as any).__editorTest; const g = await T.gif();
     const dec = new (window as any).ImageDecoder({ data: g.bytes, type: 'image/gif' }); await dec.tracks.ready; await dec.completed;
@@ -414,7 +414,7 @@ try {
     let cancel = ''; try { await T.gif(3); } catch (e) { cancel = (e as Error).message; }
     return { w: g.w, h: g.h, size: g.bytes.length, ms: Math.round(g.ms), n, rep, durs, err, half: +half.toFixed(2), cancel, offPal };
   });
-  t('GIF (ImageDecoder w Chromium): 12 klatek 1080 px, pętla w nieskończoność, czasy 8/8/9 cs (suma 1 s)', G.n === 12 && Math.max(G.w, G.h) === 1080 && G.rep === Infinity && G.durs.reduce((a: number, b: number) => a + b, 0) === 1_000_000 && G.durs.every((d: number) => d === 80_000 || d === 90_000), G);
+  t('GIF (ImageDecoder w Chromium): 12 klatek 720 px (domyślnie), pętla w nieskończoność, czasy 8/8/9 cs (suma 1 s)', G.n === 12 && Math.max(G.w, G.h) === 720 && G.rep === Infinity && G.durs.reduce((a: number, b: number) => a + b, 0) === 1_000_000 && G.durs.every((d: number) => d === 80_000 || d === 90_000), G);
   t('GIF: każdy kolor klatki należy do palety globalnej; klatka k najbliższa renderowi silnika w fazie k/12 (nie k+1, k+3); klatka 6 różni się od 0', G.offPal === 0 && G.err.every((e: number[]) => e[0] < e[1] && e[0] < e[2]) && G.half > 2, { err: G.err, half: G.half, offPal: G.offPal });
   t('GIF: przerwanie w trakcie → błąd CANCELLED', G.cancel === 'CANCELLED', G.cancel);
 

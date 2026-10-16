@@ -19,10 +19,19 @@ export function flattenOnBlack(d: Uint8ClampedArray) {
   return d;
 }
 
+/** Dithering uporządkowany (Bayer 8×8, decyzja użytkownika: opcja, domyślnie wyłączona): przesunięcie ±amp/2 zależne tylko od
+ *  pozycji piksela, więc wzór jest ten sam w każdej klatce (bez „gotowania się”, które dałaby dyfuzja błędu). Zmienia dane w miejscu. */
+const BAYER8 = (() => { const m = [0, 2, 3, 1]; const b: number[] = []; for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { let v = 0; for (let k = 0; k < 3; k++) { const s = 1 << k; v = v * 4 + m[(((y / s) & 1) << 1) | ((x / s) & 1)]; } b.push((v + 0.5) / 64 - 0.5); } return b; })();
+export const DITHER_AMP = 24;   // proj: ok. połowa typowego odstępu kolorów palety 256 na zdjęciu (ocena okiem)
+export function orderedDither(d: Uint8ClampedArray, w: number, h: number, amp = DITHER_AMP) {
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = BAYER8[(y & 7) * 8 + (x & 7)] * amp; const i = (y * w + x) * 4; d[i] += o; d[i + 1] += o; d[i + 2] += o; }
+  return d;
+}
+
 export type FrameSource = (i: number) => Promise<Uint8ClampedArray> | Uint8ClampedArray;
 /** Koduje n klatek w×h (RGBA). Klatki do palety są renderowane dodatkowo (pamięć: najwyżej 1 klatka + próbka ≤ 2^20 pikseli). */
 export async function encodeGif(frame: FrameSource, n: number, w: number, h: number, fps: number,
-  progress: (done: number, total: number) => void = () => {}, cancelled: () => boolean = () => false): Promise<Uint8Array> {
+  progress: (done: number, total: number) => void = () => {}, cancelled: () => boolean = () => false, dither = false): Promise<Uint8Array> {
   const pf = paletteFrames(n); const total = n + pf.length; let done = 0;
   const per = Math.max(1, Math.floor((1 << 20) / pf.length)); const step = Math.max(1, Math.ceil((w * h) / per));
   const sample = new Uint8ClampedArray(pf.length * Math.ceil((w * h) / step) * 4); let o = 0;
@@ -35,6 +44,7 @@ export async function encodeGif(frame: FrameSource, n: number, w: number, h: num
   const delays = gifDelays(fps, n); const gif = GIFEncoder();
   for (let i = 0; i < n; i++) {
     const d = flattenOnBlack(await frame(i)); if (cancelled()) throw new Error('CANCELLED');
+    if (dither) orderedDither(d, w, h);
     gif.writeFrame(applyPalette(d, palette), w, h, { palette: i === 0 ? palette : undefined, delay: delays[i] * 10, repeat: 0 });
     progress(++done, total);
   }

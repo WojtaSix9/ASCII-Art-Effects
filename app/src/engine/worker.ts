@@ -123,7 +123,7 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
           const bytes = await encodeMp4(frame, req.frames, w, e.w, e.h, req.fps, codec, prog, () => cancelled.has(id));
           return { data: { blob: new Blob([bytes as BlobPart], { type: 'video/mp4' }), w: e.w, h: e.h, ms: performance.now() - t } satisfies ExportRes };
         }
-        const bytes = await encodeGif(frame, req.frames, w, h, req.fps, prog, () => cancelled.has(id));
+        const bytes = await encodeGif(frame, req.frames, w, h, req.fps, prog, () => cancelled.has(id), !!req.dither);
         return { data: { blob: new Blob([bytes as BlobPart], { type: 'image/gif' }), w, h, ms: performance.now() - t } satisfies ExportRes };
       } finally { cancelled.delete(id); }
     }
