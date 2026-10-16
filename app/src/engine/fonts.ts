@@ -81,3 +81,20 @@ export async function ensureText(set: FontFaceSet, items: TextItem[] | undefined
     await set.load(`${w} 16px "${TEXT_FAMILY[it.font]}"`, String(it.text));
   }
 }
+
+// ---------- Etap 2, krok 6B: czcionka osadzana w eksporcie SVG (opcja użytkownika) ----------
+const inRange = (cp: number, range: string) => range.split(',').some((r) => { const [a, b] = r.trim().replace(/^U\+/i, '').split('-').map((h) => parseInt(h.replace(/^U\+/i, ''), 16)); return cp >= a && cp <= (b ?? a); });
+/** Podzbiory Geist Mono 400 potrzebne dla znaków `text`, jako base64 woff2 (z unicode-range). Znaki spoza Geist Mono
+ *  (Braille, grecki, katakana) nie są osadzane: w SVG rysuje je czcionka systemowa. */
+export async function svgFontFor(text: string): Promise<{ family: string; faces: { woff2Base64: string; unicodeRange: string }[]; missing: string } | null> {
+  const cps = [...new Set([...text])].filter((c) => c.trim()).map((c) => c.codePointAt(0)!); const faces: { woff2Base64: string; unicodeRange: string }[] = [];
+  const covered = new Set<number>();
+  for (const block of geistCss.split('@font-face').slice(1)) {
+    const file = /url\(\.\/files\/([^)]+\.woff2)\)/.exec(block)?.[1]; const range = /unicode-range:\s*([^;]+);/.exec(block)?.[1];
+    const url = file && Object.entries(geistUrls).find(([k]) => k.endsWith('/' + file))?.[1]; if (!url || !range) continue;
+    const hit = cps.filter((cp) => inRange(cp, range)); if (!hit.length) continue; hit.forEach((cp) => covered.add(cp));
+    const buf = new Uint8Array(await (await fetch(url)).arrayBuffer()); let bin = ''; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    faces.push({ woff2Base64: btoa(bin), unicodeRange: range.trim() });
+  }
+  return faces.length ? { family: 'Geist Mono', faces, missing: String.fromCodePoint(...cps.filter((cp) => !covered.has(cp))) } : null;
+}

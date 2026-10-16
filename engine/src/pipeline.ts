@@ -84,5 +84,7 @@ export function render(src: Img, state: RenderState, opts: RenderOpts = {}): Ren
   }
   return { img, info: ctx.info };
 }
+/** Etap 2: siatka znaków z kolorami (eksport SVG/TS). Null, gdy efekt nie ma wersji tekstowej. */
+export function renderCells(src: Img, state: RenderState, opts: RenderOpts = {}) { const { ctx, effect } = makeCtx(src, state, opts); return effect.cells ? effect.cells(ctx) : null; }
 /** Eksport tekstowy (Characters, Block, Braille). Zwraca null, gdy efekt nie ma wersji tekstowej. */
 export function renderText(src: Img, state: RenderState, opts: RenderOpts = {}): string | null { const { ctx, effect } = makeCtx(src, state, opts); return effect.text ? effect.text(ctx) : null; }

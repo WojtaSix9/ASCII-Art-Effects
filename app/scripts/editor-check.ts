@@ -456,6 +456,29 @@ try {
     const E = [mae(M.f3), mae(M.f1), mae(M.f5)];
     t('MP4: klatka 3 (dekodowana ffmpeg) najbliższa renderowi silnika w fazie 3/12, nie 1/12 i 5/12 (kolory i kolejność klatek zgodne)', raw.length === M.w * M.h * 3 && E[0] < E[1] && E[0] < E[2], { E, raw: raw.length });
   }
+  // Etap 2, krok 6B: SVG (tylko efekty z siatką znaków). Pętla 1 s z testów GIF → 15 klatek przy 15 fps.
+  if (await page.isVisible('[data-dialog]')) await page.click('[data-cancel]');
+  await page.click('[data-export]'); const svgHiddenRgb = await page.isHidden('[data-svg-only]'); await page.click('[data-cancel]');
+  await pick('characters'); await settle(page);
+  await page.click('[data-export]'); const svgVisible = !(await page.isHidden('[data-svg-only]')); await page.check('input[name="format"][value="svg"]');
+  await page.waitForFunction(() => document.querySelector('[data-anim-info]')?.textContent?.startsWith('Siatka'), null, { timeout: 20_000 });
+  const sInfo = await page.textContent('[data-anim-info]'); const sideHidden = await page.isHidden('#ed-gif-side'), embedVis = !(await page.isHidden('[data-embed-only]')), ditherHidden = await page.isHidden('[data-gif-only]');
+  t('eksport SVG: opcja tylko dla efektów z siatką znaków (RGB Split bez, Characters z); opis siatki i 15 klatek (1 s × 15 fps); zamiast rozmiaru opcja „Osadź czcionkę”',
+    svgHiddenRgb && svgVisible && !!sInfo?.includes('15 klatek (1 s × 15 fps)') && sideHidden && embedVis && ditherHidden, { svgHiddenRgb, svgVisible, sInfo, sideHidden, embedVis, ditherHidden });
+  const [sdl] = await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.click('[data-go]')]);
+  await page.waitForFunction(() => document.querySelector('[data-export-msg]')?.textContent?.startsWith('Gotowe'), null, { timeout: 120_000 });
+  const smsg = await page.textContent('[data-export-msg]'); await page.click('[data-cancel]');
+  t('eksport SVG z okna: plik ascii-art-characters.svg, komunikat z siatką i rozmiarem', sdl.suggestedFilename() === 'ascii-art-characters.svg' && !!smsg?.includes('Gotowe: SVG, siatka') && !!sInfo?.includes(smsg!.split('siatka ')[1].split(' ')[0]), { file: sdl.suggestedFilename(), smsg });
+  const S = await page.evaluate(async () => {
+    const T = (window as any).__editorTest; const a = await T.svg(false), b = await T.svg(true);
+    const faces = [...b.text.matchAll(/url\(data:font\/woff2;base64,([A-Za-z0-9+/=]+)\)/g)].map((m) => m[1]);
+    let loaded = 0; for (const f of faces) { const bin = atob(f); const u = new Uint8Array(bin.length); for (let i = 0; i < u.length; i++) u[i] = bin.charCodeAt(i); try { await new FontFace('T' + loaded, u).load(); loaded++; } catch { /* nie wczytana */ } }
+    const img = async (txt: string) => { const im = new Image(); im.src = URL.createObjectURL(new Blob([txt], { type: 'image/svg+xml' })); await im.decode(); return im.naturalWidth; };
+    const host = document.createElement('div'); host.innerHTML = a.text; document.body.append(host); const anims = document.getAnimations().length; host.remove();
+    return { type: a.type, cols: a.cols, rows: a.rows, aFace: a.text.includes('@font-face'), faces: faces.length, loaded, extra: b.text.length - a.text.length, b64: faces.reduce((s, f) => s + f.length, 0), fam: b.text.includes('font-family:"Geist Mono",ui-monospace'), wA: await img(a.text), wB: await img(b.text), anims, kA: Math.round(a.text.length / 1024), kB: Math.round(b.text.length / 1024) };
+  });
+  t('SVG bez osadzania: typ image/svg+xml, bez @font-face, otwiera się jako <img>, ma animacje CSS', S.type === 'image/svg+xml' && !S.aFace && S.wA === S.cols * 10 && S.anims > 0, S);
+  t(`SVG z osadzaniem (podzbiorów: ${S.faces}, ${S.kA} → ${S.kB} kB, siatka ${S.cols}×${S.rows}): podzbiory Geist Mono jako woff2 base64 (każdy wczytuje się jako FontFace), rodzina Geist Mono pierwsza w stosie; różnica rozmiaru ≈ długość base64`, S.faces >= 1 && S.loaded === S.faces && S.fam && S.wB === S.wA && Math.abs(S.extra - S.b64) < 400 * S.faces, S);
   t('brak błędów w konsoli', errors.length === 0, errors.join(' | '));
 } finally { await browser.close(); server.kill(); }
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${!ok && info ? `  [${info}]` : ''}`);

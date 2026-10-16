@@ -88,11 +88,13 @@ export const editorHtml = () => `
       <label><input type="radio" name="format" value="png" checked> PNG</label>
       <label><input type="radio" name="format" value="jpeg"> JPG <span class="ed-hint">(bez przezroczystości, tło czarne)</span></label>
       <label data-anim-only><input type="radio" name="format" value="gif"> GIF <span class="ed-hint">(animacja, pętla z zakładki Animation)</span></label>
-      <label data-anim-only><input type="radio" name="format" value="mp4"> MP4 <span class="ed-hint">(wideo H.264, pętla z zakładki Animation)</span></label></fieldset>
+      <label data-anim-only><input type="radio" name="format" value="mp4"> MP4 <span class="ed-hint">(wideo H.264, pętla z zakładki Animation)</span></label>
+      <label data-svg-only><input type="radio" name="format" value="svg"> SVG <span class="ed-hint">(animowane znaki, CSS bez skryptu, 15 fps)</span></label></fieldset>
     <fieldset data-for="anim" hidden><legend>Rozmiar animacji</legend>
       <label for="ed-gif-side" class="sr-only">Dłuższy bok</label>
       <select id="ed-gif-side" name="side"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select>
       <label data-gif-only><input type="checkbox" name="dither"> Dithering <span class="ed-hint">(mniej pasm na gradientach, większy plik)</span></label>
+      <label data-embed-only><input type="checkbox" name="embedFont"> Osadź czcionkę <span class="ed-hint">(Geist Mono w pliku: ten sam krój wszędzie, plik większy)</span></label>
       <p class="ed-hint" data-anim-info></p></fieldset>
     <div class="ed-anim__bar" data-export-bar hidden><span></span></div>
     <fieldset data-for="still"><legend>Skala</legend>
@@ -372,11 +374,19 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   // Etap 2, krok 4: GIF dla efektów z ruchem. Dłuższy bok 480/720/1080 px (decyzja: najwyżej 1080), nie więcej niż zdjęcie.
   const form = $<HTMLFormElement>('[data-export-form]');
   const isAnimated = () => !!defs.find((d) => d.id === state.style)?.motions?.length;
+  /** SVG tylko dla efektów z wersją tekstową (siatka znaków: Characters, Block, Braille, Mixed). */
+  const hasCells = () => isAnimated() && !!defs.find((d) => d.id === state.style)?.cells;
+  const SVG_FPS = 15;   // próbkowanie pętli w SVG (jak ascii.rest, plik 09 sekcja 6.3)
+  const svgFrames = () => Math.max(2, Math.round(state.anim.loopSeconds * SVG_FPS));
   const animDims = () => { const v = view(); const side = Number((form.elements.namedItem('side') as HTMLSelectElement).value); const k = Math.min(1, side / Math.max(v.sw, v.sh)); return { k, w: Math.round(v.sw * k), h: Math.round(v.sh * k) }; };
   const syncExportForm = () => {
-    const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif' || fmt === 'mp4';
-    $('[data-for="anim"]').hidden = !anim; $('[data-for="still"]').hidden = anim; $('[data-gif-only]').hidden = fmt !== 'gif';
-    if (anim) { const d = animDims(); const n = Math.round(state.anim.loopSeconds * state.anim.fps);
+    const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif' || fmt === 'mp4' || fmt === 'svg';
+    $('[data-for="anim"]').hidden = !anim; $('[data-for="still"]').hidden = anim; $('[data-gif-only]').hidden = fmt !== 'gif'; $('[data-embed-only]').hidden = fmt !== 'svg';
+    $('#ed-gif-side').hidden = fmt === 'svg';
+    if (fmt === 'svg') { const my = ++supportCheck; $('[data-anim-info]').textContent = `${svgFrames()} klatek (${state.anim.loopSeconds} s × ${SVG_FPS} fps). Tylko znaki efektu: bez Post FX, Color i napisów.`;
+      engine.call<{ cols: number; rows: number } | null>({ type: 'svgInfo', state: toRenderState(state) }).then((c) => { if (my !== supportCheck || !c) return;
+        $('[data-anim-info]').textContent = `Siatka ${c.cols}×${c.rows} znaków, ${svgFrames()} klatek (${state.anim.loopSeconds} s × ${SVG_FPS} fps). Tylko znaki efektu: bez Post FX, Color i napisów.`; }); }
+    else if (anim) { const d = animDims(); const n = Math.round(state.anim.loopSeconds * state.anim.fps);
       $('[data-anim-info]').textContent = `${fmt === 'mp4' ? `${d.w - (d.w & 1)}×${d.h - (d.h & 1)}` : `${d.w}×${d.h}`} px, ${n} klatek (${state.anim.loopSeconds} s × ${state.anim.fps} fps).${fmt === 'gif' ? ' Szum i ziarno powiększają plik.' : ''}`; }
     const go = $<HTMLButtonElement>('[data-go]'); go.disabled = false;
     if (fmt === 'mp4') {   // H.264 w tej przeglądarce? Bez kodera: komunikat zamiast pliku (decyzja użytkownika, bez fallbacku)
@@ -390,7 +400,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   let exportJob: { cancel: () => void } | null = null;
   $('[data-export]').addEventListener('click', () => {
     const v = view(); for (const s of [1, 2]) $(`[data-size="${s}"]`).textContent = `${Math.round(v.sw * s)}×${Math.round(v.sh * s)} px`;
-    const animOk = isAnimated(); $('[data-anim-only]').hidden = !animOk;
+    const animOk = isAnimated(); root.querySelectorAll<HTMLElement>('[data-anim-only]').forEach((l) => { l.hidden = !animOk; }); $('[data-svg-only]').hidden = !hasCells();
+    if ((form.elements.namedItem('format') as RadioNodeList).value === 'svg' && !hasCells()) form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
     if (!animOk && ['gif', 'mp4'].includes((form.elements.namedItem('format') as RadioNodeList).value)) form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
     $('[data-export-msg]').textContent = ''; syncExportForm(); dialog.showModal();
   });
@@ -399,7 +410,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   $<HTMLFormElement>('[data-export-form]').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target as HTMLFormElement); const msg = $('[data-export-msg]'), go = $<HTMLButtonElement>('[data-go]');
-    if (fd.get('format') === 'gif' || fd.get('format') === 'mp4') { await exportAnim(fd.get('format') as 'gif' | 'mp4', msg, go); return; }
+    if (fd.get('format') === 'gif' || fd.get('format') === 'mp4' || fd.get('format') === 'svg') { await exportAnim(fd.get('format') as 'gif' | 'mp4' | 'svg', msg, go); return; }
     const format = fd.get('format') as 'png' | 'jpeg'; const s = Number(fd.get('scale'));
     go.disabled = true; msg.textContent = 'Renderuję w pełnej rozdzielczości…';
     try {
@@ -417,18 +428,21 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
 
   /** Eksport animacji (GIF, MP4): n = długość × fps klatek, faza i/n, w Workerze; postęp i anulowanie.
    *  codec tylko dla testów (Chromium z Playwrighta nie ma H.264, więc kontener sprawdzamy na VP9). */
-  const startAnim = (format: 'gif' | 'mp4', onProgress: (done: number, total: number) => void, codec?: 'avc' | 'vp9') => {
+  const startAnim = (format: 'gif' | 'mp4' | 'svg', onProgress: (done: number, total: number) => void, codec?: 'avc' | 'vp9', embed?: boolean) => {
     const d = animDims(); const n = Math.max(2, Math.round(state.anim.loopSeconds * state.anim.fps)); const dither = (form.elements.namedItem('dither') as HTMLInputElement).checked;
+    const embedFont = embed ?? (form.elements.namedItem('embedFont') as HTMLInputElement).checked;
+    if (format === 'svg') return engine.callLong<ExportRes>({ type: 'exportAnim', state: toRenderState(state, true), scale: 1, frames: svgFrames(), fps: SVG_FPS, format, embedFont }, onProgress);
     return engine.callLong<ExportRes>({ type: 'exportAnim', state: toRenderState(state, true), scale: d.k, frames: n, fps: state.anim.fps, format, codec, dither }, onProgress);
   };
-  const exportAnim = async (format: 'gif' | 'mp4', msg: HTMLElement, go: HTMLButtonElement) => {
+  const exportAnim = async (format: 'gif' | 'mp4' | 'svg', msg: HTMLElement, go: HTMLButtonElement) => {
     const F = format.toUpperCase(); const bar = $('[data-export-bar]'), fill = bar.firstElementChild as HTMLElement; go.disabled = true; bar.hidden = false; fill.style.width = '0';
     const job = startAnim(format, (done, total) => { fill.style.width = `${(100 * done) / total}%`; msg.textContent = `Renderuję i koduję ${F}: ${done} z ${total}…`; }); exportJob = job;
     try {
       const r = await job.promise; const mb = r.blob.size / 1048576;
-      const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = `ascii-art-${state.style}-${r.w}px.${format}`; a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = format === 'svg' ? `ascii-art-${state.style}.svg` : `ascii-art-${state.style}-${r.w}px.${format}`; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-      msg.textContent = `Gotowe: ${F} ${r.w}×${r.h} px, ${mb.toFixed(1)} MB, ${(r.ms / 1000).toFixed(1)} s.${format === 'gif' && mb > 20 ? ' Uwaga: plik ponad 20 MB (krótsza pętla, mniejszy rozmiar lub niższe fps go zmniejszą).' : ''}`;
+      if (format === 'svg') msg.textContent = `Gotowe: SVG, siatka ${r.cols}×${r.rows} znaków, ${mb < 1 ? `${Math.round(r.blob.size / 1024)} kB` : `${mb.toFixed(1)} MB`}, ${(r.ms / 1000).toFixed(1)} s.${r.fontMissing ? ` Znaki spoza Geist Mono (${[...r.fontMissing].slice(0, 8).join(' ')}) narysuje czcionka systemowa.` : ''}`;
+      else msg.textContent = `Gotowe: ${F} ${r.w}×${r.h} px, ${mb.toFixed(1)} MB, ${(r.ms / 1000).toFixed(1)} s.${format === 'gif' && mb > 20 ? ' Uwaga: plik ponad 20 MB (krótsza pętla, mniejszy rozmiar lub niższe fps go zmniejszą).' : ''}`;
     } catch (err) { const m = (err as Error).message;
       msg.textContent = m === CANCELLED ? 'Eksport przerwany.' : m.startsWith(NO_CODEC) ? 'Ta przeglądarka nie koduje wideo H.264 (WebCodecs), więc MP4 nie powstanie.' : `Błąd eksportu ${F}: ${m}`; }
     finally { exportJob = null; go.disabled = false; bar.hidden = true; }
@@ -444,6 +458,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     /** Eksport GIF bez okna (testy): zwraca bajty i wymiary; cancelAfter = przerwij po tylu krokach postępu. */
     gif: async (cancelAfter?: number) => { const j = startAnim('gif', (done) => { if (cancelAfter && done >= cancelAfter) j.cancel(); }); const r = await j.promise; return { w: r.w, h: r.h, bytes: new Uint8Array(await r.blob.arrayBuffer()), ms: r.ms }; },
     mp4: async (codec: 'avc' | 'vp9' = 'avc', cancelAfter?: number) => { const j = startAnim('mp4', (done) => { if (cancelAfter && done >= cancelAfter) j.cancel(); }, codec); const r = await j.promise; return { w: r.w, h: r.h, type: r.blob.type, bytes: new Uint8Array(await r.blob.arrayBuffer()), ms: r.ms }; },
+    /** Eksport SVG bez okna (testy): tekst pliku i wymiary siatki. */
+    svg: async (embedFont = false) => { const r = await startAnim('svg', () => {}, undefined, embedFont).promise; return { text: await r.blob.text(), type: r.blob.type, cols: r.cols, rows: r.rows, fontMissing: r.fontMissing, ms: r.ms }; },
     renderPhase: (s: number, phase: number) => engine.call<RenderRes>({ type: 'render', state: toRenderState(state, true), scale: s, phase }),
   };
 

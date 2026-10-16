@@ -1,5 +1,5 @@
 // Rodzina GRID: Characters, Block, Braille, Dots, Cross, Diamond, Lines, Diagonal (plik 02, sekcja 1 i 4). proj.
-import type { EffectDef, Img, MotionDef, RenderCtx } from '../core/types.ts';
+import type { CellGrid, EffectDef, Img, MotionDef, RenderCtx } from '../core/types.ts';
 import { color, common, range, select, seedParam, toggle } from '../core/params.ts';
 import { backdrop, cellVisible } from '../core/compose.ts';
 import { cellAverages, clamp, hash01, lerp, over, parseColor } from '../core/util.ts';
@@ -54,6 +54,18 @@ export const motionChar = (mm: ReturnType<typeof gridMotion>, x: number, y: numb
   if (!mm || chr === ' ' || chr === '\u2800') return chr; const mod = mm(x, y, t); return mod?.ch ?? chr;
 };
 const tintC = (v: number, k: number) => v + (255 - v) * k;
+/** Siatka komórek z eksportu tekstowego efektu: kolor = średnia komórki albo tusz (mono), rozjaśniony przez glint/scan jak w renderze. */
+export function cellGridOf(ctx: RenderCtx, cw: number, ch: number, text: string): CellGrid {
+  const lines = text.replace(/\n$/, '').split('\n'); const rows = lines.length, cols = Math.max(...lines.map((l) => [...l].length));
+  const a = cellAverages(ctx.prep, cw, ch); const p = ctx.p; const ink = parseColor(p.inkColor ?? '#ffffff'); const mm = gridMotion(ctx, cw, ch, rows, ctx.prep.w, ctx.prep.h);
+  const rgb = new Uint8Array(cols * rows * 3);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const o = Math.min(y, a.ny - 1) * a.nx + Math.min(x, a.nx - 1); let c = p.colorMode === 'mono' ? ink : [a.R[o], a.G[o], a.B[o]];
+    if (mm) { let t = a.L[o]; if (p.invert) t = 1 - t; const mod = mm(x, y, clamp(t, 0, 1)); if (mod?.tint) c = c.map((v) => tintC(v, mod.tint)); }
+    const i = (y * cols + x) * 3; rgb[i] = Math.round(c[0]); rgb[i + 1] = Math.round(c[1]); rgb[i + 2] = Math.round(c[2]);
+  }
+  return { cols, rows, cw, ch, text: lines.map((l) => [...l].join('').padEnd(cols)), rgb, ground: parseColor(p.bgColor ?? '#000000') as [number, number, number] };
+}
 /** Wspolna petla: srednie komorek z `prep`, ton (z odwroceniem), kolor tuszu, coverage przez hasz; rysuje na tle. */
 export function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void, tone?: (t: number) => number, target?: Img): Img {
   const out = target ?? backdrop(ctx); const a = cellAverages(ctx.prep, cw, ch); const p = ctx.p; const ink = parseColor(p.inkColor ?? '#ffffff');
@@ -113,6 +125,7 @@ const characters: EffectDef = {
       for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) { const v = m[(y - c.y0) * cw + (x - c.x0)]; if (v && x - c.x0 < w) over(img.data, (y * img.w + x) * 4, c.r, c.g, c.b, v / 255); }
     });
   },
+  cells(ctx) { const { cw, ch } = charCell(ctx); return cellGridOf(ctx, cw, ch, this.text!(ctx)); },
   text(ctx) {
     const { cw, ch } = charCell(ctx); const ramp = rampOf(ctx.p); const a = cellAverages(ctx.prep, cw, ch); const eb = edgeBoost(ctx, a); const rows: string[] = [];
     const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);
@@ -151,6 +164,7 @@ const block: EffectDef = {
       if (bits & 4) fillRect(img, c.x0, c.y0 + hh, c.x0 + hw, c.y1, c.r, c.g, c.b); if (bits & 8) fillRect(img, c.x0 + hw, c.y0 + hh, c.x1, c.y1, c.r, c.g, c.b);
     });
   },
+  cells(ctx) { const { cw, ch } = charCell(ctx); return cellGridOf(ctx, cw, ch, this.text!(ctx)); },
   text(ctx) {
     const { cw, ch } = charCell(ctx); const st = subTones(ctx, cw, ch); const a = cellAverages(ctx.prep, cw, ch); const rows: string[] = [];
     const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);
@@ -180,6 +194,7 @@ const braille: EffectDef = {
       for (let r = 0; r < 4; r++) for (let q = 0; q < 2; q++) if (m & (1 << BIT[r][q])) { const mx = c.x0 + (q + 0.5) * dw, my = c.y0 + (r + 0.5) * dh; paintSDF(img, Math.floor(mx - rad - 1), Math.floor(my - rad - 1), Math.ceil(mx + rad + 1), Math.ceil(my + rad + 1), (x, y) => Math.hypot(x - mx, y - my) - rad, c.r, c.g, c.b); }
     });
   },
+  cells(ctx) { const { cw, ch } = brailleGeom(ctx); return cellGridOf(ctx, cw, ch, this.text!(ctx)); },
   text(ctx) {
     const { dw, dh, cw, ch } = brailleGeom(ctx); const sub = cellAverages(ctx.prep, dw, dh); const nx = Math.ceil(ctx.prep.w / cw), ny = Math.ceil(ctx.prep.h / ch); const rows: string[] = [];
     const mm = gridMotion(ctx, cw, ch, ny, ctx.prep.w, ctx.prep.h); const tn = mm ? cellAverages(ctx.prep, cw, ch) : null;

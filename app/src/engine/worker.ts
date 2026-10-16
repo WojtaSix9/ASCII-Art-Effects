@@ -1,11 +1,11 @@
 /// <reference lib="webworker" />
 // Silnik efektów w Web Workerze. Glify: OffscreenCanvas + Geist Mono załadowany w Workerze przed pierwszym renderem
 // (inaczej cache masek w canvasGlyphs zapamiętałby znaki z czcionki zastępczej).
-import { render, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES, cropRect, canvasText, TEXT_PARAMS, TEXT_FONTS, MAX_TEXTS } from '../../../engine/src/index.ts';
+import { render, renderCells, animatedSvg, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES, cropRect, canvasText, TEXT_PARAMS, TEXT_FONTS, MAX_TEXTS } from '../../../engine/src/index.ts';
 import type { GlyphProvider, Img, RenderState, TextRenderer } from '../../../engine/src/index.ts';
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
-import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK, registerTextFonts, ensureText, TEXT_STACKS } from './fonts.ts';
+import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK, registerTextFonts, ensureText, TEXT_STACKS, svgFontFor } from './fonts.ts';
 import { LIMIT_ERROR } from './protocol.ts';
 import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes, Progress, WebCodecsRow } from './protocol.ts';
 import { CANCELLED, NO_CODEC } from './protocol.ts';
@@ -92,7 +92,7 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
   if (req.type === 'init') return { data: await init() };
   await init();
   switch (req.type) {
-    case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params, motions: e.motions })) satisfies EffectMeta[] };
+    case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params, motions: e.motions, cells: !!e.cells })) satisfies EffectMeta[] };
     case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params, glyphOnly: f.glyphOnly })), glyphStyles: [...GLYPH_STYLES], color: COLOR_PARAMS, lights: { params: LIGHT_PARAMS, ambient: AMBIENT_PARAM, max: MAX_LIGHTS, skip: [...NO_LIGHTS] }, text: { params: TEXT_PARAMS, fonts: TEXT_FONTS, max: MAX_TEXTS } } satisfies PostDefs };
     case 'export': {
       if (!source) throw new Error('no source image');
@@ -117,6 +117,13 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
       const frame = async (i: number) => { await new Promise((r) => setTimeout(r, 0)); if (cancelled.has(id)) throw new Error(CANCELLED); return new Uint8ClampedArray(render(src, req.state, { scale: req.scale, glyphs, text: textR, phase: i / req.frames }).img.data); };
       const prog = (done: number, total: number) => scope.postMessage({ id, progress: { done, total } } satisfies Progress);
       try {
+        if (req.format === 'svg') {   // krok 6B: siatka znaków efektu w skali 1 (gęstość siatki nie zależy od skali), bez Post FX, Color i napisów
+          const frames = []; for (let i = 0; i < req.frames; i++) { await new Promise((r) => setTimeout(r, 0)); if (cancelled.has(id)) throw new Error(CANCELLED);
+            const c = renderCells(src, req.state, { glyphs, phase: i / req.frames }); if (!c) throw new Error(`effect "${req.state.style.id}" has no text version`); frames.push(c); prog(i + 1, req.frames); }
+          const font = req.embedFont ? await svgFontFor(frames.map((f) => f.text.join('')).join('')) : null;
+          const svg = animatedSvg(frames, { fps: req.fps, font, title: `ASCII Art Effects: ${getEffect(req.state.style.id).name}` }); const f0 = frames[0];
+          return { data: { blob: new Blob([svg], { type: 'image/svg+xml' }), w: f0.cols * 10, h: Math.round(f0.rows * 10 * f0.ch / f0.cw), ms: performance.now() - t, cols: f0.cols, rows: f0.rows, fontMissing: font?.missing } satisfies ExportRes };
+        }
         if (req.format === 'mp4') {
           const { encodeMp4, evenDims, mp4Supported } = await mp4(); const e = evenDims(w, h); const codec = req.codec ?? 'avc';
           if (!(await mp4Supported(codec, e.w, e.h))) throw new Error(`${NO_CODEC}:${codec}`);
@@ -127,6 +134,7 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
         return { data: { blob: new Blob([bytes as BlobPart], { type: 'image/gif' }), w, h, ms: performance.now() - t } satisfies ExportRes };
       } finally { cancelled.delete(id); }
     }
+    case 'svgInfo': { if (!source) throw new Error('no source image'); await ensure(rampText(req.state)); const c = renderCells(source, { ...req.state, motion: undefined }, { glyphs }); return { data: c ? { cols: c.cols, rows: c.rows } : null }; }
     case 'cancel': cancelled.add(req.target); return { data: true };
     case 'mp4Support': { const { evenDims, mp4Supported } = await mp4(); const e = evenDims(req.w, req.h); return { data: { avc: await mp4Supported('avc', e.w, e.h), vp9: await mp4Supported('vp9', e.w, e.h), w: e.w, h: e.h } }; }
     case 'webcodecs': {

@@ -595,3 +595,55 @@ Decyzje użytkownika: ruch przez **znaki, jak w oryginale**, dla wszystkich 9 ef
 
 - Porównania 1:1 z animacją na ascii.rest (strony nie da się otworzyć w tym środowisku).
 - Czy w przeglądarce znaki `/` i szum zawsze mają już wczytaną czcionkę; podzbiór łaciński Geist Mono wczytuje się przy starcie, ale osobnego testu „świeży Worker” dla tych znaków nie ma.
+
+## Krok 6B: eksport animowanego SVG
+
+Decyzja użytkownika: SVG z wyborem, z osadzoną czcionką albo bez.
+
+### Co zrobiono (`kod`)
+
+- **Silnik:**
+  - `CellGrid` (siatka znaków + kolor każdej komórki + kolor tła), `EffectDef.cells()`, `renderCells()`;
+  - `cells()` mają Characters, Block, Braille i Mixed (efekty z wersją tekstową). Kolor komórki = średnia komórki albo kolor tuszu (mono), rozjaśniony przez glint/scan tak jak w rastrze.
+- **`engine/src/export/svg.ts`** (kod własny, technika jak ascii.rest `src/svg.ts` @ `8fd792e`, nic nie skopiowane):
+  - pętla próbkowana 15 fps (jak oryginał, `proj`); kolejne identyczne klatki łączone w jedną grupę;
+  - kolory wszystkich klatek sprowadzone median cut do ≤ 32 klas CSS (`proj`: dłuższe odcinki `<tspan>`);
+  - **warstwa bazowa** = klatka 0 (zawsze widoczna); każda inna grupa zawiera tylko odcinki komórek różne od bazy (prostokąt w kolorze tła + tekst). Pierwsza wersja kopiowała całe klatki: ok. 1,8 MB zamiast 300–400 kB przy tej samej siatce;
+  - CSS: `step-end`, wspólny czas pętli, ujemne opóźnienia; wiersze rozciągnięte `textLength`, więc pasują w każdej czcionce o stałej szerokości;
+  - `prefers-reduced-motion`: nakładki ukryte, widać obraz statyczny.
+- **Aplikacja:**
+  - format `svg` w `exportAnim` (Worker): klatki `renderCells` w skali 1 (gęstość siatki nie zależy od skali, bo rozmiar komórki skaluje się z obrazem), N = długość pętli × 15;
+  - opcja **„Osadź czcionkę”**: podzbiory Geist Mono 400, których `unicode-range` obejmuje użyte znaki, jako woff2 base64. Znaków spoza Geist Mono (Braille, grecki, katakana) nie osadzamy; komunikat po eksporcie je wymienia;
+  - w oknie eksportu radio SVG tylko dla efektów z ruchem i siatką znaków; zamiast rozmiaru w px opis siatki („Siatka C×R znaków, N klatek”) i informacja, że SVG zawiera tylko znaki efektu (bez Post FX, Color i napisów);
+  - przy okazji: ukrywanie GIF/MP4 dla efektów bez ruchu obejmowało tylko pierwszą etykietę (`querySelector`); teraz wszystkie.
+
+### Pomiary (`test`, Node, zdjęcie 1, 4 s = 60 klatek, ustawienia domyślne)
+
+| Szerokość źródła | Characters glint | Characters scan | Braille scan | Block glint |
+|---|---|---|---|---|
+| 800 px (134 kol.) | 490 kB | 472 kB | 51 kB | 334 kB |
+| 1200 px (200 kol.) | 1021 kB | 639 kB | 84 kB | 731 kB |
+| 1600 px (267 kol.) | 1920 kB | 840 kB | 115 kB | 1433 kB |
+
+- Rozmiar zależy głównie od efektu (Braille ma mało kolorów i krótkie zmiany), nie tylko od siatki, więc **ostrzeżenia „duży plik” z góry nie ma**: pokazujemy rzeczywisty rozmiar po eksporcie.
+- **Osadzenie czcionki** dla Characters: 1 podzbiór (latin), 589 → 602 kB, czyli ok. 13 kB. Wcześniejsze szacunki 40–70 kB były zawyżone.
+
+### Testy (`test`)
+
+- **`test:svg` 12/12** (`app/scripts/svg-check.ts`, Chromium): dla Characters glint/scan, Braille scan, Block glint, Mixed scan:
+  - w każdej z 30 klatek animacja CSS zatrzymana w chwili klatki k (Web Animations `currentTime`), widoczny tekst złożony z bazy i widocznych nakładek = tekst klatki k z silnika, znak w znak; najwyżej 1 nakładka naraz; ≤ 32 klasy kolorów;
+  - `prefers-reduced-motion` → widać tylko bazę = obraz statyczny efektu;
+  - median cut na 4 kolorach; jedna klatka → SVG bez animacji.
+  - Test znalazł **błąd krytyczny**: skrót `g.f{animation:…}` zerował `animation-name` i miał wyższą specyficzność niż `.gN`, więc nic się nie animowało. Poprawione (właściwości rozpisane, selektory `.f.gN`).
+- **`test:editor` 85/85** (4 nowe): radio SVG tylko dla efektów z siatką; opis siatki i 15 klatek; pobranie `ascii-art-characters.svg`; bez osadzenia brak `@font-face`, plik otwiera się jako `<img>` i ma animacje; z osadzeniem każdy podzbiór wczytuje się jako `FontFace`, Geist Mono pierwszy w stosie, różnica rozmiaru ≈ długość base64 (zapas 400 znaków na podzbiór to długość reguły `@font-face` z `unicode-range`, nie próg dobrany do wyniku).
+- Silnik 330/330, `hash-baseline` 516/516 identyczny, `test:ui` 41/41, `smoke` 63/63, `test:a11y` 24/24, `test:gif` 10/10, `test:mp4` 6/6.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- SVG w Safari, Firefoksie, README na GitHubie i jako `<img>` w innych przeglądarkach niż Chromium.
+- Wyglądu znaków bez osadzenia na różnych systemach (czcionka systemowa; siatka trzyma się dzięki `textLength`, kształt znaków się różni).
+- Wydajności odtwarzania dużych plików (ok. 2 MB, 267 kolumn) na słabszym sprzęcie.
+
+### Otwarte (`decyzja użytkownika`)
+
+- **Efekty kształtowe** (Dots, Cross, Diamond, Lines, Diagonal) mają glint/scan, ale nie mają wersji tekstowej, więc SVG (i TS) dla nich nie ma.

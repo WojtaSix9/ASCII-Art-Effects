@@ -26,6 +26,9 @@ export type RenderCtx = {
 };
 /** Ruch efektu (plik 09, sekcja 3). Ruch musi być okresowy w φ z okresem 1 i przy φ = 0 dawać obraz statyczny bit w bit. */
 export type MotionDef = { id: string; name: string; params: ParamDef[] };
+/** Siatka znaków efektu tekstowego: `rows` wierszy po `cols` znaków, kolor RGB każdej komórki (po ruchu: glint rozjaśnia),
+ *  tło (kolor `bgColor`: SVG i TS nie mają rozmytego zdjęcia pod znakami) i wymiary komórki w px renderu. */
+export type CellGrid = { cols: number; rows: number; cw: number; ch: number; text: string[]; rgb: Uint8Array; ground: [number, number, number] };
 export interface GlyphProvider {
   /** Alfa-maska znaku w prostokacie w x h (Uint8Array w*h), znak wysrodkowany; font px = fontPx. */
   mask(ch: string, w: number, h: number, fontPx: number): Uint8Array;
@@ -38,6 +41,7 @@ export type EffectDef = {
   render: (ctx: RenderCtx) => Img;
   text?: (ctx: RenderCtx) => string;     // eksport tekstowy (Characters, Block, Braille)
   motions?: MotionDef[];                 // etap 2: ruchy animacji (puste/brak = efekt statyczny)
+  cells?: (ctx: RenderCtx) => CellGrid;  // etap 2: siatka znaków z kolorami (eksport SVG i TS); tylko efekty z tekstem
   glyphText?: (p: Record<string, any>) => string;   // znaki, których maski efekt pobierze (aplikacja ładuje dla nich czcionki przed renderem)
 };
 export type PostFxDef = {

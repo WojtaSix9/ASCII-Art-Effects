@@ -6,7 +6,7 @@ import { blur, cellAverages, clamp, hash01, lerp, lum, mulberry32, over, parseCo
 import { backdrop, cellVisible } from '../core/compose.ts';
 import { valueNoise } from '../core/screen.ts';
 import { CHARSETS } from '../data/charsets.ts';
-import { ASCII_MOTIONS, CELL, COLOR_PARAMS, GRID_COMMON, charAt, charCell, gridMotion, motionChar, runGlyphGrid, runGrid } from './grid.ts';
+import { ASCII_MOTIONS, CELL, cellGridOf, COLOR_PARAMS, GRID_COMMON, charAt, charCell, gridMotion, motionChar, runGlyphGrid, runGrid } from './grid.ts';
 import { seg } from './geo3.ts';
 
 const PX = { unit: 'px', px: true } as const;
@@ -37,6 +37,7 @@ const mixed: EffectDef = {
       for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) { const v = m[(y - c.y0) * cw + (x - c.x0)]; if (v && x - c.x0 < w) over(img.data, (y * img.w + x) * 4, c.r, c.g, c.b, v / 255); }
     });
   },
+  cells(ctx) { const { cw, ch } = charCell(ctx); return cellGridOf(ctx, cw, ch, this.text!(ctx)); },
   text(ctx) {
     const { cw, ch } = charCell(ctx); const a = cellAverages(ctx.prep, cw, ch); const rows: string[] = [];
     const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);

@@ -9,7 +9,8 @@ export type Req =
   | { type: 'postDefs' }                                             // definicje Post FX i Color
   | { type: 'export'; state: RenderState; scale: number; format: 'png' | 'jpeg'; quality?: number }
   /** Etap 2: animacja (stan z ruchem), n klatek faz i/n, fps; postęp przychodzi wiadomościami Progress. */
-  | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' | 'mp4'; codec?: 'avc' | 'vp9'; dither?: boolean }
+  | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' | 'mp4' | 'svg'; codec?: 'avc' | 'vp9'; dither?: boolean; embedFont?: boolean }
+  | { type: 'svgInfo'; state: RenderState }                          // siatka znaków efektu (kolumny × wiersze) dla okna eksportu SVG
   | { type: 'mp4Support'; w: number; h: number }                     // czy Worker zakoduje H.264 (i VP9, testy) w tych wymiarach
   | { type: 'webcodecs' }                                              // dev: tabela VideoEncoder.isConfigSupported
   | { type: 'cancel'; target: number }                                  // przerywa zlecenie `target` (exportAnim) przy najbliższej klatce
@@ -22,10 +23,10 @@ export type Req =
   | { type: 'gc' };                                                   // dev: wymuszenie GC (tylko z --js-flags=--expose-gc)
 
 export type InitRes = { fonts: { family: string; faces: number; loaded: number }[]; fontMs: number; workerFonts: boolean; offscreen: boolean };
-export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[]; motions?: { id: string; name: string; params: ParamDef[] }[] };
+export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[]; motions?: { id: string; name: string; params: ParamDef[] }[]; cells?: boolean };
 export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[]; glyphOnly?: boolean }[]; glyphStyles: string[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] };
   text: { params: ParamDef[]; fonts: { id: string; name: string; weights: number[] }[]; max: number } };
-export type ExportRes = { blob: Blob; w: number; h: number; ms: number };
+export type ExportRes = { blob: Blob; w: number; h: number; ms: number; cols?: number; rows?: number; fontMissing?: string };
 export type WebCodecsRow = { codec: string; label: string; w: number; h: number; supported: boolean | null };
 /** Błąd zlecenia przerwanego przez cancel. */
 export const CANCELLED = 'CANCELLED';
