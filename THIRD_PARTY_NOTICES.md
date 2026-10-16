@@ -13,3 +13,9 @@ All are licensed under the SIL Open Font License 1.1.
 | Noto Sans JP | `@fontsource/noto-sans-jp` | 5.3.1 | Characters glyphs: halfwidth katakana (Katakana preset) | Google Inc. | [`LICENSES/OFL-1.1-Noto-Sans-JP.txt`](LICENSES/OFL-1.1-Noto-Sans-JP.txt) |
 | Playfair Display | `@fontsource/playfair-display` | 5.3.0 | Text layer | 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display), Reserved Font Name "Playfair Display" | [`LICENSES/OFL-1.1-Playfair-Display.txt`](LICENSES/OFL-1.1-Playfair-Display.txt) |
 | Bebas Neue | `@fontsource/bebas-neue` | 5.3.0 | Text layer | 2019 The Bebas Neue Project Authors (https://github.com/dharmatype/Bebas-Neue) | [`LICENSES/OFL-1.1-Bebas-Neue.txt`](LICENSES/OFL-1.1-Bebas-Neue.txt) |
+
+## Code libraries
+
+| Library | npm package | Version | Used for | Copyright | License |
+|---|---|---|---|---|---|
+| gifenc | `gifenc` | 1.0.3 | GIF export of animations (`app/src/engine/gif.ts`, runs in the Web Worker) | 2017 Matt DesLauriers | MIT, [`LICENSES/MIT-gifenc.txt`](LICENSES/MIT-gifenc.txt) |

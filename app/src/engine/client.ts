@@ -2,9 +2,9 @@
 // czeka co najwyżej jedno zlecenie (ostatnie); wcześniejsze oczekujące kończą się wynikiem null.
 // Dzięki temu suwak nie tworzy kolejki renderów.
 import type { RenderState } from '../../../engine/src/index.ts';
-import type { Req, Reply, InitRes, RenderRes, EffectMeta, PostDefs } from './protocol.ts';
+import type { Req, Reply, Progress, InitRes, RenderRes, EffectMeta, PostDefs } from './protocol.ts';
 
-type Pending = { resolve: (v: any) => void; reject: (e: Error) => void };
+type Pending = { resolve: (v: any) => void; reject: (e: Error) => void; progress?: (done: number, total: number) => void };
 export type RenderOut = { image: ImageData; info: RenderRes['info']; workerMs: number; textBoxes: RenderRes['textBoxes'] };
 
 export class EngineClient {
@@ -18,8 +18,10 @@ export class EngineClient {
 
   constructor() {
     this.worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-    this.worker.onmessage = (e: MessageEvent<Reply>) => {
-      const c = this.calls.get(e.data.id); if (!c) return; this.calls.delete(e.data.id);
+    this.worker.onmessage = (e: MessageEvent<Reply | Progress>) => {
+      const c = this.calls.get(e.data.id); if (!c) return;
+      if ('progress' in e.data) { c.progress?.(e.data.progress.done, e.data.progress.total); return; }
+      this.calls.delete(e.data.id);
       if (e.data.ok) c.resolve(e.data.data); else c.reject(new Error(e.data.error));
     };
     this.worker.onerror = (e) => { for (const c of this.calls.values()) c.reject(new Error(e.message || 'worker error')); this.calls.clear(); };
@@ -28,6 +30,13 @@ export class EngineClient {
   call<T>(req: Req, transfer: Transferable[] = []): Promise<T> {
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => { this.calls.set(id, { resolve, reject }); this.worker.postMessage({ id, ...req }, transfer); });
+  }
+
+  /** Długie zlecenie z postępem i możliwością przerwania (eksport animacji). */
+  callLong<T>(req: Req, progress: (done: number, total: number) => void): { promise: Promise<T>; cancel: () => void } {
+    const id = this.nextId++;
+    const promise = new Promise<T>((resolve, reject) => { this.calls.set(id, { resolve, reject, progress }); this.worker.postMessage({ id, ...req }); });
+    return { promise, cancel: () => this.worker.postMessage({ id: this.nextId++, type: 'cancel', target: id }) };
   }
 
   init() { return this.call<InitRes>({ type: 'init' }); }

@@ -1,0 +1,48 @@
+// Etap 2, krok 4: moduł GIF (src/engine/gif.ts) w Node: rozkład opóźnień i struktura pliku odczytana parserem bloków GIF.
+// Uruchomienie: node scripts/gif-check.ts
+import { gifDelays, paletteFrames, flattenOnBlack, encodeGif } from '../src/engine/gif.ts';
+import { render } from '../../engine/src/index.ts';
+import { testImage } from '../../engine/scripts/make-test-image.ts';
+
+const res: [string, boolean, string?][] = []; const t = (n: string, ok: boolean, info?: unknown) => res.push([n, ok, info === undefined ? undefined : JSON.stringify(info)]);
+
+/** Parser bloków GIF89a (bez dekompresji LZW): ekran, paleta globalna, pętla NETSCAPE, opóźnienia GCE, ramki obrazu. */
+function parseGif(b: Uint8Array) {
+  const u16 = (o: number) => b[o] | (b[o + 1] << 8); let o = 6; const out = { sig: String.fromCharCode(...b.slice(0, 6)), w: u16(6), h: u16(8), gct: 0, loop: -1, delays: [] as number[], images: 0, localTables: 0, trailer: false };
+  const f = b[10]; o = 13; if (f & 0x80) { out.gct = 1 << ((f & 7) + 1); o += 3 * out.gct; }
+  const skipSub = () => { while (b[o]) o += b[o] + 1; o++; };
+  while (o < b.length) {
+    const c = b[o++];
+    if (c === 0x3b) { out.trailer = o === b.length; break; }
+    if (c === 0x21) { const l = b[o++];
+      if (l === 0xf9) { out.delays.push(u16(o + 2)); o += b[o] + 1; skipSub(); }
+      else if (l === 0xff) { const app = String.fromCharCode(...b.slice(o + 1, o + 12)); o += b[o] + 1; if (app === 'NETSCAPE2.0') out.loop = u16(o + 2); skipSub(); }
+      else { o += 0; skipSub(); } continue; }
+    if (c === 0x2c) { out.images++; const pf = b[o + 8]; o += 9; if (pf & 0x80) { out.localTables++; o += 3 * (1 << ((pf & 7) + 1)); } o++; skipSub(); continue; }
+    throw new Error(`nieznany blok 0x${c.toString(16)} na ${o - 1}`);
+  }
+  return out;
+}
+
+// 1. rozkład opóźnień
+const bad: string[] = [];
+for (const fps of [12, 24, 25, 30]) for (let s2 = 2; s2 <= 20; s2++) { const s = s2 / 2; const n = Math.round(s * fps); const d = gifDelays(fps, n); const sum = d.reduce((a, b) => a + b, 0);
+  if (sum !== Math.round((n * 100) / fps) || Math.max(...d.map((x) => Math.abs(x - 100 / fps))) > 1 || Math.min(...d) < 2) bad.push(`${fps}fps ${s}s sum ${sum}`); }
+t('opóźnienia GIF: dla 12/24/25/30 fps i pętli 1–10 s suma = round(n·100/fps) (długość pętli dokładna), każde opóźnienie różni się od 100/fps najwyżej o 1 cs i ≥ 2 cs', bad.length === 0, bad.slice(0, 5));
+t('opóźnienia GIF: 24 fps × 4 s = 96 klatek, 400 cs; wzór 4,4,5 (4,17 cs średnio)', gifDelays(24, 96).reduce((a, b) => a + b, 0) === 400 && gifDelays(24, 3).join() === '4,4,5', gifDelays(24, 6));
+t('paleta: klatki próbki równo w pętli, bez powtórzeń (96 → 8 klatek, 3 → 3)', paletteFrames(96).join() === '0,12,24,36,48,60,72,84' && paletteFrames(3).join() === '0,1,2');
+const fa = flattenOnBlack(new Uint8ClampedArray([200, 100, 50, 128, 10, 20, 30, 255, 99, 99, 99, 0]));
+t('spłaszczenie alfy na czarnym: kolor × alfa, alfa 255; piksel nieprzezroczysty bez zmian', [...fa].join() === `${[200, 100, 50].map((v) => Math.round((v * 128) / 255)).join()},255,10,20,30,255,0,0,0,255`, [...fa]);
+
+// 2. plik GIF z prawdziwych klatek silnika (RGB Split, ruch pulse)
+const W = 120, H = 80, N = 24, FPS = 12; const src = testImage(W, H); let calls = 0;
+const frame = (i: number) => { calls++; return new Uint8ClampedArray(render(src, { style: { id: 'rgbsplit' }, motion: { id: 'pulse' } }, { phase: i / N }).img.data); };
+const prog: number[] = []; const bytes = await encodeGif(frame, N, W, H, FPS, (d) => prog.push(d)); const g = parseGif(bytes);
+t(`plik GIF: GIF89a ${W}×${H}, paleta globalna 256, pętla w nieskończoność (NETSCAPE 0), ${N} ramek bez palet lokalnych, opóźnienia = gifDelays, poprawne zakończenie`,
+  g.sig === 'GIF89a' && g.w === W && g.h === H && g.gct === 256 && g.loop === 0 && g.images === N && g.localTables === 0 && g.delays.join() === gifDelays(FPS, N).join() && g.trailer, { ...g, delays: g.delays.slice(0, 6) });
+t(`koszt: ${N} klatek + ${paletteFrames(N).length} do palety = ${calls} renderów; postęp rośnie do końca`, calls === N + paletteFrames(N).length && prog[prog.length - 1] === calls && prog.every((v, i) => v === i + 1), { calls, size: bytes.length });
+let cancelErr = ''; try { await encodeGif(frame, N, W, H, FPS, () => {}, () => true); } catch (e) { cancelErr = (e as Error).message; }
+t('przerwanie: cancelled() → błąd CANCELLED przed końcem', cancelErr === 'CANCELLED', cancelErr);
+
+for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${info ? `  [${info}]` : ''}`);
+console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`); process.exit(res.every((r) => r[1]) ? 0 : 1);

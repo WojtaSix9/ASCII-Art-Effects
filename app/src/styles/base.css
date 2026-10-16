@@ -250,6 +250,7 @@ a { color: inherit; }
 .ed-dialog { background: var(--ed-panel); color: var(--text); border: 1px solid var(--ed-sep-strong); padding: 20px 24px; min-width: 320px; }
 .ed-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
 .ed-dialog fieldset { border: 0; padding: 0; margin: 0 0 16px; display: grid; gap: 6px; }
+.ed-dialog [hidden] { display: none; }   /* display: grid powyżej wygrywałby z atrybutem hidden */
 .ed-dialog legend { color: var(--ed-label); font-size: 13px; margin-bottom: 6px; }
 .ed-dialog input[type="radio"] { accent-color: var(--ed-fill); }
 .ed-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }

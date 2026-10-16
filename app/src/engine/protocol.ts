@@ -8,6 +8,9 @@ export type Req =
   | { type: 'defs' }                                                 // definicje efektów (parametry do budowy panelu)
   | { type: 'postDefs' }                                             // definicje Post FX i Color
   | { type: 'export'; state: RenderState; scale: number; format: 'png' | 'jpeg'; quality?: number }
+  /** Etap 2: animacja (stan z ruchem), n klatek faz i/n, fps; postęp przychodzi wiadomościami Progress. */
+  | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' }
+  | { type: 'cancel'; target: number }                                  // przerywa zlecenie `target` (exportAnim) przy najbliższej klatce
   | { type: 'setSource'; img: WireImg }
   | { type: 'render'; state: RenderState; scale?: number; phase?: number }   // phase: faza pętli animacji (etap 2)
   | { type: 'testImage'; w: number; h: number }                       // dev: syntetyczny obraz testowy jako źródło
@@ -21,6 +24,8 @@ export type EffectMeta = { id: string; name: string; category: string; params: P
 export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[]; glyphOnly?: boolean }[]; glyphStyles: string[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] };
   text: { params: ParamDef[]; fonts: { id: string; name: string; weights: number[] }[]; max: number } };
 export type ExportRes = { blob: Blob; w: number; h: number; ms: number };
+/** Błąd zlecenia przerwanego przez cancel. */
+export const CANCELLED = 'CANCELLED';
 /** Błąd eksportu, gdy przeglądarka nie utworzy kanwy tej wielkości (limit pamięci/kanwy, np. Safari na iOS). */
 export const LIMIT_ERROR = 'CANVAS_LIMIT';
 export type RenderRes = { img: WireImg; info: EffectInfo; ms: number; textBoxes?: (TextBox | null)[] };
@@ -33,3 +38,5 @@ export type HeapRes = { usedJSHeapSize: number | null };
 
 export type Msg = { id: number } & Req;
 export type Reply = { id: number; ok: true; data: unknown } | { id: number; ok: false; error: string };
+/** Postęp długiego zlecenia (exportAnim); nie kończy wywołania. */
+export type Progress = { id: number; progress: { done: number; total: number } };

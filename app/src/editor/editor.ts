@@ -5,7 +5,7 @@ import { SAMPLES } from '../config/sample.ts';
 import { MAX_SOURCE } from '../config/limits.ts';
 import { READY, thumbUrl } from '../config/thumbs.ts';
 import { sharedEngine } from '../engine/client.ts';
-import { LIMIT_ERROR, type EffectMeta, type ExportRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
+import { CANCELLED, LIMIT_ERROR, type EffectMeta, type ExportRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
 import { cropPixels, loadImage, paint, previewScale } from '../engine/preview.ts';
 import { CATEGORIES, matches, passesAnim } from '../effects/catalog.ts';
 import { mountParamPanel, type Values } from '../ui/param-panel.ts';
@@ -86,8 +86,14 @@ export const editorHtml = () => `
     <h2 id="ed-export-h" class="pp-title">/ Eksport</h2>
     <fieldset><legend>Format</legend>
       <label><input type="radio" name="format" value="png" checked> PNG</label>
-      <label><input type="radio" name="format" value="jpeg"> JPG <span class="ed-hint">(bez przezroczystości, tło czarne)</span></label></fieldset>
-    <fieldset><legend>Skala</legend>
+      <label><input type="radio" name="format" value="jpeg"> JPG <span class="ed-hint">(bez przezroczystości, tło czarne)</span></label>
+      <label data-anim-only><input type="radio" name="format" value="gif"> GIF <span class="ed-hint">(animacja, pętla z zakładki Animation)</span></label></fieldset>
+    <fieldset data-for="anim" hidden><legend>Rozmiar animacji</legend>
+      <label for="ed-gif-side" class="sr-only">Dłuższy bok</label>
+      <select id="ed-gif-side" name="side"><option value="480">480 px</option><option value="720">720 px</option><option value="1080" selected>1080 px</option></select>
+      <p class="ed-hint" data-anim-info></p></fieldset>
+    <div class="ed-anim__bar" data-export-bar hidden><span></span></div>
+    <fieldset data-for="still"><legend>Skala</legend>
       <label><input type="radio" name="scale" value="1" checked> @1x <span class="ed-hint" data-size="1"></span></label>
       <label><input type="radio" name="scale" value="2"> @2x <span class="ed-hint" data-size="2"></span></label></fieldset>
     <p class="ed-note" data-export-msg role="status"></p>
@@ -361,15 +367,31 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
 
   // ---------- eksport ----------
   const exportBlob = (format: 'png' | 'jpeg', s: number) => engine.call<ExportRes>({ type: 'export', state: toRenderState(state), scale: s, format, quality: 0.92 });
+  // Etap 2, krok 4: GIF dla efektów z ruchem. Dłuższy bok 480/720/1080 px (decyzja: najwyżej 1080), nie więcej niż zdjęcie.
+  const form = $<HTMLFormElement>('[data-export-form]');
+  const isAnimated = () => !!defs.find((d) => d.id === state.style)?.motions?.length;
+  const animDims = () => { const v = view(); const side = Number((form.elements.namedItem('side') as HTMLSelectElement).value); const k = Math.min(1, side / Math.max(v.sw, v.sh)); return { k, w: Math.round(v.sw * k), h: Math.round(v.sh * k) }; };
+  const syncExportForm = () => {
+    const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif';
+    $('[data-for="anim"]').hidden = !anim; $('[data-for="still"]').hidden = anim;
+    if (anim) { const d = animDims(); const n = Math.round(state.anim.loopSeconds * state.anim.fps);
+      $('[data-anim-info]').textContent = `${d.w}×${d.h} px, ${n} klatek (${state.anim.loopSeconds} s × ${state.anim.fps} fps). Szum i ziarno powiększają plik.`; }
+  };
+  form.addEventListener('change', syncExportForm);
+  let exportJob: { cancel: () => void } | null = null;
   $('[data-export]').addEventListener('click', () => {
     const v = view(); for (const s of [1, 2]) $(`[data-size="${s}"]`).textContent = `${Math.round(v.sw * s)}×${Math.round(v.sh * s)} px`;
-    $('[data-export-msg]').textContent = ''; dialog.showModal();
+    const animOk = isAnimated(); $('[data-anim-only]').hidden = !animOk;
+    if (!animOk && (form.elements.namedItem('format') as RadioNodeList).value === 'gif') form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
+    $('[data-export-msg]').textContent = ''; syncExportForm(); dialog.showModal();
   });
-  $('[data-cancel]').addEventListener('click', () => dialog.close());
+  $('[data-cancel]').addEventListener('click', () => { if (exportJob) { exportJob.cancel(); return; } dialog.close(); });
+  dialog.addEventListener('close', () => exportJob?.cancel());
   $<HTMLFormElement>('[data-export-form]').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const fd = new FormData(e.target as HTMLFormElement); const format = fd.get('format') as 'png' | 'jpeg'; const s = Number(fd.get('scale'));
-    const msg = $('[data-export-msg]'), go = $<HTMLButtonElement>('[data-go]');
+    const fd = new FormData(e.target as HTMLFormElement); const msg = $('[data-export-msg]'), go = $<HTMLButtonElement>('[data-go]');
+    if (fd.get('format') === 'gif') { await exportGif(msg, go); return; }
+    const format = fd.get('format') as 'png' | 'jpeg'; const s = Number(fd.get('scale'));
     go.disabled = true; msg.textContent = 'Renderuję w pełnej rozdzielczości…';
     try {
       const r = await exportBlob(format, s);
@@ -384,6 +406,23 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     } finally { go.disabled = false; }
   });
 
+  /** Eksport GIF: n = długość × fps klatek, faza i/n, w Workerze; postęp i anulowanie. */
+  const startGif = (onProgress: (done: number, total: number) => void) => {
+    const d = animDims(); const n = Math.max(2, Math.round(state.anim.loopSeconds * state.anim.fps));
+    return engine.callLong<ExportRes>({ type: 'exportAnim', state: toRenderState(state, true), scale: d.k, frames: n, fps: state.anim.fps, format: 'gif' }, onProgress);
+  };
+  const exportGif = async (msg: HTMLElement, go: HTMLButtonElement) => {
+    const bar = $('[data-export-bar]'), fill = bar.firstElementChild as HTMLElement; go.disabled = true; bar.hidden = false; fill.style.width = '0';
+    const job = startGif((done, total) => { fill.style.width = `${(100 * done) / total}%`; msg.textContent = `Renderuję i koduję GIF: ${done} z ${total}…`; }); exportJob = job;
+    try {
+      const r = await job.promise; const mb = r.blob.size / 1048576;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = `ascii-art-${state.style}-${r.w}px.gif`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+      msg.textContent = `Gotowe: GIF ${r.w}×${r.h} px, ${mb.toFixed(1)} MB, ${(r.ms / 1000).toFixed(1)} s.${mb > 20 ? ' Uwaga: plik ponad 20 MB (krótsza pętla, mniejszy rozmiar lub niższe fps go zmniejszą).' : ''}`;
+    } catch (err) { const m = (err as Error).message; msg.textContent = m === CANCELLED ? 'Eksport przerwany.' : `Błąd eksportu GIF: ${m}`; }
+    finally { exportJob = null; go.disabled = false; bar.hidden = true; }
+  };
+
   // Haki dla testów (scripts/ui-check.ts): stan i porównanie eksportu z renderem w skali 1.
   (window as any).__editorTest = {
     state: () => structuredClone(state), exportBlob, view: () => view(),
@@ -391,6 +430,9 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     isIdle: () => started && engine.idle && !layoutPending && !loading,
     renderAt: (s: number) => engine.call<RenderRes>({ type: 'render', state: toRenderState(state), scale: s }),
     anim: () => anim?.status() ?? null,
+    /** Eksport GIF bez okna (testy): zwraca bajty i wymiary; cancelAfter = przerwij po tylu krokach postępu. */
+    gif: async (cancelAfter?: number) => { const j = startGif((done) => { if (cancelAfter && done >= cancelAfter) j.cancel(); }); const r = await j.promise; return { w: r.w, h: r.h, bytes: new Uint8Array(await r.blob.arrayBuffer()), ms: r.ms }; },
+    renderPhase: (s: number, phase: number) => engine.call<RenderRes>({ type: 'render', state: toRenderState(state, true), scale: s, phase }),
   };
 
   // ---------- start ----------

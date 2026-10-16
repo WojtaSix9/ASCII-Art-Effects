@@ -15,7 +15,8 @@
     "test:ui": "node scripts/ui-check.ts",
     "test:a11y": "node scripts/a11y-check.ts",
     "thumbs": "node scripts/thumbs.ts",
-    "test:editor": "node scripts/editor-check.ts"
+    "test:editor": "node scripts/editor-check.ts",
+    "test:gif": "node scripts/gif-check.ts"
   },
   "devDependencies": {
     "axe-core": "^4.10.3",
@@ -29,7 +30,8 @@
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/noto-sans-jp": "^5.3.1",
     "@fontsource/noto-sans-mono": "^5.3.0",
-    "@fontsource/playfair-display": "^5.3.0"
+    "@fontsource/playfair-display": "^5.3.0",
+    "gifenc": "1.0.3"
   },
   "engines": {
     "node": ">=22.12"

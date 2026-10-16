@@ -380,6 +380,39 @@ try {
   await page.click('[data-play]'); await page.waitForFunction(() => (window as any).__editorTest.anim()?.phase !== 'idle', null, { timeout: 10_000 });
   await page.click('[data-pick="characters"]'); await settle(page);
   t('zmiana stylu na efekt bez ruchu: odtwarzanie zatrzymane, zakładka Animation wyłączona, panel wraca do Stylu', (await animSt()).phase === 'idle' && (await page.isDisabled('[data-tab="anim"]')) && !(await page.isHidden('[data-tabpanel="style"]')));
+  // Etap 2, krok 4: eksport GIF
+  await page.click('[data-export]'); const gifHiddenChars = await page.isHidden('[data-anim-only]'); await page.click('[data-cancel]');
+  await page.click('[data-pick="rgbsplit"]'); await settle(page); await page.click('[data-tab="anim"]');
+  await page.$eval('[data-loop-params] [data-p="loopSeconds"]', (el) => { const i = el as HTMLInputElement; i.value = '1'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.selectOption('[data-loop-params] [data-p="fps"]', '12'); await settle(page);
+  await page.click('[data-export]'); const gifVisible = !(await page.isHidden('[data-anim-only]'));
+  await page.check('input[name="format"][value="gif"]'); const info = await page.textContent('[data-anim-info]'); const stillHidden = await page.isHidden('[data-for="still"]');
+  t('eksport: GIF tylko dla efektów z ruchem; po wyborze GIF rozmiar 480/720/1080 (domyślnie 1080) i opis pętli', gifHiddenChars && gifVisible && stillHidden && !!info?.startsWith('1080×') && info.includes('12 klatek (1 s × 12 fps)'), { gifHiddenChars, gifVisible, info });
+  const [gdl] = await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.click('[data-go]')]);
+  await page.waitForFunction(() => document.querySelector('[data-export-msg]')?.textContent?.startsWith('Gotowe'), null, { timeout: 120_000 });
+  const gmsg = await page.textContent('[data-export-msg]'); await page.click('[data-cancel]');
+  t('eksport GIF z okna: pasek postępu, plik ascii-art-rgbsplit-1080px.gif, komunikat z rozmiarem', gdl.suggestedFilename() === 'ascii-art-rgbsplit-1080px.gif' && !!gmsg?.includes('MB'), { file: gdl.suggestedFilename(), gmsg });
+  const G = await page.evaluate(async () => {
+    const T = (window as any).__editorTest; const g = await T.gif();
+    const dec = new (window as any).ImageDecoder({ data: g.bytes, type: 'image/gif' }); await dec.tracks.ready; await dec.completed;
+    const n = dec.tracks.selectedTrack.frameCount, rep = dec.tracks.selectedTrack.repetitionCount; const durs: number[] = []; const err: number[] = []; let f0: Uint8ClampedArray | null = null, half = 0, offPal = 0;
+    for (let k = 0; k < n; k++) {
+      const { image } = await dec.decode({ frameIndex: k }); durs.push(image.duration);
+      const c = new OffscreenCanvas(image.displayWidth, image.displayHeight); const x = c.getContext('2d')!; x.drawImage(image, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data; image.close();
+      if (k === 0) f0 = d; if (k === n / 2) { let s = 0; for (let i = 0; i < d.length; i += 4) s += Math.abs(d[i] - f0![i]); half = s / (d.length / 4); }
+      if (k % 3 === 0) {   /* faza: klatka k najbliższa renderowi w fazie k/n, nie (k+1)/n ani (k+3)/n (bez progu). Nie k+6: pulse to cos, fazy k i n−k dają ten sam obraz */
+        const mae = async (ph: number) => { const r = await T.renderPhase(g.w / T.view().sw, ph); const e = new Uint8ClampedArray(r.img.buffer); let s = 0; for (let i = 0; i < d.length; i += 4) for (let q = 0; q < 3; q++) s += Math.abs(d[i + q] - e[i + q]); return +(s / (d.length / 4 * 3)).toFixed(2); };
+        err.push([await mae(k / n), await mae(((k + 1) % n) / n), await mae(((k + 3) % n) / n)] as any);
+        const pal = new Set<number>(); const gct = 1 << ((g.bytes[10] & 7) + 1); for (let j = 0; j < gct; j++) pal.add((g.bytes[13 + 3 * j] << 16) | (g.bytes[14 + 3 * j] << 8) | g.bytes[15 + 3 * j]);
+        for (let i = 0; i < d.length; i += 4) if (!pal.has((d[i] << 16) | (d[i + 1] << 8) | d[i + 2])) { offPal++; }
+      }
+    }
+    let cancel = ''; try { await T.gif(3); } catch (e) { cancel = (e as Error).message; }
+    return { w: g.w, h: g.h, size: g.bytes.length, ms: Math.round(g.ms), n, rep, durs, err, half: +half.toFixed(2), cancel, offPal };
+  });
+  t('GIF (ImageDecoder w Chromium): 12 klatek 1080 px, pętla w nieskończoność, czasy 8/8/9 cs (suma 1 s)', G.n === 12 && Math.max(G.w, G.h) === 1080 && G.rep === Infinity && G.durs.reduce((a: number, b: number) => a + b, 0) === 1_000_000 && G.durs.every((d: number) => d === 80_000 || d === 90_000), G);
+  t('GIF: każdy kolor klatki należy do palety globalnej; klatka k najbliższa renderowi silnika w fazie k/12 (nie k+1, k+3); klatka 6 różni się od 0', G.offPal === 0 && G.err.every((e: number[]) => e[0] < e[1] && e[0] < e[2]) && G.half > 2, { err: G.err, half: G.half, offPal: G.offPal });
+  t('GIF: przerwanie w trakcie → błąd CANCELLED', G.cancel === 'CANCELLED', G.cancel);
   t('brak błędów w konsoli', errors.length === 0, errors.join(' | '));
 } finally { await browser.close(); server.kill(); }
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${!ok && info ? `  [${info}]` : ''}`);

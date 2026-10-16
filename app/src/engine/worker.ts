@@ -7,7 +7,9 @@ import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
 import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK, registerTextFonts, ensureText, TEXT_STACKS } from './fonts.ts';
 import { LIMIT_ERROR } from './protocol.ts';
-import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes } from './protocol.ts';
+import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes, Progress } from './protocol.ts';
+import { CANCELLED } from './protocol.ts';
+import { encodeGif } from './gif.ts';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope & { fonts?: FontFaceSet; gc?: () => void };
 let glyphs: GlyphProvider | null = null;
@@ -83,7 +85,8 @@ function median(f: () => void, runs: number) {
   return t.sort((a, b) => a - b)[Math.floor(runs / 2)];
 }
 
-async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferable[] }> {
+const cancelled = new Set<number>();   // id zleceń exportAnim do przerwania
+async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Transferable[] }> {
   if (req.type === 'init') return { data: await init() };
   await init();
   switch (req.type) {
@@ -102,6 +105,20 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
       const blob = await c.convertToBlob({ type: `image/${req.format}`, quality: req.quality ?? 0.92 });
       return { data: { blob, w: r.img.w, h: r.img.h, ms: performance.now() - t } satisfies ExportRes };
     }
+    case 'exportAnim': {
+      if (!source) throw new Error('no source image');
+      const r0 = req.state.crop ? cropRect(source.w, source.h, req.state.crop) : { sw: source.w, sh: source.h };
+      const w = Math.round(r0.sw * req.scale), h = Math.round(r0.sh * req.scale);
+      await ensure(rampText(req.state)); await ensureTexts(req.state);
+      const t = performance.now(); const src = source;
+      /* przerwanie: między klatkami oddajemy sterowanie pętli zdarzeń, żeby dotarła wiadomość cancel */
+      const frame = async (i: number) => { await new Promise((r) => setTimeout(r, 0)); if (cancelled.has(id)) throw new Error(CANCELLED); return new Uint8ClampedArray(render(src, req.state, { scale: req.scale, glyphs, text: textR, phase: i / req.frames }).img.data); };
+      try {
+        const bytes = await encodeGif(frame, req.frames, w, h, req.fps, (done, total) => scope.postMessage({ id, progress: { done, total } } satisfies Progress), () => cancelled.has(id));
+        return { data: { blob: new Blob([bytes as BlobPart], { type: 'image/gif' }), w, h, ms: performance.now() - t } satisfies ExportRes };
+      } finally { cancelled.delete(id); }
+    }
+    case 'cancel': cancelled.add(req.target); return { data: true };
     case 'setSource': source = toImg(req.img); return { data: { w: source.w, h: source.h } };
     case 'testImage': source = testImage(req.w, req.h); return { data: { w: source.w, h: source.h } };
     case 'render': {
@@ -141,7 +158,7 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
 scope.onmessage = async (e: MessageEvent<Msg>) => {
   const { id } = e.data;
   try {
-    const { data, transfer } = await handle(e.data);
+    const { data, transfer } = await handle(e.data, id);
     scope.postMessage({ id, ok: true, data } satisfies Reply, transfer ?? []);
   } catch (err) {
     scope.postMessage({ id, ok: false, error: err instanceof Error ? err.message : String(err) } satisfies Reply);

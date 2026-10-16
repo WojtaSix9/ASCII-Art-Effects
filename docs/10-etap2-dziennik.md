@@ -202,3 +202,79 @@ Decyzje użytkownika:
 - **Ekranów HiDPI (dpr 2):** podgląd ma tam więcej pikseli, więc limit 96 MB mocniej obniży rozdzielczość klatek.
 - **Safari i Firefox; telefony** (pamięć 96 MB może być za dużo na iOS).
 - **`prefers-reduced-motion`:** animacja startuje tylko po kliknięciu, więc nie gra sama. Osobnej obsługi nie dodawałem.
+
+## Krok 4a: eksport GIF
+
+Decyzje użytkownika:
+- dłuższy bok najwyżej 1080 px (wybór 480 / 720 / 1080, domyślnie 1080);
+- natywny fps z rozkładem opóźnień z pliku 04;
+- limit 10 s, ostrzeżenie ponad 20 MB;
+- jedna paleta globalna bez ditheringu;
+- koder `gifenc`.
+
+### Co zrobiono (`kod`)
+
+- **Biblioteka:** `gifenc` 1.0.3 (MIT, Matt DesLauriers, zero zależności, ostatnie wydanie 2022), zainstalowana w dokładnej wersji. Licencja: `LICENSES/MIT-gifenc.txt` i `THIRD_PARTY_NOTICES.md`. Typy: `app/src/types/gifenc.d.ts`.
+  - Node w testach bierze build CommonJS, Vite build ESM. Import w `gif.ts` obsługuje oba.
+- **`app/src/engine/gif.ts`** (działa w Workerze):
+  - `gifDelays(fps, n)`: `round((i+1)·100/fps) − round(i·100/fps)` cs;
+  - `paletteFrames`: do 8 klatek równo w pętli do palety;
+  - `flattenOnBlack`: GIF bez alfy, tło czarne jak w JPG;
+  - `encodeGif`: paleta 256 kolorów z próbki ≤ 2^20 pikseli tych klatek, potem wszystkie klatki z `applyPalette`, pętla w nieskończoność.
+  - Klatki do palety renderują się dodatkowo, więc koszt to n + 8 renderów. Pamięć: jedna klatka naraz plus próbka.
+- **Worker:**
+  - zlecenie `exportAnim` (stan z ruchem, skala, n klatek, fps);
+  - wiadomości postępu (`Progress`);
+  - zlecenie `cancel`: między klatkami Worker oddaje sterowanie pętli zdarzeń, więc przerwanie dociera najpóźniej po bieżącej klatce.
+- **Klient:** `callLong(req, onProgress)` → `{ promise, cancel }`.
+- **Okno eksportu:**
+  - opcja GIF tylko dla efektów z ruchem;
+  - po jej wyborze pole „Rozmiar animacji” (480/720/1080) z opisem: wymiary, liczba klatek z zakładki Animation, uwaga o szumie;
+  - pasek postępu; „Anuluj” przerywa eksport, zamknięcie okna też;
+  - plik `ascii-art-<styl>-<bok>px.gif`; komunikat z rozmiarem, czasem i ostrzeżeniem ponad 20 MB.
+- **Poprawka błędu znalezionego testem:** `.ed-dialog fieldset { display: grid }` wygrywało z atrybutem `hidden`, więc pole „Skala” nie znikało po wyborze GIF. Dodane `.ed-dialog [hidden] { display: none }`.
+
+### Testy (`test`)
+
+**`npm run test:gif`** (Node, nowy, 7/7):
+- **Opóźnienia** dla 12/24/25/30 fps i pętli 1–10 s:
+  - suma = round(n·100/fps), czyli długość pętli jest dokładna;
+  - odchyłka pojedynczego opóźnienia ≤ 1 cs; każde ≥ 2 cs (przeglądarki zamieniają 0–1 cs na ok. 10 cs);
+  - 24 fps: 4,4,5…
+- **Plik** z prawdziwych klatek silnika, odczytany własnym parserem bloków GIF89a: wymiary, paleta globalna 256, NETSCAPE loop 0, 24 ramki bez palet lokalnych, opóźnienia równe `gifDelays`, poprawne zakończenie.
+- **Koszt:** n + 8 renderów; postęp rośnie do końca.
+- **Przerwanie:** daje `CANCELLED`.
+
+**`test:editor`** (76/76, 5 nowych):
+- **Okno eksportu:** opcja GIF tylko dla RGB Split; pole rozmiaru i opis; pobranie pliku z okna.
+- **`ImageDecoder` w Chromium:** 12 klatek, 1080 px, pętla ∞, czasy 8/8/9 cs, suma dokładnie 1 s.
+- **Każdy kolor klatki należy do palety globalnej.**
+- **Klatka k jest najbliższa renderowi silnika w fazie k/12, a nie fazom (k+1)/12 i (k+3)/12:**
+  - błąd średni ok. 4,2–5,0 wobec 7,3–8,5;
+  - to porównanie względne, bez progu.
+- **Ruch:** klatka 6 różni się od klatki 0.
+- **Przerwanie** w trakcie daje `CANCELLED`.
+
+`test:ui` 41/41, `smoke` 63/63, `test:a11y` 24/24.
+
+**Błędy we własnych testach (poprawione bez podnoszenia progów):**
+1. **Próg „średni błąd ≤ 4”** wpisałem przed pomiarem. Zmierzone 4,2–5,0, bo to błąd kwantyzacji 256 kolorami, nie rozjazd faz. Zastąpiłem go własnością bez progu: kolory z palety plus „klatka k najbliższa fazie k”.
+2. **Pierwsza wersja porównywała z fazą k+6.** Ruch „pulse” to cos, więc fazy k i n−k dają ten sam obraz; dla k = 3 faza 9/12 jest lustrzana. Teraz k+1 i k+3: 2k+1 i 2k+3 nigdy nie dają 12.
+
+### Pomiar domyślnego eksportu (`test`, headless Chromium)
+
+RGB Split, 4 s × 24 fps = 96 klatek, 1080 px:
+
+| zdjęcie | wymiary | rozmiar | czas |
+|---|---|---|---|
+| 1 | 1080×830 | **26,7 MB** | 12,4 s |
+| 2 | 1080×720 | **41,8 MB** | 15,3 s |
+
+- **Oba pliki przekraczają próg ostrzeżenia 20 MB.** Zdjęcia z detalem słabo się kompresują w GIF, a w RGB Split zmienia się prawie każdy piksel.
+- **Pasma** na gradiencie nieba (256 kolorów bez ditheringu) widać na oko.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Odtwarzania pliku w Safari i Firefoksie (jitter ±1 cs); rozmiaru dla innych efektów.
+- Pamięci przy 10 s × 30 fps (300 klatek): klatki nie są trzymane, ale nie mierzyłem.
+- Eksportu z przezroczystością: GIF jest zawsze na czarnym tle.
