@@ -1,0 +1,165 @@
+
+> ascii-art-effects-app@0.1.0 test:engine
+> node scripts/browser-engine.ts
+
+Przeglądarka: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36
+Data: 2026-10-16T10:06:15.282Z
+
+== Testy ==
+OK   Worker (module) uruchomiony, OffscreenCanvas dostępny
+OK   FontFaceSet w Workerze (self.fonts)
+OK   Geist Mono w Workerze: 6/6 podzbiorów wczytanych od razu  [42 ms]
+OK   Noto Sans Mono (greek) i Noto Sans JP zarejestrowane, pobierane na żądanie  [Noto Sans Mono: 1, Noto Sans JP: 124]
+OK   Render identyczny z Node: 106/106 przypadków (90 efektów, 16 post FX, Color, Dither)
+OK   Metoda pokrycia: kontrola „A” = Geist Mono  [Geist Mono]
+OK   Metoda pokrycia: kontrola U+10FFFD = brak (tofu)  [missing]
+OK   Każdy znak 16 presetów rysuje kod albo czcionka z npm (bez czcionek urządzenia): 154/154
+OK   Źródło znaków z czcionek zgodne z tablicami cmap (wzorzec)
+OK   Najnowszy wygrywa: 10 szybkich zleceń → 2 rendery (pierwsze i ostatnie), 8 pominiętych  [wykonane 2, null 8]
+OK   Świeży Worker: pierwszy render „katakana” = render po wczytaniu czcionek
+OK   Świeży Worker: pierwszy render „math” = render po wczytaniu czcionek
+OK   Podgląd presetów: 16 kanw po wszystkich testach  [16]
+OK   brak błędów w konsoli
+
+== Źródło znaków w presetach (Worker, OffscreenCanvas) ==
+preset      kod  Geist  NotoMono  NotoJP  urządzenie  brak
+standard      0   13      0       0        0       0
+classic       0    9      0       0        0       0
+ink           0   11      0       0        0       0
+minimal       0    3      0       0        0       0
+blocks        0    4      0       0        0       0
+bars          0    8      0       0        0       0
+quadrants     0    9      0       0        0       0
+braille      10    0      0       0        0       0
+numeric       0   11      0       0        0       0
+binary        0    2      0       0        0       0
+hacker        0   10      0       0        0       0
+alpha         0   15      0       0        0       0
+dots          6    2      0       0        0       0
+geometric     7    3      0       0        0       0
+math          0    6      4       0        0       0
+katakana      0    0      0      21        0       0
+
+== Czas w obie strony (pixel, zlecenie → Worker → ImageData → kanwa) ==
+600×400    render    8.4 ms, razem    9.7 ms, narzut 1.4 ms
+1600×1067  render   22.7 ms, razem   25.3 ms, narzut 2.6 ms
+
+== Czasy: 1600×1067, mediana z 3 po rozgrzewce; Chromium (Worker) vs Node 22, ta sama maszyna ==
+efekt                    Chromium     Node   > 100 ms w przeglądarce
+characters                  37 ms     82 ms   
+block-chars                 33 ms     76 ms   
+braille                    109 ms    227 ms   tak
+dots                        86 ms    167 ms   
+cross                      107 ms    165 ms   tak
+diamond                     56 ms     62 ms   
+lines                       71 ms    144 ms   
+diagonal                    97 ms    104 ms   
+asciiStudio                130 ms    180 ms   tak
+pixel                       32 ms     38 ms   
+mosaic                      36 ms     54 ms   
+lego                       155 ms    227 ms   tak
+hexmosaic                  152 ms    187 ms   tak
+disco                       45 ms     34 ms   
+halftone                   303 ms    682 ms   tak
+posterize                   63 ms     86 ms   
+duotone                     52 ms     69 ms   
+gradientmap                 72 ms    263 ms   
+dither                      59 ms     76 ms   
+pinch                      134 ms    176 ms   tak
+spherize                   140 ms    178 ms   tak
+twirl                      138 ms    185 ms   tak
+zigzag                     125 ms    160 ms   tak
+ripple                     150 ms    217 ms   tak
+polar                      231 ms    305 ms   tak
+shear                      202 ms    229 ms   tak
+motionblur                 930 ms   1237 ms   tak
+tiltshift                  492 ms    680 ms   tak
+gaussianblur               192 ms    318 ms   tak
+radialblur                1415 ms   2050 ms   tak
+rgbsplit                   106 ms    140 ms   tak
+scanline                     9 ms      8 ms   
+crt                        331 ms    487 ms   tak
+thermal                    311 ms    375 ms   tak
+edgeglow                   339 ms    678 ms   tak
+lens                       372 ms    775 ms   tak
+risograph                 1266 ms   1790 ms   tak
+comic                      748 ms   1126 ms   tak
+sketch                     674 ms    974 ms   tak
+crosshatch                 443 ms    653 ms   tak
+halftonecmyk               979 ms   1566 ms   tak
+stippling                  209 ms    336 ms   tak
+pointillize                340 ms    644 ms   tak
+ledmatrix                  287 ms    542 ms   tak
+lowpoly                    208 ms    283 ms   tak
+truchet                    106 ms    168 ms   tak
+smudge                     917 ms   1307 ms   tak
+3d                         378 ms    558 ms   tak
+anaglyph                   454 ms    539 ms   tak
+prism                      500 ms    539 ms   tak
+dreamdust                  262 ms    384 ms   tak
+lightwind                  397 ms    306 ms   tak
+starburst                  357 ms    366 ms   tak
+warpbloom                  452 ms    587 ms   tak
+pixelsort                  265 ms    281 ms   tak
+forensics                  204 ms    161 ms   tak
+glitch                      27 ms     13 ms   
+datamosh                  2206 ms   2301 ms   tak
+lofi                        96 ms    158 ms   
+beacon                     267 ms    435 ms   tak
+engraving                  470 ms    822 ms   tak
+warhol                     248 ms    429 ms   tak
+blueprint                  544 ms    548 ms   tak
+ukiyoe                     565 ms    732 ms   tak
+mezzotint                  240 ms    453 ms   tak
+lattice                    282 ms    437 ms   tak
+topography                 368 ms    514 ms   tak
+neongrid                   595 ms   1148 ms   tak
+schematic                  344 ms    620 ms   tak
+droste                     153 ms    162 ms   tak
+isoextrude                1390 ms   2352 ms   tak
+mixed                       32 ms     47 ms   
+specimen                    40 ms     52 ms   
+forms                      116 ms    148 ms   tak
+flowfield                  303 ms    467 ms   tak
+frostedglass               319 ms    472 ms   tak
+stainedglass              1434 ms   2619 ms   tak
+shatter                   3833 ms   4921 ms   tak
+vitrine                    521 ms    751 ms   tak
+glassorb                   337 ms    586 ms   tak
+flutedglass                165 ms    177 ms   tak
+liquidglass                512 ms    716 ms   tak
+waves                      182 ms    201 ms   tak
+oilpaint                   961 ms   1481 ms   tak
+watercolor                1884 ms   2543 ms   tak
+chrome                     436 ms    611 ms   tak
+thinfilm                   632 ms    662 ms   tak
+marble                    1066 ms   1391 ms   tak
+molten                    1064 ms   1983 ms   tak
+crystallize               1616 ms   2314 ms   tak
+emboss                     374 ms    532 ms   tak
+pixel + advBlur            215 ms    350 ms   tak
+pixel + vignette           116 ms    226 ms   tak
+pixel + scanLines           26 ms     36 ms   
+pixel + bloom              283 ms    431 ms   tak
+pixel + charBloom           31 ms     30 ms   
+pixel + chromatic          225 ms    229 ms   tak
+pixel + charChroma          23 ms     32 ms   
+pixel + rgbSplit           128 ms    141 ms   tak
+pixel + crtCurve           144 ms    195 ms   tak
+pixel + glitch              49 ms     53 ms   
+pixel + filmGrain           70 ms     81 ms   
+pixel + pixelate            34 ms     50 ms   
+pixel + halftone            88 ms    145 ms   
+pixel + filmDust            24 ms     44 ms   
+pixel + sharpen            148 ms    188 ms   tak
+pixel + noise               66 ms     93 ms   
+
+== Pamięć: partie po 2 × liczba efektów renderów (skala 1 i 2) na 1600×1067, pełna ścieżka do kanwy, GC po każdej partii ==
+renderów      RSS Chromium   sterta Workera   sterta strony
+       0     581.3 MB      —      —
+     182     685.4 MB      —        106.3 MB
+     364     632.7 MB      —        132.3 MB
+     546     690.3 MB      —        106.3 MB
+     728     638.5 MB      —        132.3 MB
+     910     717.0 MB      —        106.3 MB
+    1092     689.3 MB      —        132.3 MB
