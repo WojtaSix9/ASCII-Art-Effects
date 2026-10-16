@@ -792,6 +792,7 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
     - Risograph bez przesunięcia i ziarna stoi.
   - **Mój błąd w teście CRT:** środek pasa policzyłem jako 67,5 zamiast −15 + 75 = 60; poprawiony rachunek, kod bez zmian.
 - **`test:editor` 90/90:** Dither ma flow i shimmer; uwaga pojawia się po wyborze Floyd–Steinberg.
+- **Przeglądarka = Node 127/127** (10 nowych ruchów). Najpierw wyszło 117/117, bo plik oczekiwanych skrótów z Node (`src/dev/fixtures/engine-hashes.json`) nie był odświeżony i nowych ruchów nie porównywano; po `gen-dev-fixtures` wszystkie 127 zgodne.
 - **hash-baseline** 516/516 identyczny.
 
 ### Koszt klatki (`test`, Chromium, Worker, zdjęcie 1 przy dłuższym boku 1080 px, mediana z 3)

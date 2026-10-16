@@ -111,9 +111,19 @@
   "motion:rgbsplit.pulse@0.5": "7116d0ed5cecc1e3eca7817d60b74ee26d36d5e3",
   "motion:pixel.breathe@0.3": "c21c6155fc18dc2fae807ae9d28c36acb489d98b",
   "motion:disco.hue@0.3": "cb7b24194221cdd778f043389a43c19f019013c5",
+  "motion:halftone.rotate@0.3": "640097d9a83a5292d2645c8af44c03ebcf11a3b8",
+  "motion:dither.flow@0.3": "3e158897d5974de6d6db6d0523037bde58b9975c",
+  "motion:dither.shimmer@0.3": "3b262c68fdc33d4865c75996e3f94588e0954b46",
   "motion:twirl.oscillate@0.3": "20347be6f807ec5416c49bfa935c1fbf05842e37",
   "motion:zigzag.flow@0.3": "05ee7ff7241eebcf283404d37ffb0d0fb920d19f",
   "motion:ripple.spread@0.3": "a2cdb9e35cddb30e1585215b20f2c841212c4dcc",
   "motion:scanline.roll@0.3": "6cf3ecfd5f889de958fff69fb64680ff7bbb3bed",
-  "motion:flutedglass.slide@0.3": "cb2053b0f831934a94fdfb4977338dfd788a4364"
+  "motion:crt.flicker@0.3": "9a4c4417a8fb9eeccc122b18580844afd7df54f5",
+  "motion:crt.refresh@0.3": "5f1e373e832a88caa3e681e0a570a3c78cf7d7d0",
+  "motion:risograph.drift@0.3": "8b6768656c8aeaadbef4c19f6fc984f4c1167801",
+  "motion:ledmatrix.pulse@0.3": "b769f473a2792560f35200dd45bf29ad7f2e06b6",
+  "motion:ledmatrix.sweep@0.3": "aac0328c65be52ef1af6d788e35f6bdaeba31b12",
+  "motion:glitch.jitter@0.3": "7b60fe0cda06d679f58b4aedccca99761003059a",
+  "motion:flutedglass.slide@0.3": "cb2053b0f831934a94fdfb4977338dfd788a4364",
+  "motion:waves.flow@0.3": "bed01e85f72fc86e965a27926aa7d750b20d4d06"
 }
