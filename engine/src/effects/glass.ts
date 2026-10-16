@@ -144,10 +144,12 @@ const flutedglass: EffectDef = {
     range('shading', 'Shading', 40, 0, 100, PCT), ...px1()],
   // w każdym żłobku u ∈ [−1, 1] (od krawędzi do krawędzi); próbka przesunięta o −u · refraction · szerokość/2 (soczewka ściska obraz
   // do środka żłobka, powyżej 100% odwraca); cień ku krawędziom (1 − 0,25·shading·u²) i wąski odblask przy u = −0,45
+  // etap 2, ruch „slide” (plik 09: przesuwanie wzoru żłobków; proj): żłobki przesuwają się o speed szerokości na pętlę
+  motions: [{ id: 'slide', name: 'Slide', params: [range('speed', 'Speed (cycles per loop)', 1, 1, 8)] }],
   render(ctx) {
-    const s = ctx.prep; const { w, h } = s; const fw = ctx.p.fluteWidth * ctx.scale; const st = ctx.p.refractionStrength / 100; const sh = ctx.p.shading / 100; const vert = ctx.p.direction !== 'horizontal'; const out = out0(s);
+    const s = ctx.prep; const { w, h } = s; const fw = ctx.p.fluteWidth * ctx.scale; const st = ctx.p.refractionStrength / 100; const sh = ctx.p.shading / 100; const vert = ctx.p.direction !== 'horizontal'; const out = out0(s); const sl = ctx.motion ? ctx.motion.p.speed * ctx.motion.phase : 0;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4; const a = vert ? x + 0.5 : y + 0.5; const u = 2 * fr(a / fw) - 1; const off = -u * st * fw * 0.5; const m = 1 - 0.25 * sh * u * u, g = sh * 0.35 * Math.exp(-(((u + 0.45) / 0.12) ** 2));
+      const i = (y * w + x) * 4; const a = vert ? x + 0.5 : y + 0.5; const u = 2 * fr(a / fw + sl) - 1; const off = -u * st * fw * 0.5; const m = 1 - 0.25 * sh * u * u, g = sh * 0.35 * Math.exp(-(((u + 0.45) / 0.12) ** 2));
       for (let q = 0; q < 3; q++) { const v = (vert ? bil(s.data, w, h, x + 0.5 + off, y + 0.5, q) : bil(s.data, w, h, x + 0.5, y + 0.5 + off, q)) * m; out.data[i + q] = v + (255 - v) * g; }
       out.data[i + 3] = s.data[i + 3];
     }

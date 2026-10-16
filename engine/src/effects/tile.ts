@@ -1,6 +1,6 @@
 // Rodzina TILE: Pixel Art, Mosaic, Hex Mosaic, Disco, LEGO (plik 02, sekcje 2 i 4). proj.
 import type { EffectDef, Img, RenderCtx } from '../core/types.ts';
-import { color, common, range, select, seedParam, toggle } from '../core/params.ts';
+import { color, common, motionCommon, range, select, seedParam, toggle } from '../core/params.ts';
 import { backdrop } from '../core/compose.ts';
 import { cellAverages, clamp, hash01, lerp, lum, over, parseColor } from '../core/util.ts';
 import { fillRect, paintSDF, paintSDFNear } from '../core/raster.ts';
@@ -20,14 +20,21 @@ function runTiles(ctx: RenderCtx, cs: number, draw: (img: Img, x0: number, y0: n
   }
   return out;
 }
+/** Obrót koloru wokół osi szarości (1,1,1)/√3 o kąt a (wzór Rodriguesa); zachowuje szarości. */
+const hueMatrix = (a: number) => { const c = Math.cos(a), s = Math.sin(a), t = (1 - c) / 3, q = s / Math.sqrt(3); return [c + t, t - q, t + q, t + q, c + t, t - q, t - q, t + q, c + t]; };
 const quant = (v: number, n: number) => Math.round((v / 255) * (n - 1)) * (255 / (n - 1));
 
 const pixel: EffectDef = {
   id: 'pixel', name: 'Pixel Art', category: 'Pixels & Blocks', engine: 'TILE', phase: 1,
   description: 'The image reduced to large colour blocks, optionally with a limited palette.',
   params: [range('blockSize', 'Block size', 12, 2, 80, { unit: 'px', px: true }), range('levels', 'Colour levels', 8, 2, 32, { level: 'main' }), toggle('dither', 'Dither', false), ...TILE_COMMON()],
+  // etap 2, ruch „breathe” (plik 09: oddychanie rozmiaru bloku; proj): blok × (1 − intensity·(1 − cos 2π·speed·φ)/2), zaokrąglony
+  // do całych px, więc rozmiar zmienia się skokami (siatka zaczepiona w lewym górnym rogu)
+  motions: [{ id: 'breathe', name: 'Breathe', params: motionCommon(50) }],
   render(ctx) {
-    const cs = ctx.px(ctx.p.blockSize); const n = ctx.p.levels;
+    const m = ctx.motion; const base = ctx.px(ctx.p.blockSize); const n = ctx.p.levels;
+    /* rozmiar liczony w px przy skali 1, potem × skala: eksport @2x ma tyle samo bloków co podgląd */
+    const cs = m ? ctx.px(Math.max(1, Math.round(ctx.p.blockSize * (1 - ((m.p.intensity / 100) * (1 - Math.cos(2 * Math.PI * m.p.speed * m.phase))) / 2)))) : base;
     return runTiles(ctx, cs, (img, x0, y0, x1, y1, r, g, b, cx, cy) => {
       let rr = r, gg = g, bb = b;
       if (ctx.p.dither) { const off = ((BAYER4[(cy & 3) * 4 + (cx & 3)] + 0.5) / 16 - 0.5) * (255 / (n - 1)); rr += off; gg += off; bb += off; }
@@ -51,9 +58,16 @@ const disco: EffectDef = {
   id: 'disco', name: 'Disco', category: 'Light & Colour', engine: 'TILE', phase: 1,
   description: 'Coloured blocks with strongly boosted saturation, like disco lighting.',
   params: [range('cellSize', 'Cell size', 14, 3, 80, { unit: 'px', px: true }), range('saturation', 'Saturation', 220, 100, 500, { unit: '%' }), ...TILE_COMMON()],
+  // etap 2, ruch „hue cycle” (plik 09: cykl kolorów; proj): kolor bloku obrócony wokół osi szarości o 360°·speed·φ
+  // (macierz Rodriguesa), zmieszany z kolorem bez obrotu w proporcji intensity
+  motions: [{ id: 'hue', name: 'Hue cycle', params: motionCommon(100) }],
   render(ctx) {
-    const cs = ctx.px(ctx.p.cellSize); const s = ctx.p.saturation / 100;
-    return runTiles(ctx, cs, (img, x0, y0, x1, y1, r, g, b) => { const l = lum(r, g, b) * 255; fillRect(img, x0, y0, x1, y1, clamp(l + (r - l) * s, 0, 255), clamp(l + (g - l) * s, 0, 255), clamp(l + (b - l) * s, 0, 255)); });
+    const cs = ctx.px(ctx.p.cellSize); const s = ctx.p.saturation / 100; const m = ctx.motion; const ang = m ? 2 * Math.PI * m.p.speed * m.phase : 0; const H = ang ? hueMatrix(ang) : null; const k = m ? m.p.intensity / 100 : 0;
+    return runTiles(ctx, cs, (img, x0, y0, x1, y1, r, g, b) => {
+      const l = lum(r, g, b) * 255; let c = [clamp(l + (r - l) * s, 0, 255), clamp(l + (g - l) * s, 0, 255), clamp(l + (b - l) * s, 0, 255)];
+      if (H) { const h = [0, 1, 2].map((q) => clamp(H[q * 3] * c[0] + H[q * 3 + 1] * c[1] + H[q * 3 + 2] * c[2], 0, 255)); c = c.map((v, q) => lerp(v, h[q], k)); }
+      fillRect(img, x0, y0, x1, y1, c[0], c[1], c[2]);
+    });
   },
 };
 const LEGO_RGB = LEGO_COLORS.map(parseColor);

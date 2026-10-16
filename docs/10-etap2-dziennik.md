@@ -408,3 +408,63 @@ Dla porównania GIF tych samych klatek: 26,7 i 41,8 MB.
 - **Kodowania H.264**, a więc i wyglądu, rozmiaru oraz BT.709 w pliku H.264. Wymaga Chrome, Safari lub Firefoksa użytkownika: `/dev/engine`, sekcja WebCodecs, potem eksport MP4 w edytorze.
 - **Odtwarzania MP4** w QuickTime, na iOS i w odtwarzaczach systemowych.
 - **Pamięci przy 300 klatkach** z renderem efektu; w kroku 4b mierzyłem samo kodowanie.
+
+## Krok 5: Tier A (Scanline, Twirl, Ripple, ZigZag, Fluted Glass, Disco, Pixel Art)
+
+RGB Split miał ruch od kroku 2. Rodzina ASCII to osobny krok 6.
+
+### Ruchy (`proj`; brief: plik 09, sekcja 2.2)
+
+Każdy jest okresowy z konstrukcji (całkowita liczba cykli `speed`) i przy φ = 0 daje obraz statyczny.
+
+| Efekt | Ruch | Wzór |
+|---|---|---|
+| Scanline | roll | wzór przesuwa się o speed okresów (roll + speed·φ okresu) |
+| Twirl | oscillate | amount × (1 − I·(1 − cos 2π·speed·φ)); przy I = 100% do −amount i z powrotem |
+| Ripple | spread | faza sinusa −2π·speed·φ: fale biegną od środka |
+| ZigZag | flow | fala trójkątna przesuwa się o speed długości fali w pionie |
+| Fluted Glass | slide | żłobki (soczewki) przesuwają się o speed szerokości; obraz pod nimi stoi |
+| Disco | hue cycle | obrót koloru wokół osi szarości o 360°·speed·φ (Rodrigues), mieszany z oryginałem w proporcji I |
+| Pixel Art | breathe | blok × (1 − I·(1 − cos)/2), zaokrąglony do px przy skali 1, potem × skala |
+
+**Uwagi:**
+- **Ripple/ZigZag (`kod`):** w naszym silniku nazwy odpowiadają zachowaniu, więc zamiana etykiet z pliku 01 nas nie dotyczy.
+- **Pixel Art „breathe”** zmienia rozmiar skokami po 1 px, a siatka jest zaczepiona w lewym górnym rogu. Ocena na oko: ruch widać, ale nie jest płynny (zgodnie z ryzykiem w briefie).
+- **Poprawka przed testem:** pierwsza wersja zaokrąglała rozmiar bloku już po przeskalowaniu, przez co @2x miałby inną liczbę bloków. Teraz rozmiar jest liczony w px przy skali 1.
+
+### Testy (`test`)
+
+**Silnik (323/323, sekcja 34).** Własności wspólne dla **każdego** ruchu w rejestrze (dziś 8):
+- φ 0 = statyczny bit w bit;
+- φ 1 = φ 0; dla faz 0,1 / 0,25 / 0,6: φ i φ + 1 bit w bit (pomiar: 0 różnic we wszystkich 8 ruchach, próg 0);
+- φ 0,25 ≠ statyczny, czyli ruch jest;
+- determinizm; alfa i wymiary;
+- speed 2 daje okres 1/2;
+- komórki @2x = @1x.
+
+Po jednej własności na efekt:
+- **Scanline:** φ 0,2 przy okresie 5 px = wzór przesunięty o 1 wiersz.
+- **Twirl:** φ 0,5 (100%) = statyczny Twirl z amount −120, bit w bit.
+- **Disco:**
+  - szarość nie zmienia się w żadnej fazie (obrót wokół osi szarości);
+  - czerwień po 120° → zieleń (0,255,0).
+- **Pixel Art:** φ 0,5 → blok 6 px, 27×20 komórek zamiast 14×10.
+- **Fluted Glass:** na płaskim obrazie wzór cieniowania po 1/3 pętli = statyczny przesunięty o 8 px (1/3 z 24 px).
+- Ripple i ZigZag mają tylko własności wspólne; kierunku ruchu fali nie sprawdzałem osobno.
+
+**Błąd we własnym teście:** pierwsza wersja testu Fluted Glass zakładała, że przesuwa się obraz. Ruch przesuwa soczewki, a nie treść, więc własność była źle sformułowana. Teraz test sprawdza przesunięcie wzoru cieniowania na płaskim obrazie.
+
+**Aplikacja:**
+- `hash-cases` obejmuje każdy ruch z rejestru w fazie 0,3; przeglądarka = Node 117/117;
+- `test:ui` 41/41, `test:editor` 80/80, `smoke` 63/63, `test:a11y` 24/24;
+- badge „Animation” jest teraz na 8 efektach, w tym na kafelku Pixel Art na stronie głównej.
+- `hash-baseline` 516/516 identyczny.
+
+**Ocena na oko:**
+- arkusz 7 efektów × fazy 0 / 0,25 / 0,5 na zdjęciu 1 (360 px): ruch widoczny w każdym;
+- czas klatki w Node przy 360 px: 1–19 ms.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Płynności odtwarzania w aplikacji na prawdziwym sprzęcie.
+- Wyglądu GIF i MP4 dla tych efektów (ścieżka eksportu jest wspólna i sprawdzona na RGB Split).

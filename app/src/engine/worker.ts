@@ -154,7 +154,7 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
     }
     case 'hashes': {
       const src = testImage(300, 200); const out: Record<string, string> = {};
-      for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX)) out[c.name] = await sha1(render(src, c.state, { phase: c.phase }).img.data);
+      for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX, EFFECTS.flatMap((e) => (e.motions ?? []).map((m) => ({ effect: e.id, id: m.id }))))) out[c.name] = await sha1(render(src, c.state, { phase: c.phase }).img.data);
       return { data: out };
     }
     case 'bench': {

@@ -40,9 +40,11 @@ const scanline: EffectDef = {
   id: 'scanline', name: 'Scanline', category: 'Glitch & Signal', engine: 'SHADER', phase: 2,
   description: 'Dark horizontal scan lines, like an old monitor; roll shifts them vertically.',
   params: [range('spacing', 'Spacing', 3, 1, 20, PX), range('thickness', 'Thickness', 2, 1, 10, PX), range('intensity', 'Intensity', 60, 0, 100, { unit: '%' }), range('roll', 'Roll', 0, 0, 100, { unit: '%' }), ...px1()],
+  // etap 2, ruch „roll” (plik 09; proj): wzór przesuwa się o speed pełnych okresów na pętlę (roll + speed·φ okresów)
+  motions: [{ id: 'roll', name: 'Roll', params: [range('speed', 'Speed (cycles per loop)', 1, 1, 8)] }],
   // okres = spacing + thickness; wiersz przyciemniany proporcjonalnie do pokrycia pasem; roll przesuwa wzór o ułamek okresu
   render(ctx) {
-    const s = ctx.prep; const out = copy(s); const k = ctx.p.intensity / 100; if (!k) return out; const T = ctx.p.thickness * ctx.scale, P = T + ctx.p.spacing * ctx.scale, o = (ctx.p.roll / 100) * P; const d = out.data;
+    const s = ctx.prep; const out = copy(s); const k = ctx.p.intensity / 100; if (!k) return out; const T = ctx.p.thickness * ctx.scale, P = T + ctx.p.spacing * ctx.scale, o = (ctx.p.roll / 100 + (ctx.motion ? ctx.motion.p.speed * ctx.motion.phase : 0)) * P; const d = out.data;
     for (let y = 0; y < s.h; y++) { const m = 1 - k * bandCover(y, P, T, o); if (m === 1) continue; for (let i = y * s.w * 4, e = i + s.w * 4; i < e; i += 4) { d[i] *= m; d[i + 1] *= m; d[i + 2] *= m; } }
     return out;
   },

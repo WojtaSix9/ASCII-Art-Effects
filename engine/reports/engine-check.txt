@@ -314,3 +314,10 @@ OK   RGB Split pulse: φ i φ + 1 (speed 2, 4 fazy) bit w bit (próg 0 = pomiar;
 OK   RGB Split pulse: przesunięcie R/B zgodne ze wzorem: φ 0 → ±10 px, φ 0,5 → ±4 px, φ 0,25 → ±7 px; G na miejscu; @2x → ±8 px  [90,80,70 | 84,80,76 | 87,80,73 | @2x 168,160,152]
 OK   RGB Split pulse: intensity 0 = brak ruchu (każda faza = obraz statyczny)
 OK   RGB Split pulse: 32 fazy z [0, 1): wymiary i alfa jak w źródle
+OK   ruchy (8): φ 0 = statyczny bit w bit; φ 1 = φ 0; φ 0,25 ≠ statyczny (ruch jest); determinizm; alfa i wymiary; speed 2 → okres 1/2; komórki @2x = @1x  [pixel.breathe, disco.hue, twirl.oscillate, zigzag.flow, ripple.spread, rgbsplit.pulse, scanline.roll, flutedglass.slide]
+OK   ruchy: φ i φ + 1 (fazy 0,1 / 0,25 / 0,6) bit w bit dla każdego ruchu (próg 0 = pomiar)  [{"pixel.breathe":0,"disco.hue":0,"twirl.oscillate":0,"zigzag.flow":0,"ripple.spread":0,"rgbsplit.pulse":0,"scanline.roll":0,"flutedglass.slide":0}]
+OK   Scanline roll: φ 0,2 przy okresie 5 px = wzór przesunięty o 1 wiersz (wiersz y = statyczny y + 1)
+OK   Twirl oscillate (100%): φ 0,5 = statyczny Twirl z amount −120 (bit w bit)
+OK   Disco hue: szarość bez zmian w każdej fazie; czerwień po 1/3 cyklu (120°) → zieleń  [0,255,0]
+OK   Pixel Art breathe (50%): φ 0,5 → blok 12 → 6 px: 27×20 komórek zamiast 14×10  [{"cols":27,"rows":20} {"cols":14,"rows":10}]
+OK   Fluted Glass slide: żłobki (soczewki) przesuwają się, obraz nie: na płaskim obrazie wzór cieniowania po 1/3 pętli = statyczny przesunięty o 8 px (1/3 z 24 px)

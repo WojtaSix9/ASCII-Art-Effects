@@ -704,5 +704,36 @@ const SRC = testImage(300, 200);
   ok('RGB Split pulse: intensity 0 = brak ruchu (każda faza = obraz statyczny)', [0.2, 0.5, 0.9].every((f) => sha(RS(S, f, { intensity: 0 })) === st));
   ok('RGB Split pulse: 32 fazy z [0, 1): wymiary i alfa jak w źródle', Array.from({ length: 32 }, (_, i) => RS(S, i / 32)).every((o) => o.w === 160 && o.h === 120 && o.data.every((v, k) => k % 4 !== 3 || v === S.data[k])));
 }
+// 34. Etap 2, Tier A: własności wspólne dla każdego ruchu w rejestrze + po jednej własności na efekt
+{
+  const S = testImage(160, 120); const W = 160, H = 120;
+  const R = (img: Img, id: string, mid: string | null, phase?: number, mp: any = {}, scale = 1, sp: any = {}) => render(img, { style: { id, params: sp }, ...(mid ? { motion: { id: mid, params: mp } } : {}) }, { phase, scale });
+  const md = (a: Img, b: Img) => { let m = 0; for (let k = 0; k < a.data.length; k++) m = Math.max(m, Math.abs(a.data[k] - b.data[k])); return m; };
+  const rows: string[] = []; const bad: string[] = []; const perDiff: Record<string, number> = {};
+  for (const e of EFFECTS) for (const m of e.motions ?? []) {
+    const key = `${e.id}.${m.id}`; const st = R(S, e.id, null).img; const z = R(S, e.id, m.id, 0).img; const q = R(S, e.id, m.id, 0.25).img;
+    if (sha(z) !== sha(st)) bad.push(`${key}: φ0≠statyczny`);
+    perDiff[key] = Math.max(...[0.1, 0.25, 0.6].map((f) => md(R(S, e.id, m.id, f).img, R(S, e.id, m.id, f + 1).img)));
+    if (sha(R(S, e.id, m.id, 1).img) !== sha(st)) bad.push(`${key}: φ1≠φ0`);
+    if (sha(q) === sha(st)) bad.push(`${key}: brak ruchu przy φ 0,25`);
+    if (sha(R(S, e.id, m.id, 0.37).img) !== sha(R(S, e.id, m.id, 0.37).img)) bad.push(`${key}: niedeterministyczny`);
+    if (!q.data.every((v, k) => k % 4 !== 3 || v === S.data[k]) || q.w !== W || q.h !== H) bad.push(`${key}: alfa/wymiary`);
+    if (m.params.some((p) => p.id === 'speed') && sha(R(S, e.id, m.id, 0.5, { speed: 2 }).img) !== sha(st)) bad.push(`${key}: speed 2 → φ 0,5 ≠ statyczny`);
+    const i1 = R(S, e.id, m.id, 0.3).info, i2 = R(S, e.id, m.id, 0.3, {}, 2).info; if (JSON.stringify(i1) !== JSON.stringify(i2)) bad.push(`${key}: komórki @2x ≠ @1x ${JSON.stringify(i1)} ${JSON.stringify(i2)}`);
+    rows.push(key);
+  }
+  ok(`ruchy (${rows.length}): φ 0 = statyczny bit w bit; φ 1 = φ 0; φ 0,25 ≠ statyczny (ruch jest); determinizm; alfa i wymiary; speed 2 → okres 1/2; komórki @2x = @1x`, bad.length === 0, bad.join('; ') || rows.join(', '));
+  ok('ruchy: φ i φ + 1 (fazy 0,1 / 0,25 / 0,6) bit w bit dla każdego ruchu (próg 0 = pomiar)', Object.values(perDiff).every((v) => v === 0), JSON.stringify(perDiff));
+  const flat = newImg(W, H, [200, 200, 200, 255]); const rowsOf = (img: Img) => Array.from({ length: H }, (_, y) => img.data[(y * W + 5) * 4]);
+  const sc0 = rowsOf(R(flat, 'scanline', null).img), sc1 = rowsOf(R(flat, 'scanline', 'roll', 0.2).img);   /* okres 3 + 2 = 5 px, φ 0,2 = 1 px */
+  ok('Scanline roll: φ 0,2 przy okresie 5 px = wzór przesunięty o 1 wiersz (wiersz y = statyczny y + 1)', sc1.slice(0, H - 1).every((v, y) => v === sc0[y + 1]) && sc1.join() !== sc0.join());
+  ok('Twirl oscillate (100%): φ 0,5 = statyczny Twirl z amount −120 (bit w bit)', sha(R(S, 'twirl', 'oscillate', 0.5).img) === sha(R(S, 'twirl', null, undefined, {}, 1, { amount: -120 }).img));
+  const red = newImg(W, H, [255, 0, 0, 255]); const dr = R(red, 'disco', 'hue', 1 / 3).img.data; const gray = newImg(W, H, [120, 120, 120, 255]);
+  ok('Disco hue: szarość bez zmian w każdej fazie; czerwień po 1/3 cyklu (120°) → zieleń', [0.2, 0.5, 0.8].every((f) => sha(R(gray, 'disco', 'hue', f).img) === sha(R(gray, 'disco', null).img)) && dr[1] > 200 && dr[0] < 40 && dr[2] < 40, `${dr[0]},${dr[1]},${dr[2]}`);
+  const pz = R(S, 'pixel', 'breathe', 0.5).info, p0 = R(S, 'pixel', null).info;
+  ok('Pixel Art breathe (50%): φ 0,5 → blok 12 → 6 px: 27×20 komórek zamiast 14×10', pz.cols === 27 && pz.rows === 20 && p0.cols === 14 && p0.rows === 10, `${JSON.stringify(pz)} ${JSON.stringify(p0)}`);
+  const fg = (f?: number) => R(newImg(W, H, [150, 150, 150, 255]), 'flutedglass', f === undefined ? null : 'slide', f, {}, 1, { fluteWidth: 24 }).img; const fa = fg(1 / 3), fb = fg();
+  ok('Fluted Glass slide: żłobki (soczewki) przesuwają się, obraz nie: na płaskim obrazie wzór cieniowania po 1/3 pętli = statyczny przesunięty o 8 px (1/3 z 24 px)', (() => { for (let y = 0; y < H; y += 7) for (let x = 0; x < W - 8; x++) if (fa.data[(y * W + x) * 4] !== fb.data[(y * W + x + 8) * 4]) return false; return sha(fa) !== sha(fb); })());
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

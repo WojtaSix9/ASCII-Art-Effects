@@ -101,8 +101,13 @@
     "phase": 1,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "breathe",
+        "name": "Breathe"
+      }
+    ]
   },
   {
     "id": "mosaic",
@@ -686,8 +691,13 @@
     "phase": 2,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "oscillate",
+        "name": "Oscillate"
+      }
+    ]
   },
   {
     "id": "zigzag",
@@ -701,8 +711,13 @@
     "phase": 2,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "flow",
+        "name": "Flow"
+      }
+    ]
   },
   {
     "id": "ripple",
@@ -716,8 +731,13 @@
     "phase": 2,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "spread",
+        "name": "Spread"
+      }
+    ]
   },
   {
     "id": "polar",
@@ -931,8 +951,13 @@
     "phase": 2,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "roll",
+        "name": "Roll"
+      }
+    ]
   },
   {
     "id": "thermal",
@@ -976,8 +1001,13 @@
     "phase": 1,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "hue",
+        "name": "Hue cycle"
+      }
+    ]
   },
   {
     "id": "anaglyph",
@@ -1216,8 +1246,13 @@
     "phase": 3,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "slide",
+        "name": "Slide"
+      }
+    ]
   },
   {
     "id": "liquidglass",

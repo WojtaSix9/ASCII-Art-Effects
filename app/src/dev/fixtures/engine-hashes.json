@@ -108,5 +108,12 @@
   "motion:rgbsplit.pulse@0": "4facd340a8308bead652f0dac77669a41df0647a",
   "motion:rgbsplit.pulse@0.1": "662e830597db27d502f60bf1af8c4195e3a04c49",
   "motion:rgbsplit.pulse@0.25": "d4b45f87f82219264380d83057803735d538c1f7",
-  "motion:rgbsplit.pulse@0.5": "7116d0ed5cecc1e3eca7817d60b74ee26d36d5e3"
+  "motion:rgbsplit.pulse@0.5": "7116d0ed5cecc1e3eca7817d60b74ee26d36d5e3",
+  "motion:pixel.breathe@0.3": "c21c6155fc18dc2fae807ae9d28c36acb489d98b",
+  "motion:disco.hue@0.3": "cb7b24194221cdd778f043389a43c19f019013c5",
+  "motion:twirl.oscillate@0.3": "20347be6f807ec5416c49bfa935c1fbf05842e37",
+  "motion:zigzag.flow@0.3": "05ee7ff7241eebcf283404d37ffb0d0fb920d19f",
+  "motion:ripple.spread@0.3": "a2cdb9e35cddb30e1585215b20f2c841212c4dcc",
+  "motion:scanline.roll@0.3": "6cf3ecfd5f889de958fff69fb64680ff7bbb3bed",
+  "motion:flutedglass.slide@0.3": "cb2053b0f831934a94fdfb4977338dfd788a4364"
 }
