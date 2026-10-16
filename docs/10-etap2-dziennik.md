@@ -278,3 +278,56 @@ RGB Split, 4 s × 24 fps = 96 klatek, 1080 px:
 - Odtwarzania pliku w Safari i Firefoksie (jitter ±1 cs); rozmiaru dla innych efektów.
 - Pamięci przy 10 s × 30 fps (300 klatek): klatki nie są trzymane, ale nie mierzyłem.
 - Eksportu z przezroczystością: GIF jest zawsze na czarnym tle.
+
+## Krok 4b: badanie wykonalności MP4 (raport przed implementacją)
+
+Prototyp był w osobnym katalogu poza repozytorium, bez zmian w aplikacji. Środowisko: Chromium 141 z Playwrighta (headless), `ffprobe` 6.1.1.
+
+### Wyniki (`test`)
+
+**1. W tym Chromium nie ma kodera H.264.**
+- `VideoEncoder.isConfigSupported` zwraca `false` dla wszystkich `avc1`: profile 42/4d/64, poziomy 3.1–5.1, wymiary 720–1920 px, przy każdym ustawieniu przyspieszenia (68 kombinacji).
+- Działają VP9 (`vp09.00.10.08`) i AV1 (`av01.0.08M.08`) we wszystkich wymiarach.
+- Otwarty Chromium nie zawiera kodeków H.264; ma je Chrome od Google. **Kodowania H.264 nie da się tu przetestować** (`BRAK`). Wymaga testu użytkownika w Chrome, Safari i Firefoksie.
+
+**2. Ścieżka koder → muxer → MP4 działa** (sprawdzone na VP9 i AV1 w kontenerze MP4, odczyt `ffprobe`):
+- 96 klatek 1080×830 przy 24 fps: plik ma `nb_frames=96`, `duration=4.000000`, `r_frame_rate=24/1`, `yuv420p`, `color_range=tv`;
+- `+faststart`: `moov` (bajt 28) przed `mdat`, zarówno w `mp4-muxer` (`fastStart: 'in-memory'`), jak i w Mediabunny;
+- czas kodowania (bez renderu efektu): 96 klatek ok. 0,5–0,8 s; 300 klatek 1080×830 przy 30 fps 1,7 s.
+
+**3. Pamięć:**
+- 300 klatek 1080p z bufora RGBA (jak z silnika); co 50 klatek GC i odczyt sterty JS strony;
+- sterta: 6 → 47 → 48 → 38 → 41 → 49 → 45 MB, płasko, bez wzrostu liniowego;
+- pamięci kodera i GPU poza stertą JS nie mierzyłem.
+
+**4. Metadane koloru: BT.601, nie BT.709.**
+- `ffprobe` pokazuje `color_primaries/transfer/space=smpte170m` (BT.601), także gdy `VideoFrame` dostaje jawne `colorSpace` BT.709.
+- Wymaganie z pliku 04 (BT.709) **nie jest spełnione bez dodatkowej pracy**. Możliwe drogi: nadpisanie `decoderConfig.colorSpace` w metadanych dla muxera albo sprawdzenie, jaką macierz RGB→YUV koder faktycznie stosuje (etykieta inna niż macierz = przesunięcie kolorów).
+- Do zbadania przy implementacji; może zachowywać się inaczej dla H.264 w Chrome.
+
+### Biblioteki (`npm view`, 16 X 2026)
+
+| Pakiet | Wersja | Licencja | Stan | Uwagi |
+|---|---|---|---|---|
+| `mp4-muxer` | 5.2.2 | MIT | **wycofany** („superseded by Mediabunny”) | działa (sprawdzone); bez dalszych poprawek |
+| `mediabunny` | 1.61.x | **MPL-2.0** | aktywnie rozwijany (1.61.5 z 15 X) | działa (sprawdzone); następca `mp4-muxer` |
+| `mp4box` | 2.4.1 | BSD-3 | aktywny | głównie parser; muxowanie WebCodecs bardziej pracochłonne |
+
+**MPL-2.0** to copyleft na poziomie pliku (`docs`, treść licencji; nie jestem prawnikiem):
+- użycie niezmienionej biblioteki z npm w naszym buildzie jest dozwolone;
+- zmienione pliki samej biblioteki trzeba by udostępnić;
+- w notkach licencyjnych należy podać źródło.
+
+Propozycja: Mediabunny w wersji co najmniej dwutygodniowej (np. 1.61.0 z 29 IX), dokładnie przypiętej.
+
+### Propozycja implementacji (`proj?`)
+
+1. **Kodek:** H.264 (`avc1.640028`, High 4.0; do 1080 px wystarcza), gdy `isConfigSupported` zwraca `true`. Wymiary zaokrąglone do parzystych.
+2. **Brak H.264** (np. Chromium bez kodeków, część Firefoksów): komunikat zamiast pliku. Fallback (WebM/VP9 albo MP4/AV1) tylko za zgodą użytkownika.
+3. **Testy automatyczne** (bo H.264 tu nie działa):
+   - ścieżka kodowania i kontener sprawdzane na VP9 w MP4, przez wymuszenie kodeka w haku testowym;
+   - liczba klatek, czas, faststart, wymiary parzyste, BT.709 po poprawce, odczyt `ffprobe`;
+   - komunikat przy braku H.264;
+   - test dymny H.264 w prawdziwych przeglądarkach wykonuje użytkownik.
+4. **Raport wsparcia na `/dev/engine`:** sekcja „WebCodecs”, czyli lista `isConfigSupported` dla H.264/VP9/AV1. Użytkownik otwiera ją na swoich urządzeniach i odsyła wynik.
+5. **Bitrate (`proj?`):** ok. 8 Mb/s przy 1080 px. Rozmiar do oceny na zdjęciach (oczekiwany wielokrotnie mniejszy niż GIF).
