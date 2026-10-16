@@ -817,3 +817,11 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
 
 - GIF i MP4 tych efektów w pełnym eksporcie (rozmiary plików); to krok 10 (test dymny).
 - Safari i Firefox.
+
+## Decyzje użytkownika po Tier B (17 X)
+
+- 91 opisów efektów: zaakceptowane.
+- `ascii-frame.png`: pominąć.
+- Licencje zdjęć ma użytkownik; w stopce dopisane „zdjęcia przykładowe: Magnific”.
+- Karta Logo: osobna strona `/logo` (krok 8).
+- Deploy na Vercel: podgląd gałęzi `etap2-animacje` (poniżej).

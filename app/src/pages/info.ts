@@ -70,5 +70,5 @@ export function mountLicenses(main: HTMLElement) {
 
 export const footerHtml = () => `<footer class="foot">
   <p><span class="foot__brand">ASCII Art Effects</span> · obrazy liczone w przeglądarce, zdjęcia nie są wysyłane na serwer</p>
-  <p><a href="/licenses">Licencje</a> · czcionki OFL-1.1 · podziękowania: <a href="https://ascii.rest" rel="noopener">ascii.rest</a> (MIT)</p>
+  <p><a href="/licenses">Licencje</a> · czcionki OFL-1.1 · zdjęcia przykładowe: Magnific · podziękowania: <a href="https://ascii.rest" rel="noopener">ascii.rest</a> (MIT)</p>
 </footer>`;

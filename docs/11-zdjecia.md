@@ -48,6 +48,8 @@
 | `photo-42-halo.jpg` | `young-man-with-circle-light-around-head_250224-99.jpg` | 626×417 | 23 kB |
 | `photo-43-projection.jpg` | `young-woman-standing-universe-texture-projection_23-2149512132.jpg` | 626×417 | 22 kB |
 
-Pominięte: `ascii-frame.png` (gotowa grafika ASCII, nie zdjęcie; czeka na decyzję).
+Pominięte: `ascii-frame.png` (gotowa grafika ASCII, nie zdjęcie; decyzja użytkownika 17 X: pominąć).
+
+Licencje zdjęć ma użytkownik; w stopce strony informacja „zdjęcia przykładowe: Magnific” (prośba użytkownika).
 
 Usunięte z `app/public/sample/`: `photo-1.jpg`, `photo-2.jpg` (zdjęcia tymczasowe z etapu 1).
