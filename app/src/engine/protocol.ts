@@ -9,7 +9,7 @@ export type Req =
   | { type: 'postDefs' }                                             // definicje Post FX i Color
   | { type: 'export'; state: RenderState; scale: number; format: 'png' | 'jpeg'; quality?: number }
   | { type: 'setSource'; img: WireImg }
-  | { type: 'render'; state: RenderState; scale?: number }
+  | { type: 'render'; state: RenderState; scale?: number; phase?: number }   // phase: faza pętli animacji (etap 2)
   | { type: 'testImage'; w: number; h: number }                       // dev: syntetyczny obraz testowy jako źródło
   | { type: 'coverage' }                                              // dev: pokrycie znaków presetów
   | { type: 'hashes' }                                                // dev: SHA-1 renderów (porównanie z Node)

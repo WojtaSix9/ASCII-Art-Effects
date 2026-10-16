@@ -107,7 +107,7 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
     case 'render': {
       if (!source) throw new Error('no source image');
       await ensure(rampText(req.state)); await ensureTexts(req.state);
-      const t = performance.now(); const r = render(source, req.state, { scale: req.scale ?? 1, glyphs, text: textR });
+      const t = performance.now(); const r = render(source, req.state, { scale: req.scale ?? 1, glyphs, text: textR, phase: req.phase });
       const ms = performance.now() - t;
       const img = r.img.data.buffer === source.data.buffer ? { ...r.img, data: new Uint8ClampedArray(r.img.data) } : r.img;
       return { data: { img: toWire(img), info: r.info, ms, textBoxes: r.textBoxes }, transfer: [img.data.buffer as ArrayBuffer] };
@@ -121,7 +121,7 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
     }
     case 'hashes': {
       const src = testImage(300, 200); const out: Record<string, string> = {};
-      for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX)) out[c.name] = await sha1(render(src, c.state).img.data);
+      for (const c of HASH_CASES(EFFECTS.map((e) => e.id), POSTFX)) out[c.name] = await sha1(render(src, c.state, { phase: c.phase }).img.data);
       return { data: out };
     }
     case 'bench': {

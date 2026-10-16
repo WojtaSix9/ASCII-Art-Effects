@@ -20,7 +20,9 @@ export type RenderState = { style: { id: string; params?: Record<string, any> };
    *  więc pozycje świateł i siatka znaków liczą się względem kadru. Brak = całe zdjęcie. */
   crop?: Crop;
   /** Warstwa tekstu (plik 08): do 4 napisów, rysowana na końcu, po Color. Wymaga RenderOpts.text. */
-  text?: TextItem[] };
+  text?: TextItem[];
+  /** Etap 2 (plik 09): ruch animacji efektu. Faza klatki idzie osobno, w RenderOpts.phase, bo zmienia się co klatkę. */
+  motion?: { id: string; params?: Record<string, any> } };
 function cropImg(src: Img, c: Crop | undefined): Img {
   if (!c) return src; const r = cropRect(src.w, src.h, c); if (r.sx === 0 && r.sy === 0 && r.sw === src.w && r.sh === src.h) return src;
   const out = new Uint8ClampedArray(r.sw * r.sh * 4);
@@ -30,7 +32,8 @@ function cropImg(src: Img, c: Crop | undefined): Img {
 /** Efekty bez świateł (plik 01, sekcja 1: Dither nie ma zakładki Lights). */
 export const NO_LIGHTS = new Set(['dither']);
 export { GLYPH_STYLES };
-export type RenderOpts = { scale?: number; glyphs?: GlyphProvider | null; strict?: boolean; text?: TextRenderer | null };
+/** phase: faza pętli animacji φ (etap 2), liczba skończona; brak = 0. Efekt odpowiada za okresowość (φ i φ + 1 dają ten sam obraz). */
+export type RenderOpts = { scale?: number; glyphs?: GlyphProvider | null; strict?: boolean; text?: TextRenderer | null; phase?: number };
 export type RenderResult = { img: Img; info: EffectInfo; textBoxes?: (TextBox | null)[] };
 
 /** Krok 6: pamięć ostatniego przeskalowanego (i oświetlonego) źródła. Przy przesuwaniu suwaka stylu źródło i skala są te
@@ -51,13 +54,19 @@ function glyphFxOf(styleId: string, state: RenderState, opts: RenderOpts): Glyph
   const b = on('charBloom'), c = on('charChroma'); const fx = { bloom: b ? b.intensity : 0, chroma: c ? c.offset : 0 };
   return fx.bloom > 0 || fx.chroma > 0 ? fx : null;
 }
+function motionOf(effect: ReturnType<typeof getEffect>, state: RenderState, opts: RenderOpts): RenderCtx['motion'] {
+  const phase = opts.phase ?? 0; if (!Number.isFinite(phase)) throw new Error('phase must be a finite number');
+  if (!state.motion) return null;
+  const m = effect.motions?.find((x) => x.id === state.motion!.id); if (!m) throw new Error(`effect "${effect.id}" has no motion "${state.motion.id}"`);
+  return { id: m.id, phase, p: resolveParams(m.params, state.motion.params ?? {}, opts.strict ?? true) };
+}
 function makeCtx(src: Img, state: RenderState, opts: RenderOpts): { ctx: RenderCtx; effect: ReturnType<typeof getEffect> } {
   const scale = opts.scale ?? 1; if (!(scale >= 0.1 && scale <= 8)) throw new Error('scale must be within 0.1..8');
   const effect = getEffect(state.style.id); const p = resolveParams(effect.params, state.style.params ?? {}, opts.strict ?? true);
   const info: EffectInfo = {};
   const scaled = scaledSource(src, scale, state.lights && !NO_LIGHTS.has(effect.id) ? state.lights : undefined, state.crop);
   const prep = adjust(scaled, p.brightness ?? 0, p.contrast ?? 0);
-  return { effect, ctx: { src: scaled, prep, p, scale, glyphs: opts.glyphs ?? null, info, glyphFx: glyphFxOf(effect.id, state, opts), px: (v: number) => Math.max(1, Math.round(v * scale)) } };
+  return { effect, ctx: { src: scaled, prep, p, scale, glyphs: opts.glyphs ?? null, info, glyphFx: glyphFxOf(effect.id, state, opts), px: (v: number) => Math.max(1, Math.round(v * scale)), motion: motionOf(effect, state, opts) } };
 }
 export function render(src: Img, state: RenderState, opts: RenderOpts = {}): RenderResult {
   const { ctx, effect } = makeCtx(src, state, opts);

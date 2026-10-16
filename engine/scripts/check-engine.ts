@@ -683,5 +683,26 @@ const SRC = testImage(300, 200);
   ok('Crystallize: bez fazy i krawedzi kazdy krysztal (komorka Voronoi) ma jeden kolor', flatCells, `${first.size} komorek`);
   const mb = D(S, 'marble', { contrast: 100 }), mb0 = D(S, 'marble', { contrast: 0 }); ok('Marble: wieksza wartosc "Image contrast" -> wynik bardziej skorelowany z jasnoscia obrazu', (() => { const corr = (a: Img) => { let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0; const n = W * H; for (let q = 0; q < n; q++) { const x = lum(S.data[q * 4], S.data[q * 4 + 1], S.data[q * 4 + 2]), y = lum(a.data[q * 4], a.data[q * 4 + 1], a.data[q * 4 + 2]); sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; } return (sxy / n - (sx / n) * (sy / n)) / Math.sqrt((sxx / n - (sx / n) ** 2) * (syy / n - (sy / n) ** 2)); }; return corr(mb) > corr(mb0) + 0.2; })());
 }
+// 33. Etap 2, krok 2: model animacji (faza φ, rejestr ruchów) na przykładzie RGB Split „pulse”
+{
+  const { readFileSync } = await import('node:fs'); const J = JSON.parse(readFileSync('src/data/effects.json', 'utf8')) as any[];
+  const badM: string[] = []; for (const e of EFFECTS) { const ms = e.motions ?? []; if (new Set(ms.map((m) => m.id)).size !== ms.length) badM.push(`${e.id} dup`); for (const m of ms) for (const p of m.params) if (p.kind === 'range' && !(p.default >= p.min! && p.default <= p.max!)) badM.push(`${e.id}.${m.id}.${p.id}`); }
+  ok('ruchy: unikalne id w efekcie, domyślne parametry w zakresach; effects.json animated/motions zgodne z rejestrem', badM.length === 0 && EFFECTS.every((e) => { const j = J.find((x) => x.id === e.id); return j.animated === !!e.motions?.length && JSON.stringify(j.motions) === JSON.stringify((e.motions ?? []).map((m) => ({ id: m.id, name: m.name }))); }), badM.join(', '));
+  ok('ruchy: nieznany ruch i faza nieskończona rzucają błąd', (() => { try { render(SRC, { style: { id: 'rgbsplit' }, motion: { id: 'nope' } }); return false; } catch { /* ok */ } try { render(SRC, { style: { id: 'rgbsplit' }, motion: { id: 'pulse' } }, { phase: NaN }); return false; } catch { return true; } })());
+  const RS = (img: Img, phase?: number, mp: any = {}, scale = 1, sp: any = {}) => render(img, { style: { id: 'rgbsplit', params: sp }, ...(phase === undefined ? {} : { motion: { id: 'pulse', params: mp } }) }, { phase, scale }).img;
+  const S = testImage(160, 120); const st = sha(RS(S));
+  ok('RGB Split pulse: φ = 0 (jawnie i domyślnie) = obraz statyczny bit w bit; ta sama φ = ten sam obraz', sha(RS(S, 0)) === st && sha(render(S, { style: { id: 'rgbsplit' }, motion: { id: 'pulse' } }).img) === st && sha(RS(S, 0.37)) === sha(RS(S, 0.37)));
+  ok('RGB Split pulse: okresowość: φ = 1, 2 i 3 (speed 3) = φ = 0 bit w bit', sha(RS(S, 1)) === st && sha(RS(S, 2)) === st && sha(RS(S, 1, { speed: 3 })) === st);
+  const md = (a: Img, b: Img) => { let m = 0; for (let k = 0; k < a.data.length; k++) m = Math.max(m, Math.abs(a.data[k] - b.data[k])); return m; };
+  const per = [0.1, 0.25, 0.5, 0.8].map((f) => md(RS(S, f, { speed: 2 }), RS(S, f + 1, { speed: 2 })));
+  ok('RGB Split pulse: φ i φ + 1 (speed 2, 4 fazy) bit w bit (próg 0 = pomiar; dopuszczałem ±1 na różnice cos w ostatnich bitach, nie wystąpiły)', Math.max(...per) === 0, `max różnica: ${per.join(', ')}`);
+  const line = newImg(160, 40, [0, 0, 0, 255]); for (let y = 0; y < 40; y++) line.data.fill(255, (y * 160 + 80) * 4, (y * 160 + 80) * 4 + 3);
+  const peak = (img: Img, c: number) => { let b = 0, bx = -1; for (let x = 0; x < img.w; x++) { const v = img.data[(20 * img.w + x) * 4 + c]; if (v > b) { b = v; bx = x; } } return bx; };
+  const at = (f: number, sc = 1) => { const o = RS(line, f, { intensity: 60 }, sc); return [peak(o, 0), peak(o, 1), peak(o, 2)]; };
+  const a0 = at(0), a5 = at(0.5), a25 = at(0.25), s2 = at(0.5, 2);
+  ok('RGB Split pulse: przesunięcie R/B zgodne ze wzorem: φ 0 → ±10 px, φ 0,5 → ±4 px, φ 0,25 → ±7 px; G na miejscu; @2x → ±8 px', a0.join() === '90,80,70' && a5.join() === '84,80,76' && a25.join() === '87,80,73' && s2[1] >= 160 && s2[1] <= 161 && s2[0] - s2[1] === 8 && s2[1] - s2[2] === 8, `${a0} | ${a5} | ${a25} | @2x ${s2}`);
+  ok('RGB Split pulse: intensity 0 = brak ruchu (każda faza = obraz statyczny)', [0.2, 0.5, 0.9].every((f) => sha(RS(S, f, { intensity: 0 })) === st));
+  ok('RGB Split pulse: 32 fazy z [0, 1): wymiary i alfa jak w źródle', Array.from({ length: 32 }, (_, i) => RS(S, i / 32)).every((o) => o.w === 160 && o.h === 120 && o.data.every((v, k) => k % 4 !== 3 || v === S.data[k])));
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

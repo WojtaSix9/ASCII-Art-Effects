@@ -104,5 +104,9 @@
   "postfx:sharpen": "43e2d9273fffac9967864316bffe932232fe9a76",
   "postfx:noise": "06b33ef2d024bc084fb22714b6f0509f4d8f6cd1",
   "color:sepia": "c3cdd3bfdfd85e614c0812fdc5be99e57125a427",
-  "dither:floyd+pico8": "1b0521078fea69bd7d1f70f40b7fbf1e700aea9d"
+  "dither:floyd+pico8": "1b0521078fea69bd7d1f70f40b7fbf1e700aea9d",
+  "motion:rgbsplit.pulse@0": "4facd340a8308bead652f0dac77669a41df0647a",
+  "motion:rgbsplit.pulse@0.1": "662e830597db27d502f60bf1af8c4195e3a04c49",
+  "motion:rgbsplit.pulse@0.25": "d4b45f87f82219264380d83057803735d538c1f7",
+  "motion:rgbsplit.pulse@0.5": "7116d0ed5cecc1e3eca7817d60b74ee26d36d5e3"
 }

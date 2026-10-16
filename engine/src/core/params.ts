@@ -40,3 +40,7 @@ export function resolveParams(defs: ParamDef[], input: Record<string, any> = {},
   }
   return out;
 }
+
+/** Wspólne parametry ruchu (plik 09, sekcja 3; proj): `speed` = całkowita liczba cykli na pętlę (pętla domyka się z konstrukcji),
+ *  `intensity` = siła ruchu. Długość pętli w sekundach i fps należą do eksportu, nie do silnika. */
+export const motionCommon = (intensity = 50): ParamDef[] => [range('speed', 'Speed (cycles per loop)', 1, 1, 8), range('intensity', 'Intensity', intensity, 0, 100, { unit: '%' })];

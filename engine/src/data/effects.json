@@ -10,7 +10,9 @@
     "description": "Każda komórka dostaje znak ze skali tonalnej wg jasności (jasne = gęste znaki: domyślnie jasny tekst na ciemnym tle; `invert` odwraca).",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "asciiStudio",
@@ -23,7 +25,9 @@
     "description": "Obraz złożony z zaprojektowanych kształtów lub znaków, kolorowanych przez paletę, domyślnie na czarnym tle.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "block-chars",
@@ -36,7 +40,9 @@
     "description": "Komórki z znaków blokowych Unicode (pełne, połówki, ćwiartki, cieniowane) dobieranych do tonu.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "dots",
@@ -49,7 +55,9 @@
     "description": "Okrągłe kropki o rozmiarze zależnym od jasności (raster półtonowy).",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "mixed",
@@ -62,7 +70,9 @@
     "description": "Mieszanka kilku zestawów znaków w jednym obrazie: np. gęste bloki w cieniach, litery w półtonach, kropki w światłach.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "braille",
@@ -75,7 +85,9 @@
     "description": "Każda komórka to znak Braille'a 2×4 punkty, więc ok. dwa razy więcej szczegółów niż zwykły ramp. Monochromatyczne.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "pixel",
@@ -88,7 +100,9 @@
     "description": "Obraz sprowadzony do dużych bloków koloru, opcjonalnie z ograniczoną paletą.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "mosaic",
@@ -101,7 +115,9 @@
     "description": "Kafelki kwadratowe o średnim kolorze, ze spoiną.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "lego",
@@ -114,7 +130,9 @@
     "description": "Kafelki w postaci klocków z wypukłą kropką (stud), kolory posteryzowane do palety (w tym zestaw w stylu LEGO Art).",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "3d",
@@ -127,7 +145,9 @@
     "description": "Izometryczne sześciany na siatce heksagonalnej z osobnym cieniowaniem ścian (góra, jasna, ciemna).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "hexmosaic",
@@ -140,7 +160,9 @@
     "description": "Plaster miodu z sześciokątnych kafelków o średnim kolorze obszaru.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "ledmatrix",
@@ -153,7 +175,9 @@
     "description": "Matryca świecących diod z bloomem: czarny panel, jasne miejsca rozlewają światło.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "dither",
@@ -166,7 +190,9 @@
     "description": "Redukcja do małej palety z rozpraszaniem błędu lub wzorem progowym. 15 algorytmów, 15 palet, edytor własnej palety.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "stippling",
@@ -179,7 +205,9 @@
     "description": "Obraz zbudowany z tysięcy małych punktów: gęsto w cieniach, rzadko w światłach (rysunek tuszem punktowym).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "risograph",
@@ -192,7 +220,9 @@
     "description": "Druk risograficzny: 2–3 farby w osobnych warstwach, każda z rastrem, lekko przesunięte względem siebie, z ziarnem i nakładaniem kolorów.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "comic",
@@ -205,7 +235,9 @@
     "description": "Styl komiksowy: posteryzacja do kilku plam koloru, czarne kontury i raster Ben-Day w cieniach.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "sketch",
@@ -218,7 +250,9 @@
     "description": "Szkic ołówkiem: wykryte krawędzie plus lekkie kreskowanie w cieniach na papierze.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "engraving",
@@ -231,7 +265,9 @@
     "description": "Sztych: linie o zmiennej grubości, pogrubiane w cieniach i cienkie w światłach, układające się wzdłuż form.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "warhol",
@@ -244,7 +280,9 @@
     "description": "Siatka 2×2 (lub 3×3) kopii obrazu, każda w innej kontrastowej, mocno posteryzowanej palecie (pop-art).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "blueprint",
@@ -257,7 +295,9 @@
     "description": "Monochromatyczny druk w odcieniach błękitu pruskiego z bielą, z plamami papieru i ziarnem.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "halftone",
@@ -270,7 +310,9 @@
     "description": "Klasyczny raster: kropki, linie lub kwadraty ułożone pod kątem, wielkość wg tonu.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "ukiyoe",
@@ -283,7 +325,9 @@
     "description": "Japoński drzeworyt: płaskie plamy koloru z ograniczonej palety, ciemne kontury, faktura słojów drewna i papieru.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "posterize",
@@ -296,7 +340,9 @@
     "description": "Redukcja do N poziomów na kanał, z ostrymi przejściami (plamy koloru).",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "mezzotint",
@@ -309,7 +355,9 @@
     "description": "Mezzotinta: ziarnisty, aksamitny szum o dużym kontraście, ciemne tło i jasne plamy światła.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "pointillize",
@@ -322,7 +370,9 @@
     "description": "Pointylizm: losowe okrągłe plamki koloru z obrazu, różnej wielkości, częściowo nachodzące na siebie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "crosshatch",
@@ -335,7 +385,9 @@
     "description": "Kreskowanie krzyżowe: kolejne warstwy linii pod różnymi kątami włączają się w coraz ciemniejszych miejscach.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "halftonecmyk",
@@ -348,7 +400,9 @@
     "description": "Rozdzielenie na cztery farby (C, M, Y, K) z rastrem pod różnymi kątami na kolorze papieru.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "cross",
@@ -361,7 +415,9 @@
     "description": "Siatka znaków plus/krzyżyk skalowanych jasnością.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "diamond",
@@ -374,7 +430,9 @@
     "description": "Siatka rombów o rozmiarze zależnym od tonu.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "lines",
@@ -387,7 +445,9 @@
     "description": "Poziome segmenty linii, których długość lub grubość zależy od jasności.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "diagonal",
@@ -400,7 +460,9 @@
     "description": "Ukośne kreski (jak Lines, ale pod kątem).",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "specimen",
@@ -413,7 +475,9 @@
     "description": "Interpretacja: plansza próbek pisma. Obraz złożony ze znaków kroju pisma w różnych rozmiarach i wagach, układających się jak tablica specimenowa.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "lowpoly",
@@ -426,7 +490,9 @@
     "description": "Triangulacja Delaunaya z losowych punktów, każdy trójkąt wypełniony średnim kolorem.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "droste",
@@ -439,7 +505,9 @@
     "description": "Efekt Droste: obraz rekurencyjnie zagnieżdżony w sobie, ze spiralnym obrotem.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "truchet",
@@ -452,7 +520,9 @@
     "description": "Kafelki Truchet: w każdej komórce losowo obrócony łuk lub linia, wybierane i grubione wg jasności.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "isoextrude",
@@ -465,7 +535,9 @@
     "description": "Izometryczne słupki, których wysokość zależy od jasności komórki (histogram 3D).",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "flowfield",
@@ -478,7 +550,9 @@
     "description": "Linie lub cząstki podążające za polem wektorowym wyliczonym z kierunków gradientu obrazu, kolor z obrazu.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "lattice",
@@ -491,7 +565,9 @@
     "description": "Kratownica: węzły siatki połączone krawędziami, grubość węzłów i linii zależy od jasności.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "topography",
@@ -504,7 +580,9 @@
     "description": "Warstwice: izolinie jasności jak na mapie topograficznej.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "forms",
@@ -517,7 +595,9 @@
     "description": "7 wariantów (z docs). Interpretacja: komórki zastąpione prostymi bryłami lub formami (kula, kostka, stożek, piramida, walec…) z cieniowaniem.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "schematic",
@@ -530,7 +610,9 @@
     "description": "Schemat techniczny: linie siatki, krzyże pomiarowe, wykryte krawędzie i etykiety jak na rysunku inżynierskim.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "neongrid",
@@ -543,7 +625,9 @@
     "description": "Neonowa siatka w stylu synthwave: jasność obrazu steruje jasnością i grubością świecących linii.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "smudge",
@@ -556,7 +640,9 @@
     "description": "Rozmazanie pociągnięciem: piksele ciągnięte w kierunku, jak palec po mokrej farbie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "pinch",
@@ -569,7 +655,9 @@
     "description": "Ściąganie lub rozpychanie do punktu.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "spherize",
@@ -582,7 +670,9 @@
     "description": "Efekt kuli, wypukły lub wklęsły.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "twirl",
@@ -595,7 +685,9 @@
     "description": "Skręcenie wokół środka.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "zigzag",
@@ -608,7 +700,9 @@
     "description": "Falowe przesunięcie linii (zygzak poprzeczny).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "ripple",
@@ -621,7 +715,9 @@
     "description": "Koncentryczne fale od środka.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "polar",
@@ -634,7 +730,9 @@
     "description": "Przekształcenie prostokątne ↔ biegunowe (obraz zawijany w okrąg).",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "shear",
@@ -647,7 +745,9 @@
     "description": "Falowe ścięcie linii.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "motionblur",
@@ -660,7 +760,9 @@
     "description": "Rozmycie ruchem w kierunku.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "tiltshift",
@@ -673,7 +775,9 @@
     "description": "Efekt miniatury: ostry pas, reszta rozmyta, podbite nasycenie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "gaussianblur",
@@ -686,7 +790,9 @@
     "description": "Klasyczne rozmycie gaussowskie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "radialblur",
@@ -699,7 +805,9 @@
     "description": "Rozmycie od środka: zoom lub obrót.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "crt",
@@ -712,7 +820,9 @@
     "description": "Ekran kineskopowy: zakrzywienie, linie skanowania, maska luminoforu RGB, poświata, lekkie migotanie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "pixelsort",
@@ -725,7 +835,9 @@
     "description": "Sortowanie pikseli w wierszach lub kolumnach wg jasności, w segmentach wyznaczonych progiem.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "forensics",
@@ -738,7 +850,9 @@
     "description": "Interpretacja: wizualizacja jak w analizie kryminalistycznej obrazu (mapa szumu, ELA, krawędzie, kolorowa mapa błędów, opcjonalnie etykiety nakładki).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "glitch",
@@ -751,7 +865,9 @@
     "description": "Przesunięcia poziome pasków, rozdzielenie RGB, bloki i szum, jak uszkodzony sygnał.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "datamosh",
@@ -764,7 +880,9 @@
     "description": "Rozmazywanie pikseli wg wektorów ruchu (jak uszkodzona kompresja wideo); na stillu symulowane przesunięciem bloków.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "lofi",
@@ -777,7 +895,9 @@
     "description": "Zniszczony nośnik: niska rozdzielczość, kwantyzacja kolorów, artefakty kompresji i błędy taśmy VHS.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "rgbsplit",
@@ -790,7 +910,14 @@
     "description": "Przesunięcie kanałów R, G, B względem siebie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": true,
+    "motions": [
+      {
+        "id": "pulse",
+        "name": "Pulse"
+      }
+    ]
   },
   {
     "id": "scanline",
@@ -803,7 +930,9 @@
     "description": "Linie skanowania.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "thermal",
@@ -816,7 +945,9 @@
     "description": "Kamera termowizyjna: jasność mapowana na paletę ciepła, szum sensora, ewentualne znaczniki.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "beacon",
@@ -829,7 +960,9 @@
     "description": "Interpretacja: pole punktów światła, przez które przechodzi pulsujący sygnał od źródła (jak radar lub ping).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "disco",
@@ -842,7 +975,9 @@
     "description": "Kolorowe bloki o mocno podbitym nasyceniu, jak oświetlenie dyskotekowe.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "anaglyph",
@@ -855,7 +990,9 @@
     "description": "Efekt 3D z czerwono-cyjanowych kanałów przesuniętych wg głębokości (z jasności).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "gradientmap",
@@ -868,7 +1005,9 @@
     "description": "Mapowanie jasności na wielopunktowy gradient kolorów.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "prism",
@@ -881,7 +1020,9 @@
     "description": "Rozszczepienie światła jak w pryzmacie: tęczowe smugi i dyspersja przy krawędziach.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "dreamdust",
@@ -894,7 +1035,9 @@
     "description": "Marzycielska poświata z unoszącym się pyłem, bokeh i iskrami.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "lightwind",
@@ -907,7 +1050,9 @@
     "description": "Kierunkowe smugi światła ciągnące się z jasnych obszarów (god rays).",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "starburst",
@@ -920,7 +1065,9 @@
     "description": "Lustrzane sektory wokół środka.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "warpbloom",
@@ -933,7 +1080,9 @@
     "description": "Falowe odkształcenie połączone z poświatą.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "duotone",
@@ -946,7 +1095,9 @@
     "description": "Dwa kolory: jeden dla cieni, drugi dla świateł.",
     "phase": 1,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "edgeglow",
@@ -959,7 +1110,9 @@
     "description": "Wykryte krawędzie świecące neonowo na przyciemnionym tle.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "lens",
@@ -972,7 +1125,9 @@
     "description": "Wady obiektywu: aberracja chromatyczna, dystorsja beczkowata i winietowanie.",
     "phase": 2,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "frostedglass",
@@ -985,7 +1140,9 @@
     "description": "Szkło matowe: rozmycie z drobnym ziarnem.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "stainedglass",
@@ -998,7 +1155,9 @@
     "description": "Witraż: komórki Voronoi w płaskich kolorach z ołowianymi obrysami i efektem podświetlenia.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "shatter",
@@ -1011,7 +1170,9 @@
     "description": "Rozbite szkło: fragmenty Voronoi przesunięte i obrócone, z liniami pęknięć od punktu uderzenia.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "vitrine",
@@ -1024,7 +1185,9 @@
     "description": "Interpretacja: obraz za szklaną taflą z odblaskami i ramką.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "glassorb",
@@ -1037,7 +1200,9 @@
     "description": "Obraz widziany przez szklaną kulę, z odwróceniem i refrakcją.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "flutedglass",
@@ -1050,7 +1215,9 @@
     "description": "Szkło żłobkowane: pionowe walcowate soczewki.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "liquidglass",
@@ -1063,7 +1230,9 @@
     "description": "Wspólny silnik z mapą normalnych tekstury szkła. 10 tekstur (parametr `texture`):",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "waves",
@@ -1076,7 +1245,9 @@
     "description": "Obraz na falującej powierzchni lub zbudowany z falistych linii.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "oilpaint",
@@ -1089,7 +1260,9 @@
     "description": "Obraz olejny: wygładzenie typu Kuwahara plus faktura pociągnięć pędzla i relief farby.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "watercolor",
@@ -1102,7 +1275,9 @@
     "description": "Akwarela: miękkie rozlewy koloru, ciemniejsze krawędzie pigmentu, faktura papieru.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "chrome",
@@ -1115,7 +1290,9 @@
     "description": "Jasność jako wysokość, mapowana na metaliczne odbicie otoczenia.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "thinfilm",
@@ -1128,7 +1305,9 @@
     "description": "Iryzacja jak bańka mydlana: kolory interferencyjne zależne od „grubości” (jasności).",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "marble",
@@ -1141,7 +1320,9 @@
     "description": "Interpretacja: żyłki marmuru ze sterowaniem tonem obrazu i turbulencją.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "molten",
@@ -1154,7 +1335,9 @@
     "description": "Interpretacja: płynny, rozgrzany metal. Jasność deformuje powierzchnię (metaballe), ciepła paleta i poświata.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "crystallize",
@@ -1167,7 +1350,9 @@
     "description": "Komórki Voronoi o średnim kolorze, ze ściętymi krawędziami jak kryształy.",
     "phase": 3,
     "phaseAssigned": true,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   },
   {
     "id": "emboss",
@@ -1180,6 +1365,8 @@
     "description": "Tłoczenie: obraz wygląda jak wypukła rzeźba oświetlona z kierunku.",
     "phase": 3,
     "phaseAssigned": false,
-    "status": "ready"
+    "status": "ready",
+    "animated": false,
+    "motions": []
   }
 ]

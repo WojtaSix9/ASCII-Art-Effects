@@ -12,7 +12,7 @@ export class EngineClient {
   private nextId = 1;
   private calls = new Map<number, Pending>();
   private busy = false;
-  private queued: { state: RenderState; scale: number; p: Pending } | null = null;
+  private queued: { state: RenderState; scale: number; phase?: number; p: Pending } | null = null;
   /** Liczba renderów faktycznie wykonanych przez Worker (do testów trybu "najnowszy wygrywa"). */
   rendersExecuted = 0;
 
@@ -45,10 +45,10 @@ export class EngineClient {
     return this.call({ type: 'setSource', img: { w: img.width, h: img.height, buffer } }, [buffer]);
   }
 
-  render(state: RenderState, scale = 1): Promise<RenderOut | null> {
+  render(state: RenderState, scale = 1, phase?: number): Promise<RenderOut | null> {
     return new Promise((resolve, reject) => {
       if (this.queued) this.queued.p.resolve(null);
-      this.queued = { state, scale, p: { resolve, reject } };
+      this.queued = { state, scale, phase, p: { resolve, reject } };
       this.pump();
     });
   }
@@ -57,7 +57,7 @@ export class EngineClient {
     if (this.busy || !this.queued) return;
     const job = this.queued; this.queued = null; this.busy = true; this.rendersExecuted++;
     try {
-      const r = await this.call<RenderRes>({ type: 'render', state: job.state, scale: job.scale });
+      const r = await this.call<RenderRes>({ type: 'render', state: job.state, scale: job.scale, phase: job.phase });
       const image = new ImageData(new Uint8ClampedArray(r.img.buffer), r.img.w, r.img.h);
       job.p.resolve({ image, info: r.info, workerMs: r.ms, textBoxes: r.textBoxes });
     } catch (e) { job.p.reject(e as Error); }

@@ -31,10 +31,11 @@ const IDFIX: Record<string, string> = { ZigZag: 'zigzag', Ripple: 'ripple' };   
 const impl = new Map(EFFECTS.map((e) => [e.id, e]));
 const list = out.map((e) => {
   const id = e.id ?? IDFIX[e.name]; const desc = e.rest.join(' ').replace(/Opcje:.*$/, '').replace(/^\s*[·\-]?\s*/, '').replace(/\s+/g, ' ').trim(); const ph = phaseOfName(e.name, e.cat); const im = impl.get(id);
-  return { id, name: e.name, category: CATS[e.cat - 1], categoryIndex: e.cat, engine: e.engine, complexity: e.complexity, source: e.source, description: desc, phase: ph.phase, phaseAssigned: ph.assigned, status: im ? 'ready' : 'soon' };
+  return { id, name: e.name, category: CATS[e.cat - 1], categoryIndex: e.cat, engine: e.engine, complexity: e.complexity, source: e.source, description: desc, phase: ph.phase, phaseAssigned: ph.assigned, status: im ? 'ready' : 'soon',
+    animated: !!im?.motions?.length, motions: (im?.motions ?? []).map((m) => ({ id: m.id, name: m.name })) };   // etap 2: z rejestru (jedno źródło prawdy)
 });
 writeFileSync('src/data/effects.json', JSON.stringify(list, null, 2) + '\n');
 const byCat = CATS.map((c, i) => `${c}: ${list.filter((x) => x.categoryIndex === i + 1).length}`).join(', ');
 const un = list.filter((x) => !x.phaseAssigned).map((x) => x.name);
-const rep = [`${list.length} efektow, ${new Set(list.map((x) => x.id)).size} unikalnych id`, byCat, `faza 1: ${list.filter((x) => x.phase === 1).length}, faza 2: ${list.filter((x) => x.phase === 2).length}, faza 3: ${list.filter((x) => x.phase === 3).length}`, `status ready: ${list.filter((x) => x.status === 'ready').length}`, `bez przypisanej fazy w pliku 02 (domyslnie 3): ${un.length}: ${un.join(', ')}`, `zrodlo opisu: ${['docs', 'docs/proj', 'proj', 'proj?'].map((s) => `${s}=${list.filter((x) => x.source === s).length}`).join(', ')}`];
+const rep = [`${list.length} efektow, ${new Set(list.map((x) => x.id)).size} unikalnych id`, byCat, `faza 1: ${list.filter((x) => x.phase === 1).length}, faza 2: ${list.filter((x) => x.phase === 2).length}, faza 3: ${list.filter((x) => x.phase === 3).length}`, `status ready: ${list.filter((x) => x.status === 'ready').length}`, `animowane: ${list.filter((x) => x.animated).map((x) => x.id).join(', ') || 'brak'}`, `bez przypisanej fazy w pliku 02 (domyslnie 3): ${un.length}: ${un.join(', ')}`, `zrodlo opisu: ${['docs', 'docs/proj', 'proj', 'proj?'].map((s) => `${s}=${list.filter((x) => x.source === s).length}`).join(', ')}`];
 writeFileSync('reports/effects-json.txt', rep.join('\n') + '\n'); console.log(rep.join('\n'));

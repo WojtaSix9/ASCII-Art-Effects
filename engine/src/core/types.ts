@@ -21,7 +21,11 @@ export type RenderCtx = {
   info: EffectInfo;                      // efekt wpisuje tu np. liczbe komorek (do testow)
   glyphFx?: { bloom: number; chroma: number } | null;   // charBloom/charChroma (src/post/glyphfx.ts); null = wyłączone
   px: (v: number) => number;             // v px przy skali 1x -> px przy biezacej skali (min 1)
+  /** Etap 2 (plik 09, sekcja 3): wybrany ruch, faza pętli φ (0 = klatka statyczna) i jego parametry. null = obraz statyczny. */
+  motion?: { id: string; phase: number; p: Record<string, any> } | null;
 };
+/** Ruch efektu (plik 09, sekcja 3). Ruch musi być okresowy w φ z okresem 1 i przy φ = 0 dawać obraz statyczny bit w bit. */
+export type MotionDef = { id: string; name: string; params: ParamDef[] };
 export interface GlyphProvider {
   /** Alfa-maska znaku w prostokacie w x h (Uint8Array w*h), znak wysrodkowany; font px = fontPx. */
   mask(ch: string, w: number, h: number, fontPx: number): Uint8Array;
@@ -33,6 +37,7 @@ export type EffectDef = {
   needsGlyphs?: boolean;
   render: (ctx: RenderCtx) => Img;
   text?: (ctx: RenderCtx) => string;     // eksport tekstowy (Characters, Block, Braille)
+  motions?: MotionDef[];                 // etap 2: ruchy animacji (puste/brak = efekt statyczny)
   glyphText?: (p: Record<string, any>) => string;   // znaki, których maski efekt pobierze (aplikacja ładuje dla nich czcionki przed renderem)
 };
 export type PostFxDef = {

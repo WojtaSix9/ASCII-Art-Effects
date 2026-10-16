@@ -2,7 +2,7 @@
 // Opcje z pliku 02 (RGB Split, Scanline: docs; reszta: proj); zakresy, domyślne wartości i wzory: proj.
 // Długości w px skalują się z eksportem; losowość (szum, migotanie) zależy od seeda i jest stała w ułamkach obrazu.
 import type { EffectDef, Img } from '../core/types.ts';
-import { color, common, range, seedParam, select, toggle } from '../core/params.ts';
+import { color, common, motionCommon, range, seedParam, select, toggle } from '../core/params.ts';
 import { blur, clamp, hash01, lerp, lum, parseColor } from '../core/util.ts';
 
 const px1 = () => [...common('brightness', 'contrast')];
@@ -22,9 +22,13 @@ const rgbsplit: EffectDef = {
   id: 'rgbsplit', name: 'RGB Split', category: 'Glitch & Signal', engine: 'SHADER', phase: 2,
   description: 'Shifts the red, green and blue channels apart.',
   params: [range('offset', 'Offset', 10, 1, 20, PX), range('angle', 'Angle', 0, 0, 360, { unit: '°' }), toggle('perChannel', 'Per channel (120° apart)', false), ...px1()],
+  // etap 2, ruch „pulse” (plik 09: oscylacja offsetu wzdłuż kąta; proj): offset × (1 − intensity · (1 − cos 2π·speed·φ) / 2),
+  // przy φ = 0 dokładnie offset (obraz statyczny), najmniejszy w połowie cyklu
+  motions: [{ id: 'pulse', name: 'Pulse', params: motionCommon(60) }],
   // zwykle: R przesunięty o +offset w kierunku angle, B o −offset, G na miejscu; perChannel: R, G, B co 120°
   render(ctx) {
-    const s = ctx.prep; const { w, h } = s; const d = s.data; const out = new Uint8ClampedArray(d.length); const k = ctx.p.offset * ctx.scale; const a = (ctx.p.angle * Math.PI) / 180;
+    const s = ctx.prep; const { w, h } = s; const d = s.data; const out = new Uint8ClampedArray(d.length); const m = ctx.motion;
+    const k = ctx.p.offset * ctx.scale * (m ? 1 - ((m.p.intensity / 100) * (1 - Math.cos(2 * Math.PI * m.p.speed * m.phase))) / 2 : 1); const a = (ctx.p.angle * Math.PI) / 180;
     const dirs = ctx.p.perChannel ? [0, 1, 2].map((c) => [Math.cos(a + (c * 2 * Math.PI) / 3) * k, Math.sin(a + (c * 2 * Math.PI) / 3) * k]) : [[Math.cos(a) * k, Math.sin(a) * k], [0, 0], [-Math.cos(a) * k, -Math.sin(a) * k]];
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; for (let c = 0; c < 3; c++) out[i + c] = bil(d, w, h, x + 0.5 - dirs[c][0], y + 0.5 - dirs[c][1], c); out[i + 3] = d[i + 3]; }
     return { w, h, data: out };

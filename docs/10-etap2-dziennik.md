@@ -73,3 +73,61 @@ Przy 240 klatkach Risograph w 1600 px to ok. 5 min.
 ### Uwaga użytkownika (do zapamiętania, nie naprawiać teraz)
 
 Na podglądzie w boksie przed/po zdjęcie „przed” i „po” czasem się różnią. Użytkownik i tak zmieni zdjęcia przykładowe. Przyczyny nie badałem (`BRAK`). Wrócić do tego przy wymianie zdjęć.
+
+## Krok 2: model animacji (faza φ, rejestr ruchów), RGB Split end-to-end
+
+Plan zaakceptowany przez użytkownika. Decyzje: podgląd zapętla się w nieskończoność; ruchy definiowane w TS, a `effects.json` generowany z rejestru.
+
+### Co zrobiono (`kod`)
+
+- **Silnik:**
+  - `render(src, state, { …, phase })`. `phase` to liczba skończona, brak = 0; NaN i ∞ rzucają błąd.
+  - Ruch jest w stanie: `state.motion = { id, params }`. Faza idzie osobno, bo zmienia się co klatkę, a stan zostaje ten sam.
+  - Efekt dostaje `ctx.motion = { id, phase, p }` albo `null`. Nieznane id ruchu rzuca błąd.
+  - Faza **nie jest** zawijana do [0, 1) w potoku. Okresowość musi wynikać ze wzoru efektu, inaczej test okresowości byłby pusty.
+- **Konflikt nazw:** `EffectDef.phase` nadal oznacza fazę katalogu (1/2/3). Faza animacji żyje tylko w `RenderOpts.phase` i `ctx.motion.phase`.
+- **Rejestr:**
+  - `EffectDef.motions: MotionDef[]` (`{ id, name, params }`).
+  - `motionCommon()`: `speed` = całkowita liczba cykli na pętlę (1–8), więc pętla domyka się z konstrukcji; `intensity` 0–100%.
+  - `gen-effects-json.ts` dopisuje do `effects.json` pola `animated` i `motions` (id, nazwa). Pozostałe pola bez zmian (sprawdzone porównaniem JSON).
+- **RGB Split, ruch „pulse” (`proj`):** offset × (1 − intensity · (1 − cos 2π·speed·φ)/2). Przy φ = 0 wynik jest dokładnie statyczny; minimum przypada w połowie cyklu.
+- **Aplikacja:**
+  - zlecenie `render` w Workerze i `client.render(state, scale, phase)` przyjmują fazę;
+  - przypadki zgodności przeglądarka = Node mogą mieć fazę;
+  - doszły 4 klatki RGB Split: φ 0 / 0,1 / 0,25 / 0,5.
+  - UI (zakładka Animation, odtwarzacz) to krok 3.
+
+### Testy (`test`)
+
+| Test | Wynik |
+|---|---|
+| `hash-baseline` | **516/516 identyczne** z wzorcem z kroku 0 |
+| silnik `check-engine.ts` | 316/316 (308 + 8 nowych) |
+| przeglądarka = Node (`QUICK`) | 110/110, w tym 4 klatki animacji; hash φ = 0 = hash obrazu statycznego |
+| `test:ui` (`ONLY=rgbsplit`) / `smoke` / `test:editor` | 39/39 / 63/63 / 65/65 |
+
+**Nowe testy silnika (sekcja 33):**
+- **Rejestr:** unikalne id ruchów, wartości domyślne w zakresach, `effects.json` zgodny z rejestrem.
+- **Błędy:** nieznany ruch i nieskończona faza rzucają błąd.
+- **Statyka:** φ = 0, jawnie albo domyślnie, daje obraz statyczny bit w bit.
+- **Determinizm:** ta sama φ daje ten sam obraz.
+- **Okresowość:** φ = 1, 2 i 3 (przy speed 3) daje bit w bit φ = 0. Dla 4 faz φ i φ + 1 (speed 2) też bit w bit.
+  - Próg: najpierw dopuszczałem ±1 na kanał, bo cos(2π·n·φ) różni się w ostatnich bitach float.
+  - Pomiar dał 0 różnicy, więc test wymaga zgodności bit w bit.
+- **Wzór na obrazie z jedną białą linią (x = 80):**
+  - φ 0 → R 90 / G 80 / B 70; φ 0,5 → 84/80/76; φ 0,25 → 87/80/73;
+  - @2x przesunięcie ±8 px, zgodnie z 10 × 0,4 × 2.
+- **Brak ruchu przy intensity 0:** każda faza = obraz statyczny.
+- **Zakres:** dla 32 faz z [0, 1) wymiary i alfa są jak w źródle.
+
+**Błąd we własnym przypadku testowym:**
+- Pierwsza wersja przypadków przeglądarkowych miała speed 2 i fazy 0 / 0,25 / 0,5 / 0,75.
+- Przy speed 2 fazy 0 i 0,5 oraz 0,25 i 0,75 dają identyczne klatki (pełny cykl i symetria cos), więc dwa przypadki nic nie wnosiły.
+- Teraz: speed 1, fazy 0 / 0,1 / 0,25 / 0,5, cztery różne hashe.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Wyglądu ruchu na oko: kroku 2 nie da się jeszcze obejrzeć w aplikacji. Własności ruchu sprawdzają testy.
+- Safari i Firefox.
+- Odtwarzania w pętli na kanwie i jego płynności (krok 3).
+- Pełnych `test:engine` i `test:a11y`: interfejs się nie zmienił, a z `test:engine` uruchomiłem tylko część zgodności (`QUICK`).

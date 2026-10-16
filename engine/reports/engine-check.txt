@@ -306,3 +306,11 @@ OK   Material: parametry zerowe = bez zmian (Waves bez amplitudy, Emboss w kolor
 OK   Material: plaski obraz -> jednolity wynik (Emboss szary 128, Chrome, Thin-Film bez szumu, Molten bez plyniecia, Watercolor bialy bez papieru = kolor papieru)
 OK   Crystallize: bez fazy i krawedzi kazdy krysztal (komorka Voronoi) ma jeden kolor  [78 komorek]
 OK   Marble: wieksza wartosc "Image contrast" -> wynik bardziej skorelowany z jasnoscia obrazu
+OK   ruchy: unikalne id w efekcie, domyślne parametry w zakresach; effects.json animated/motions zgodne z rejestrem
+OK   ruchy: nieznany ruch i faza nieskończona rzucają błąd
+OK   RGB Split pulse: φ = 0 (jawnie i domyślnie) = obraz statyczny bit w bit; ta sama φ = ten sam obraz
+OK   RGB Split pulse: okresowość: φ = 1, 2 i 3 (speed 3) = φ = 0 bit w bit
+OK   RGB Split pulse: φ i φ + 1 (speed 2, 4 fazy) bit w bit (próg 0 = pomiar; dopuszczałem ±1 na różnice cos w ostatnich bitach, nie wystąpiły)  [max różnica: 0, 0, 0, 0]
+OK   RGB Split pulse: przesunięcie R/B zgodne ze wzorem: φ 0 → ±10 px, φ 0,5 → ±4 px, φ 0,25 → ±7 px; G na miejscu; @2x → ±8 px  [90,80,70 | 84,80,76 | 87,80,73 | @2x 168,160,152]
+OK   RGB Split pulse: intensity 0 = brak ruchu (każda faza = obraz statyczny)
+OK   RGB Split pulse: 32 fazy z [0, 1): wymiary i alfa jak w źródle
