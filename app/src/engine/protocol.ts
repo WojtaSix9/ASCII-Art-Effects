@@ -11,7 +11,7 @@ export type Req =
   /** Etap 2: animacja (stan z ruchem), n klatek faz i/n, fps; postęp przychodzi wiadomościami Progress. */
   | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' | 'mp4' | 'svg'; codec?: 'avc' | 'vp9'; dither?: boolean; embedFont?: boolean }
   | { type: 'svgInfo'; state: RenderState }
-  /** Etap 2, krok 6C: plik TS (piece ascii.rest). dryRun: tylko opis (siatka po dopasowaniu do 80×32, znaki spoza zestawu), bez kodu. */
+  /** Etap 2, krok 6C: plik TS (piece ascii.rest). dryRun: tylko opis (kategoria, siatka po dopasowaniu do limitu, znaki spoza zestawu), bez kodu. */
   | { type: 'piece'; state: RenderState; loop: number; fps: number; dryRun?: boolean }                          // siatka znaków efektu (kolumny × wiersze) dla okna eksportu SVG
   | { type: 'mp4Support'; w: number; h: number }                     // czy Worker zakoduje H.264 (i VP9, testy) w tych wymiarach
   | { type: 'webcodecs' }                                              // dev: tabela VideoEncoder.isConfigSupported
@@ -29,7 +29,7 @@ export type EffectMeta = { id: string; name: string; category: string; params: P
 export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[]; glyphOnly?: boolean }[]; glyphStyles: string[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] };
   text: { params: ParamDef[]; fonts: { id: string; name: string; weights: number[] }[]; max: number } };
 export type ExportRes = { blob: Blob; w: number; h: number; ms: number; cols?: number; rows?: number; fontMissing?: string };
-export type PieceRes = { from: { cols: number; rows: number; cellSize: number }; cols: number; rows: number; cellSize: number; bad: string; distinct: number; code?: string; slug?: string; colors?: number };
+export type PieceRes = { from: { cols: number; rows: number; cellSize: number }; cols: number; rows: number; cellSize: number; bad: string; distinct: number; category: 'scenes' | 'effects'; limit: { cols: number; rows: number }; param: string | null; code?: string; slug?: string; colors?: number };
 export type WebCodecsRow = { codec: string; label: string; w: number; h: number; supported: boolean | null };
 /** Błąd zlecenia przerwanego przez cancel. */
 export const CANCELLED = 'CANCELLED';

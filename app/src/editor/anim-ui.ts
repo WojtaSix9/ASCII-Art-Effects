@@ -23,7 +23,7 @@ export const animHtml = () => `
   <form class="pp" data-motion-params onsubmit="return false"></form>
   <form class="pp" data-loop-params onsubmit="return false"></form>
   <div class="pp-sec">
-    <button type="button" class="ed-btn ed-btn--primary" data-play aria-pressed="false"><span data-play-icon>${ICON.play}</span> <span data-play-label>Odtwórz</span></button>
+    <button type="button" class="ed-btn ed-btn--primary" data-play aria-pressed="false"><span data-play-icon>${ICON.play}</span><span data-play-label>Odtwórz</span></button>
     <div class="ed-anim__bar" data-anim-bar hidden><span></span></div>
     <p class="ed-hint" data-anim-status role="status"></p>
   </div>`;

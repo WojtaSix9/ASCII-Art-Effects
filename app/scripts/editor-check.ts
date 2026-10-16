@@ -3,11 +3,15 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium, type Page } from 'playwright';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MAX_SOURCE } from '../src/config/limits.ts';
 import { READY } from '../src/config/thumbs.ts';
+import { SAMPLES } from '../src/config/sample.ts';
+/** Wymiary zdjęcia roboczego 1 z nagłówka JPEG (znacznik SOF), żeby testy nie zależały od konkretnego pliku. */
+const jpegSize = (b: Buffer) => { for (let i = 2; i < b.length;) { const m = b[i + 1], len = b.readUInt16BE(i + 2); if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) }; i += 2 + len; } throw new Error('no SOF'); };
+const S1 = jpegSize(readFileSync(new URL('../public' + SAMPLES[0].src, import.meta.url)));
 
 const BASE = 'http://localhost:4173';
 const server = spawn('npx', ['vite', 'preview'], { stdio: 'ignore' });
@@ -333,14 +337,14 @@ try {
     const jpg = await T.exportBlob('jpeg', 2); const jb = await createImageBitmap(jpg.blob);
     return { style: st.style, renderW: r.img.w, renderH: r.img.h, pngType: png.blob.type, pngW: bmp.width, pngH: bmp.height, same: pngPix === (await dig(new Uint8ClampedArray(r.img.buffer))), jpgType: jpg.blob.type, jpgW: jb.width, jpgH: jb.height };
   });
-  t('eksport PNG @1x: 1500×1153 (rozmiar zdjęcia 1), piksele identyczne z renderem w skali 1', ex.pngType === 'image/png' && ex.pngW === 1500 && ex.pngH === 1153 && ex.renderW === 1500 && ex.same, ex);
-  t('eksport JPG @2x: image/jpeg 3000×2306', ex.jpgType === 'image/jpeg' && ex.jpgW === 3000 && ex.jpgH === 2306, ex);
+  t(`eksport PNG @1x: ${S1.w}×${S1.h} (rozmiar zdjęcia 1), piksele identyczne z renderem w skali 1`, ex.pngType === 'image/png' && ex.pngW === S1.w && ex.pngH === S1.h && ex.renderW === S1.w && ex.same, ex);
+  t(`eksport JPG @2x: image/jpeg ${2 * S1.w}×${2 * S1.h}`, ex.jpgType === 'image/jpeg' && ex.jpgW === 2 * S1.w && ex.jpgH === 2 * S1.h, ex);
   // Przez interfejs: okno, rozmiary, pobranie pliku
   await page.click('[data-export]');
   const sizes = [await page.textContent('[data-size="1"]'), await page.textContent('[data-size="2"]')];
   await page.check('input[name="format"][value="jpeg"]'); await page.check('input[name="scale"][value="2"]');
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.click('[data-go]')]);
-  t('eksport z okna: rozmiary @1x/@2x, plik ascii-art-<styl>@2x.jpg', sizes[0] === '1500×1153 px' && sizes[1] === '3000×2306 px' && dl.suggestedFilename() === `ascii-art-${ex.style}@2x.jpg`, { sizes, file: dl.suggestedFilename() });
+  t('eksport z okna: rozmiary @1x/@2x, plik ascii-art-<styl>@2x.jpg', sizes[0] === `${S1.w}×${S1.h} px` && sizes[1] === `${2 * S1.w}×${2 * S1.h} px` && dl.suggestedFilename() === `ascii-art-${ex.style}@2x.jpg`, { sizes, file: dl.suggestedFilename() });
   await page.waitForTimeout(1000);
   // Własne zdjęcie 4000×2000 → zmniejszone do 3000×1500
   await page.setInputFiles('[data-file]', { name: 'duze.png', mimeType: 'image/png', buffer: bigPng });
@@ -483,8 +487,8 @@ try {
   await page.click('[data-export]'); await page.check('input[name="format"][value="ts"]');
   await page.waitForFunction(() => document.querySelector('[data-anim-info]')?.textContent?.startsWith('Siatka'), null, { timeout: 30_000 });
   const ts1 = { info: await page.textContent('[data-anim-info]'), go: await page.isDisabled('[data-go]') }; await page.click('[data-cancel]');
-  t('TS, pętla 1 s: siatka zdjęcia zmniejszona do ≤ 80×32 przez Cell size; ostrzeżenie, że checker biblioteki zobaczy tylko jedną klatkę (0, 1, 2, 3, 4, 6 s = ta sama chwila pętli); Pobierz aktywne',
-    !!ts1.info?.includes('zmniejszona do') && !!ts1.info.includes('najwyżej 80×32') && !!ts1.info.includes('jedną klatkę') && !ts1.go, ts1);
+  t('TS, pętla 1 s: kategoria scenes (zdjęcie kolorowe, siatka w limicie 320×120); ostrzeżenie, że checker biblioteki zobaczy tylko jedną klatkę (0, 1, 2, 3, 4, 6 s = ta sama chwila pętli); Pobierz aktywne',
+    !!ts1.info?.includes('kategoria scenes, najwyżej 320×120') && !!ts1.info.includes('jedną klatkę') && !ts1.go, ts1);
   await page.$eval('[data-loop-params] [data-p="loopSeconds"]', (el) => { const i = el as HTMLInputElement; i.value = '4'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); }); await settle(page);
   await page.click('[data-export]'); await page.check('input[name="format"][value="ts"]');
   await page.waitForFunction(() => document.querySelector('[data-anim-info]')?.textContent?.startsWith('Siatka'), null, { timeout: 30_000 });
@@ -497,8 +501,8 @@ try {
   {
     const dir = mkdtempSync(join(tmpdir(), 'piece-')); const f = join(dir, `${P.slug}.ts`); writeFileSync(f, P.code); const mod = await import(f); const m = mod.meta; const fr = mod.default({ ...m.options });
     const color = new Uint8Array(m.cols * m.rows); const frames = [0, 1, 2, 3, 4, 6].map((x) => fr(x, { color })); const shape = frames.every((x: string) => x.split('\n').length === m.rows && x.split('\n').every((l) => [...l].length === m.cols));
-    t(`TS: plik importuje się w Node; ${m.cols}×${m.rows} ≤ 80×32, każda klatka ${m.rows} wierszy po ${m.cols} znaków, znaki z zestawu biblioteki, ≥ 3 różne klatki w chwilach checkera, indeksy kolorów < ${m.palette.length}`,
-      m.cols <= 80 && m.rows <= 32 && shape && frames.every((x: string) => /^[\x20-\x7E·°─-▟]*$/.test(x.replace(/\n/g, ''))) && new Set(frames).size >= 3 && color.every((v) => v < m.palette.length) && m.loop === 4,
+    t(`TS: plik importuje się w Node; scenes ${m.cols}×${m.rows} ≤ 320×120, każda klatka ${m.rows} wierszy po ${m.cols} znaków, znaki z zestawu biblioteki, ≥ 3 różne klatki w chwilach checkera, indeksy kolorów < ${m.palette.length}`,
+      m.category === 'scenes' && m.cols <= 320 && m.rows <= 120 && shape && frames.every((x: string) => /^[\x20-\x7E·°─-▟•●]*$/.test(x.replace(/\n/g, ''))) && new Set(frames).size >= 3 && color.every((v) => v < m.palette.length) && m.loop === 4,
       { cols: m.cols, rows: m.rows, distinct: new Set(frames).size, pal: m.palette.length });
   }
   await pick('mixed'); await settle(page); await page.click('[data-export]'); await page.check('input[name="format"][value="ts"]');

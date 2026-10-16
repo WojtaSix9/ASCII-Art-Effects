@@ -32,6 +32,9 @@ const rendered = (p: Page, id: string) => p.waitForSelector(`[data-stage][data-r
   const man = JSON.parse(readFileSync(new URL('../public/thumbs/manifest.json', import.meta.url), 'utf8'));
   const stale = SAMPLES.map((s, i) => ({ n: i + 1, now: createHash('sha1').update(readFileSync(new URL('../public' + s.src, import.meta.url))).digest('hex'), was: man.samples[i + 1]?.sha1 })).filter((x) => x.now !== x.was);
   t('miniatury: manifest zgodny z bieżącymi zdjęciami roboczymi (inaczej: npm run thumbs)', stale.length === 0, stale);
+  /* kadr „przed” i miniatura efektu muszą pochodzić z tego samego zdjęcia: numer zdjęcia z manifestu = przypisanie sampleNoFor */
+  const wrongSample = READY.filter((e) => man.thumbs[e.id]?.sample !== sampleNoFor(e.id)).map((e) => `${e.id}: ${man.thumbs[e.id]?.sample} ≠ ${sampleNoFor(e.id)}`);
+  t('miniatury: każda wyrenderowana z tego samego zdjęcia co jej kadr „przed” (manifest = przypisanie zdjęć do efektów)', wrongSample.length === 0 && Object.keys(man.samples).length === SAMPLES.length, wrongSample.slice(0, 5));
   const missing = READY.filter((e) => !man.thumbs[e.id] || man.thumbs[e.id].sample !== sampleNoFor(e.id));
   t(`miniatury: każdy z ${READY.length} gotowych efektów ma miniaturę na właściwym zdjęciu (naprzemiennie)`, missing.length === 0 && READY.length === EFFECTS.length, missing.map((e) => e.id));
 }

@@ -1,6 +1,6 @@
 // /dev/thumbs: generator miniatur (05, krok 5, wariant B). Renderuje gotowe efekty na zdjęciach roboczych (naprzemiennie),
 // pakuje WebP do .zip; zawartość wkłada się do public/thumbs/. W tym repozytorium robi to też `npm run thumbs` (Playwright).
-import { SAMPLES } from '../config/sample.ts';
+import { SAMPLES, focusOf } from '../config/sample.ts';
 import { READY, THUMB, sampleNoFor } from '../config/thumbs.ts';
 import { EngineClient } from '../engine/client.ts';
 import { coverRect, cropPixels, loadImage, paint } from '../engine/preview.ts';
@@ -31,7 +31,7 @@ export function mountThumbs(main: HTMLElement): () => void {
   (async () => {
     await client.init();
     for (let n = 1; n <= SAMPLES.length; n++) {
-      const s = SAMPLES[n - 1]; const img = await loadImage(s.src); const crop = coverRect(img.naturalWidth, img.naturalHeight, THUMB.w, THUMB.h, s.focus);
+      const s = SAMPLES[n - 1]; const img = await loadImage(s.src); const crop = coverRect(img.naturalWidth, img.naturalHeight, THUMB.w, THUMB.h, focusOf(s));
       manifest.samples[n] = { src: s.src, sha1: await hex(await (await fetch(s.src)).arrayBuffer()), crop };
       const c = document.createElement('canvas'); c.width = THUMB.w; c.height = THUMB.h;
       c.getContext('2d')!.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, THUMB.w, THUMB.h);

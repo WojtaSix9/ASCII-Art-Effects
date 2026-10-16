@@ -703,3 +703,50 @@ Decyzje użytkownika: wariant 1 (6 odcieni na kolor, najwyżej 10 kolorów zdję
 ### Otwarte (`decyzja użytkownika`)
 
 - Kategoria `effects` (limit 80×32) czy `scenes` (320×120, „szerokie, gęste, kolorowe obrazy”, co pasuje do zdjęć)?
+
+## Poprawki po przeglądzie użytkownika (17 X) i TS jako `scenes`
+
+### Zdjęcia (`kod`, lista w `docs/11-zdjecia.md`)
+
+- **Źródło:** 44 pliki w `photos-inbox/`; duplikatów SHA-256 brak (pary o podobnych nazwach to różne obrazy).
+- **Pominięte:** `ascii-frame.png` (gotowa grafika ASCII, nie zdjęcie; czeka na decyzję).
+- **Na stronę:** 43 zdjęcia jako `photo-NN-temat.jpg` w `app/public/sample/`.
+  - Dłuższy bok ≤ 1600 px, JPG jakość 85, bez metadanych; razem ok. 3 MB.
+  - Mniejszych nie powiększano: 25 plików ma 455–626 px (podgląd źródła tej wielkości).
+  - `photo-1.jpg` i `photo-2.jpg` usunięte.
+- **Opisy alt:** po polsku, dla każdego zdjęcia (`src/config/sample.ts`).
+- **Przypisanie do efektów:** losowe, ale stałe (ziarno `SAMPLE_SEED`). Kolejne efekty przechodzą przez wszystkie zdjęcia w wylosowanej kolejności, więc każde wypada 2–3 razy, a sąsiednie kafelki mają różne zdjęcia.
+- **Hero:** zamek na latającej wyspie (`photo-08-castle`).
+- **Miniatury:** wygenerowane od nowa (`npm run thumbs`): 91 + 43 kadry „przed”, 7,9 MB.
+
+### Przed/po (`test`)
+
+- **Stan:** manifest miniatur zgadza się z przypisaniem (0 rozbieżności na 91).
+- **Prawdopodobna przyczyna dawnego rozjazdu:** miniatury wygenerowane dla innego przypisania zdjęć niż to, którego używały kafelki.
+- **Nowy test w `ui-check`:** numer zdjęcia każdej miniatury z manifestu = przypisanie zdjęcia efektu. Wcześniej sprawdzane były tylko sumy SHA zdjęć.
+- **Na oko:** 12 par przed/po, w każdej to samo zdjęcie.
+- **Pixel Art wyglądał na przesunięty.** Sprawdzone: wszystkie 91 efektów zwracają obraz dokładnie w rozmiarze wejścia, a przesunięcie było złudzeniem z mojego pomniejszonego zestawienia.
+- **Efekty zmieniające geometrię** (Polar, Kaleidoscope, Droste, Twirl) z natury wyglądają inaczej niż „przed”.
+
+### Interfejs (`kod`)
+
+- **Przycisk Odtwórz/Pauza:**
+  - ikona i tekst wyrównane flexboksem; wcześniej SVG stał na linii bazowej tekstu;
+  - stała szerokość, bez skoku przy zmianie napisu.
+- **/effects:** pill „Animation” w tym samym rzędzie co kategorie, w jednej grupie „Filtr: kategoria i animacja”.
+- **Opisy efektów na stronie** (05, pytanie 7: piszę ja, do akceptacji):
+  - 91 krótkich zdań w `src/config/descriptions.ts`, bez notatek roboczych z katalogu („Interpretacja:”, „7 wariantów (z docs)”, „parametr `texture`:”);
+  - wyszukiwanie przeszukuje oba opisy.
+
+### TS jako `scenes` (decyzja użytkownika: zdjęcia dokładniej)
+
+- **Kategorie:**
+  - `scenes` do 320×120; wymaga palety, tła i ≥ 4 kolorów tuszu w pierwszej klatce, dopuszcza też `•●`;
+  - obraz z < 4 kolorami (np. Characters mono, Braille) idzie jako `effects` do 80×32, z komunikatem w oknie.
+- **Dopasowanie siatki** działa też dla Braille (Dot pitch); wcześniej rzucało wyjątek, zanim komunikat o znakach się pokazał.
+- **Testy:** silnik 348/348 (3 nowe: scena bez zmniejszania, 300×134 → ≤ 320×120, mono → effects).
+- **Checker biblioteki na zdjęciach jako scenes:** 3/3 ok (`photo-39-eye` 267×92, `photo-01-atrium` 167×73, `photo-24-hibiscus` Block 167×67), 0,5–1,35 ms na klatkę przy limicie 10 ms.
+
+### Uwaga (`BRAK`, do decyzji)
+
+- Nazwy plików źródłowych (`…_53876-108161.jpg`, `…_23-2150491098.jpg`) wyglądają jak pobrania z Freepika. Darmowa licencja Freepika zwykle wymaga podania autora. Nie sprawdzałem licencji tych plików; to nie jest porada prawna.

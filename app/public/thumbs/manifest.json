@@ -1,574 +1,984 @@
 {
-  "generated": "2026-10-16T10:38:29.572Z",
+  "generated": "2026-10-16T19:04:34.056Z",
   "size": "960x668",
   "samples": {
     "1": {
-      "src": "/sample/photo-1.jpg",
-      "sha1": "fcc62a6a4359ff2d27e9d831be20a2cd2e205974",
+      "src": "/sample/photo-01-atrium.jpg",
+      "sha1": "fdf2364e7f027fadd6243a3e9edbc144603db829",
       "crop": {
         "sx": 0,
-        "sy": 0,
-        "sw": 1500,
-        "sh": 1044
+        "sy": 17,
+        "sw": 1000,
+        "sh": 696
       }
     },
     "2": {
-      "src": "/sample/photo-2.jpg",
-      "sha1": "3a3c536187aebf807b02e698fd43860c1784ae4b",
+      "src": "/sample/photo-02-plants.jpg",
+      "sha1": "e5a17571e032930294b29bb099bec82f7a293561",
       "crop": {
-        "sx": 32,
+        "sx": 20,
         "sy": 0,
-        "sw": 1437,
-        "sh": 1000
+        "sw": 960,
+        "sh": 668
+      }
+    },
+    "3": {
+      "src": "/sample/photo-03-pink-frame.jpg",
+      "sha1": "fbe4edf498c9c0d5e55cc3bdcb7e33566ab890f4",
+      "crop": {
+        "sx": 96,
+        "sy": 0,
+        "sw": 809,
+        "sh": 563
+      }
+    },
+    "4": {
+      "src": "/sample/photo-04-cloud-island.jpg",
+      "sha1": "6aaa15d230391a12f0fc5e6eba27ca7f74ded679",
+      "crop": {
+        "sx": 90,
+        "sy": 0,
+        "sw": 821,
+        "sh": 571
+      }
+    },
+    "5": {
+      "src": "/sample/photo-05-cloud-car.jpg",
+      "sha1": "17f7e4f39f02f2c0ba13889bf235835a0621bf51",
+      "crop": {
+        "sx": 21,
+        "sy": 0,
+        "sw": 959,
+        "sh": 667
+      }
+    },
+    "6": {
+      "src": "/sample/photo-06-cloud-sea.jpg",
+      "sha1": "6f063aaff393c30ba938828035be9a14da28d222",
+      "crop": {
+        "sx": 91,
+        "sy": 0,
+        "sw": 819,
+        "sh": 570
+      }
+    },
+    "7": {
+      "src": "/sample/photo-07-pink-hills.jpg",
+      "sha1": "81d9227aeb1288b5a34766ba7fc54e21da84fa5e",
+      "crop": {
+        "sx": 91,
+        "sy": 0,
+        "sw": 819,
+        "sh": 570
+      }
+    },
+    "8": {
+      "src": "/sample/photo-08-castle.jpg",
+      "sha1": "b86880c10465f98d6b2555d1f906507f9edc71fc",
+      "crop": {
+        "sx": 90,
+        "sy": 0,
+        "sw": 821,
+        "sh": 571
+      }
+    },
+    "9": {
+      "src": "/sample/photo-09-ruins-moon.jpg",
+      "sha1": "d03e16ae6f17640b1c1472c6e8618858113727f2",
+      "crop": {
+        "sx": 90,
+        "sy": 0,
+        "sw": 821,
+        "sh": 571
+      }
+    },
+    "10": {
+      "src": "/sample/photo-10-cloud-temple.jpg",
+      "sha1": "944d1652a0128270f6adf22783249ab03c5e007f",
+      "crop": {
+        "sx": 90,
+        "sy": 0,
+        "sw": 821,
+        "sh": 571
+      }
+    },
+    "11": {
+      "src": "/sample/photo-11-domes.jpg",
+      "sha1": "aa4abaa4c54b83019aeaf8b9606d3de9b1c7cbb0",
+      "crop": {
+        "sx": 89,
+        "sy": 0,
+        "sw": 822,
+        "sh": 572
+      }
+    },
+    "12": {
+      "src": "/sample/photo-12-fountain.jpg",
+      "sha1": "bb26b569837723eacd63e5b26135e3dadee9bf31",
+      "crop": {
+        "sx": 90,
+        "sy": 0,
+        "sw": 821,
+        "sh": 571
+      }
+    },
+    "13": {
+      "src": "/sample/photo-13-snow-waves.jpg",
+      "sha1": "b1f2dbf3943ab585d0e7bd4f854b093700927dfe",
+      "crop": {
+        "sx": 97,
+        "sy": 0,
+        "sw": 806,
+        "sh": 561
+      }
+    },
+    "14": {
+      "src": "/sample/photo-14-facade.jpg",
+      "sha1": "78ffabe1585873372f4c81cac52dbee4d3ccfa88",
+      "crop": {
+        "sx": 96,
+        "sy": 0,
+        "sw": 809,
+        "sh": 563
+      }
+    },
+    "15": {
+      "src": "/sample/photo-15-torus.jpg",
+      "sha1": "8323c3de2a4fe6b3bb0cb672d6d3877c16834d88",
+      "crop": {
+        "sx": 34,
+        "sy": 0,
+        "sw": 1533,
+        "sh": 1067
+      }
+    },
+    "16": {
+      "src": "/sample/photo-16-sunset-bay.jpg",
+      "sha1": "a994f6dcd24084814744ab149f32d37ec3708148",
+      "crop": {
+        "sx": 0,
+        "sy": 17,
+        "sw": 626,
+        "sh": 436
+      }
+    },
+    "17": {
+      "src": "/sample/photo-17-holo-heads.jpg",
+      "sha1": "6ce2c88ffdd15713a27a5586d6777ed089b477c0",
+      "crop": {
+        "sx": 0,
+        "sy": 155,
+        "sw": 455,
+        "sh": 317
+      }
+    },
+    "18": {
+      "src": "/sample/photo-18-holo-twin.jpg",
+      "sha1": "3d188c5bb82067dd81367c53aaa87fd8a4293120",
+      "crop": {
+        "sx": 0,
+        "sy": 95,
+        "sw": 626,
+        "sh": 436
+      }
+    },
+    "19": {
+      "src": "/sample/photo-19-pyramid.jpg",
+      "sha1": "a4670b277ef9f1d860c9c36e09b83e2424e19aed",
+      "crop": {
+        "sx": 34,
+        "sy": 0,
+        "sw": 1533,
+        "sh": 1067
+      }
+    },
+    "20": {
+      "src": "/sample/photo-20-purple-sun.jpg",
+      "sha1": "5d4ef6f47338fd8e38090f6ad786608ad004920c",
+      "crop": {
+        "sx": 56,
+        "sy": 0,
+        "sw": 514,
+        "sh": 358
+      }
+    },
+    "21": {
+      "src": "/sample/photo-21-holo-face.jpg",
+      "sha1": "993cd42188c725bc461c201ccd4bf9df9062c907",
+      "crop": {
+        "sx": 0,
+        "sy": 155,
+        "sw": 455,
+        "sh": 317
+      }
+    },
+    "22": {
+      "src": "/sample/photo-22-orange-flower.jpg",
+      "sha1": "cb466d982f5a4cc3fe1e45993e2fd1ac3a9c044d",
+      "crop": {
+        "sx": 98,
+        "sy": 0,
+        "sw": 805,
+        "sh": 560
+      }
+    },
+    "23": {
+      "src": "/sample/photo-23-ribbon.jpg",
+      "sha1": "73f49cb889ca0abeeaf4137eda7fd61a0e0f1113",
+      "crop": {
+        "sx": 34,
+        "sy": 0,
+        "sw": 1533,
+        "sh": 1067
+      }
+    },
+    "24": {
+      "src": "/sample/photo-24-hibiscus.jpg",
+      "sha1": "9fb23c9b0f7c4d167dc1d13ec309c3f1d2c66d41",
+      "crop": {
+        "sx": 21,
+        "sy": 0,
+        "sw": 959,
+        "sh": 667
+      }
+    },
+    "25": {
+      "src": "/sample/photo-25-shadows.jpg",
+      "sha1": "6982274e61588c0950a53ff675c38e6ade1c13c6",
+      "crop": {
+        "sx": 68,
+        "sy": 0,
+        "sw": 490,
+        "sh": 341
+      }
+    },
+    "26": {
+      "src": "/sample/photo-26-pink-fog.jpg",
+      "sha1": "535421ec8aad027f6789fff01bb6d906c6f60c96",
+      "crop": {
+        "sx": 0,
+        "sy": 22,
+        "sw": 626,
+        "sh": 436
+      }
+    },
+    "27": {
+      "src": "/sample/photo-27-neon-blue.jpg",
+      "sha1": "22bfe3cc81fbc7fcb1071dd35eecf31b0dfa8190",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "28": {
+      "src": "/sample/photo-28-projector.jpg",
+      "sha1": "7d3fc027a1b761b0172ccbf6e04a2f035e0c7309",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "29": {
+      "src": "/sample/photo-29-neon-arc.jpg",
+      "sha1": "ea1aea08252e8cdee8cfa0eba725c9c5b9ffa2d7",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "30": {
+      "src": "/sample/photo-30-neon-ring.jpg",
+      "sha1": "8ef18b6ebc426185a3b3fea222d20673e5c27b2e",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "31": {
+      "src": "/sample/photo-31-glass-grid.jpg",
+      "sha1": "15f8995f54c167eea31337e0bc3a8ed95f3ea135",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "32": {
+      "src": "/sample/photo-32-bouquet.jpg",
+      "sha1": "d7f9b1e310823c9b28376acc97854bfcb214385b",
+      "crop": {
+        "sx": 0,
+        "sy": 2,
+        "sw": 626,
+        "sh": 436
+      }
+    },
+    "33": {
+      "src": "/sample/photo-33-gradient.jpg",
+      "sha1": "b4b7d7ca9f16de39bae015b7135763ba4af8f1ad",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "34": {
+      "src": "/sample/photo-34-frames.jpg",
+      "sha1": "a096fa97f8a6c16cb89d4c26001a64358169bbce",
+      "crop": {
+        "sx": 0,
+        "sy": 17,
+        "sw": 626,
+        "sh": 436
+      }
+    },
+    "35": {
+      "src": "/sample/photo-35-eye-flower.jpg",
+      "sha1": "d31a64ca0d6056c7d59e487c9726a3c8cc667e6d",
+      "crop": {
+        "sx": 0,
+        "sy": 95,
+        "sw": 626,
+        "sh": 436
+      }
+    },
+    "36": {
+      "src": "/sample/photo-36-red-moon.jpg",
+      "sha1": "4ac8b66978368f74a0576f1cbe3fb3c92bdc9c8c",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "37": {
+      "src": "/sample/photo-37-brutalist.jpg",
+      "sha1": "138942368654cd69704ad8a92db0f6d3033cc455",
+      "crop": {
+        "sx": 0,
+        "sy": 51,
+        "sw": 626,
+        "sh": 436
+      }
+    },
+    "38": {
+      "src": "/sample/photo-38-lioness.jpg",
+      "sha1": "c24b2a8ab2d80b8d469c13d1994e821c13e05e6c",
+      "crop": {
+        "sx": 143,
+        "sy": 0,
+        "sw": 1314,
+        "sh": 914
+      }
+    },
+    "39": {
+      "src": "/sample/photo-39-eye.jpg",
+      "sha1": "0a9b67636bd97fe20d8ce139b700776731a3958f",
+      "crop": {
+        "sx": 143,
+        "sy": 0,
+        "sw": 1314,
+        "sh": 914
+      }
+    },
+    "40": {
+      "src": "/sample/photo-40-stairway.jpg",
+      "sha1": "4da8529b3c7b84986a8ff5d43e6bb22f2af7597f",
+      "crop": {
+        "sx": 56,
+        "sy": 0,
+        "sw": 514,
+        "sh": 358
+      }
+    },
+    "41": {
+      "src": "/sample/photo-41-cosmic.jpg",
+      "sha1": "0703e04c46f811623a949aed4ac3bdb779cb4e0b",
+      "crop": {
+        "sx": 57,
+        "sy": 0,
+        "sw": 513,
+        "sh": 357
+      }
+    },
+    "42": {
+      "src": "/sample/photo-42-halo.jpg",
+      "sha1": "8782ae9661172cd9c4dd51c7eeea4b6e3222f2e5",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
+      }
+    },
+    "43": {
+      "src": "/sample/photo-43-projection.jpg",
+      "sha1": "abe61df631e95f8d56af1e0fdc262ee5bb608109",
+      "crop": {
+        "sx": 14,
+        "sy": 0,
+        "sw": 599,
+        "sh": 417
       }
     }
   },
   "thumbs": {
-    "characters": {
-      "sample": 1,
-      "bytes": 146634,
-      "mode": "q0.8",
-      "ms": 203
-    },
-    "block-chars": {
-      "sample": 1,
-      "bytes": 27430,
-      "mode": "q0.8",
-      "ms": 72
-    },
-    "mixed": {
-      "sample": 1,
-      "bytes": 104914,
-      "mode": "q0.8",
-      "ms": 34
-    },
-    "pixel": {
-      "sample": 1,
-      "bytes": 7304,
-      "mode": "q1",
-      "ms": 23
-    },
-    "lego": {
-      "sample": 1,
-      "bytes": 19196,
-      "mode": "q1",
-      "ms": 92
-    },
-    "hexmosaic": {
-      "sample": 1,
-      "bytes": 138902,
-      "mode": "q0.8",
-      "ms": 148
-    },
-    "dither": {
-      "sample": 1,
-      "bytes": 18934,
-      "mode": "q1",
-      "ms": 33
-    },
-    "risograph": {
-      "sample": 1,
-      "bytes": 353218,
-      "mode": "q0.8",
-      "ms": 586
-    },
-    "sketch": {
-      "sample": 1,
-      "bytes": 103710,
-      "mode": "q0.8",
-      "ms": 482
-    },
-    "warhol": {
-      "sample": 1,
-      "bytes": 17788,
-      "mode": "q1",
-      "ms": 178
-    },
-    "halftone": {
-      "sample": 1,
-      "bytes": 338310,
-      "mode": "q0.8",
-      "ms": 169
-    },
-    "posterize": {
-      "sample": 1,
-      "bytes": 66608,
-      "mode": "q1",
-      "ms": 26
-    },
-    "pointillize": {
-      "sample": 1,
-      "bytes": 205366,
-      "mode": "q0.8",
-      "ms": 559
-    },
-    "halftonecmyk": {
-      "sample": 1,
-      "bytes": 419896,
-      "mode": "q0.8",
-      "ms": 346
-    },
-    "diamond": {
-      "sample": 1,
-      "bytes": 189002,
-      "mode": "q0.8",
-      "ms": 32
-    },
-    "diagonal": {
-      "sample": 1,
-      "bytes": 231040,
-      "mode": "q0.8",
-      "ms": 58
-    },
-    "lowpoly": {
-      "sample": 1,
-      "bytes": 22594,
-      "mode": "q0.8",
-      "ms": 271
-    },
-    "truchet": {
-      "sample": 1,
-      "bytes": 324080,
-      "mode": "q0.8",
-      "ms": 65
-    },
     "flowfield": {
       "sample": 1,
-      "bytes": 75964,
+      "bytes": 105994,
       "mode": "q0.8",
-      "ms": 263
-    },
-    "topography": {
-      "sample": 1,
-      "bytes": 73874,
-      "mode": "q0.8",
-      "ms": 169
-    },
-    "schematic": {
-      "sample": 1,
-      "bytes": 23252,
-      "mode": "q1",
-      "ms": 163
-    },
-    "smudge": {
-      "sample": 1,
-      "bytes": 32534,
-      "mode": "q0.8",
-      "ms": 322
-    },
-    "spherize": {
-      "sample": 1,
-      "bytes": 58364,
-      "mode": "q0.8",
-      "ms": 74
-    },
-    "zigzag": {
-      "sample": 1,
-      "bytes": 59148,
-      "mode": "q0.8",
-      "ms": 73
-    },
-    "polar": {
-      "sample": 1,
-      "bytes": 54020,
-      "mode": "q0.8",
-      "ms": 97
-    },
-    "motionblur": {
-      "sample": 1,
-      "bytes": 21932,
-      "mode": "q0.8",
-      "ms": 375
-    },
-    "gaussianblur": {
-      "sample": 1,
-      "bytes": 12960,
-      "mode": "q0.8",
-      "ms": 167
-    },
-    "crt": {
-      "sample": 1,
-      "bytes": 80938,
-      "mode": "q0.8",
-      "ms": 259
-    },
-    "forensics": {
-      "sample": 1,
-      "bytes": 191102,
-      "mode": "q0.8",
-      "ms": 84
-    },
-    "datamosh": {
-      "sample": 1,
-      "bytes": 27130,
-      "mode": "q0.8",
-      "ms": 967
-    },
-    "rgbsplit": {
-      "sample": 1,
-      "bytes": 60606,
-      "mode": "q0.8",
-      "ms": 58
-    },
-    "thermal": {
-      "sample": 1,
-      "bytes": 48806,
-      "mode": "q0.8",
-      "ms": 123
-    },
-    "disco": {
-      "sample": 1,
-      "bytes": 25266,
-      "mode": "q0.8",
-      "ms": 19
-    },
-    "gradientmap": {
-      "sample": 1,
-      "bytes": 68596,
-      "mode": "q0.8",
-      "ms": 19
-    },
-    "dreamdust": {
-      "sample": 1,
-      "bytes": 64044,
-      "mode": "q0.8",
-      "ms": 255
-    },
-    "starburst": {
-      "sample": 1,
-      "bytes": 132470,
-      "mode": "q0.8",
-      "ms": 148
-    },
-    "duotone": {
-      "sample": 1,
-      "bytes": 50686,
-      "mode": "q0.8",
-      "ms": 37
-    },
-    "lens": {
-      "sample": 1,
-      "bytes": 48544,
-      "mode": "q0.8",
-      "ms": 165
-    },
-    "stainedglass": {
-      "sample": 1,
-      "bytes": 62794,
-      "mode": "q0.8",
-      "ms": 581
-    },
-    "vitrine": {
-      "sample": 1,
-      "bytes": 49520,
-      "mode": "q0.8",
-      "ms": 229
-    },
-    "flutedglass": {
-      "sample": 1,
-      "bytes": 51888,
-      "mode": "q0.8",
-      "ms": 66
-    },
-    "waves": {
-      "sample": 1,
-      "bytes": 59702,
-      "mode": "q0.8",
-      "ms": 59
-    },
-    "watercolor": {
-      "sample": 1,
-      "bytes": 45088,
-      "mode": "q0.8",
-      "ms": 1007
-    },
-    "thinfilm": {
-      "sample": 1,
-      "bytes": 81108,
-      "mode": "q0.8",
-      "ms": 268
-    },
-    "molten": {
-      "sample": 1,
-      "bytes": 30322,
-      "mode": "q0.8",
-      "ms": 446
-    },
-    "emboss": {
-      "sample": 1,
-      "bytes": 45374,
-      "mode": "q0.8",
-      "ms": 161
-    },
-    "asciiStudio": {
-      "sample": 2,
-      "bytes": 12260,
-      "mode": "q1",
-      "ms": 106
-    },
-    "dots": {
-      "sample": 2,
-      "bytes": 241478,
-      "mode": "q0.8",
-      "ms": 100
-    },
-    "braille": {
-      "sample": 2,
-      "bytes": 9714,
-      "mode": "q1",
-      "ms": 73
-    },
-    "mosaic": {
-      "sample": 2,
-      "bytes": 66982,
-      "mode": "q1",
-      "ms": 22
-    },
-    "3d": {
-      "sample": 2,
-      "bytes": 133998,
-      "mode": "q0.8",
-      "ms": 214
-    },
-    "ledmatrix": {
-      "sample": 2,
-      "bytes": 289398,
-      "mode": "q0.8",
-      "ms": 254
-    },
-    "stippling": {
-      "sample": 2,
-      "bytes": 316006,
-      "mode": "q0.8",
-      "ms": 621
-    },
-    "comic": {
-      "sample": 2,
-      "bytes": 133140,
-      "mode": "q0.8",
-      "ms": 234
-    },
-    "engraving": {
-      "sample": 2,
-      "bytes": 269082,
-      "mode": "q0.8",
-      "ms": 209
-    },
-    "blueprint": {
-      "sample": 2,
-      "bytes": 45856,
-      "mode": "q0.8",
-      "ms": 153
-    },
-    "ukiyoe": {
-      "sample": 2,
-      "bytes": 53464,
-      "mode": "q0.8",
-      "ms": 427
-    },
-    "mezzotint": {
-      "sample": 2,
-      "bytes": 51104,
-      "mode": "q1",
-      "ms": 115
-    },
-    "crosshatch": {
-      "sample": 2,
-      "bytes": 345944,
-      "mode": "q0.8",
-      "ms": 269
-    },
-    "cross": {
-      "sample": 2,
-      "bytes": 205280,
-      "mode": "q0.8",
-      "ms": 52
-    },
-    "lines": {
-      "sample": 2,
-      "bytes": 59316,
-      "mode": "q0.8",
-      "ms": 36
-    },
-    "specimen": {
-      "sample": 2,
-      "bytes": 110658,
-      "mode": "q0.8",
-      "ms": 447
-    },
-    "droste": {
-      "sample": 2,
-      "bytes": 147722,
-      "mode": "q0.8",
-      "ms": 73
-    },
-    "isoextrude": {
-      "sample": 2,
-      "bytes": 210178,
-      "mode": "q0.8",
-      "ms": 724
-    },
-    "lattice": {
-      "sample": 2,
-      "bytes": 137486,
-      "mode": "q0.8",
-      "ms": 171
-    },
-    "forms": {
-      "sample": 2,
-      "bytes": 198996,
-      "mode": "q0.8",
-      "ms": 86
-    },
-    "neongrid": {
-      "sample": 2,
-      "bytes": 38404,
-      "mode": "q0.8",
-      "ms": 289
-    },
-    "pinch": {
-      "sample": 2,
-      "bytes": 125250,
-      "mode": "q0.8",
-      "ms": 73
-    },
-    "twirl": {
-      "sample": 2,
-      "bytes": 126162,
-      "mode": "q0.8",
-      "ms": 84
-    },
-    "ripple": {
-      "sample": 2,
-      "bytes": 121142,
-      "mode": "q0.8",
-      "ms": 62
-    },
-    "shear": {
-      "sample": 2,
-      "bytes": 141122,
-      "mode": "q0.8",
-      "ms": 78
-    },
-    "tiltshift": {
-      "sample": 2,
-      "bytes": 60984,
-      "mode": "q0.8",
-      "ms": 396
-    },
-    "radialblur": {
-      "sample": 2,
-      "bytes": 24838,
-      "mode": "q0.8",
-      "ms": 536
-    },
-    "pixelsort": {
-      "sample": 2,
-      "bytes": 112268,
-      "mode": "q0.8",
-      "ms": 152
-    },
-    "glitch": {
-      "sample": 2,
-      "bytes": 152468,
-      "mode": "q0.8",
-      "ms": 27
-    },
-    "lofi": {
-      "sample": 2,
-      "bytes": 166428,
-      "mode": "q0.8",
-      "ms": 80
-    },
-    "scanline": {
-      "sample": 2,
-      "bytes": 142724,
-      "mode": "q0.8",
-      "ms": 9
-    },
-    "beacon": {
-      "sample": 2,
-      "bytes": 239924,
-      "mode": "q0.8",
-      "ms": 146
-    },
-    "anaglyph": {
-      "sample": 2,
-      "bytes": 113826,
-      "mode": "q0.8",
-      "ms": 181
-    },
-    "prism": {
-      "sample": 2,
-      "bytes": 81122,
-      "mode": "q0.8",
-      "ms": 263
-    },
-    "lightwind": {
-      "sample": 2,
-      "bytes": 131686,
-      "mode": "q0.8",
-      "ms": 535
-    },
-    "warpbloom": {
-      "sample": 2,
-      "bytes": 103216,
-      "mode": "q0.8",
-      "ms": 240
-    },
-    "edgeglow": {
-      "sample": 2,
-      "bytes": 121758,
-      "mode": "q0.8",
-      "ms": 312
-    },
-    "frostedglass": {
-      "sample": 2,
-      "bytes": 29336,
-      "mode": "q0.8",
-      "ms": 131
-    },
-    "shatter": {
-      "sample": 2,
-      "bytes": 141256,
-      "mode": "q0.8",
-      "ms": 2456
+      "ms": 366
     },
     "glassorb": {
-      "sample": 2,
-      "bytes": 32506,
+      "sample": 1,
+      "bytes": 43292,
       "mode": "q0.8",
-      "ms": 299
+      "ms": 226
     },
-    "liquidglass": {
+    "schematic": {
       "sample": 2,
-      "bytes": 116522,
+      "bytes": 30948,
       "mode": "q0.8",
-      "ms": 195
+      "ms": 140
     },
     "oilpaint": {
       "sample": 2,
-      "bytes": 272228,
+      "bytes": 272084,
       "mode": "q0.8",
-      "ms": 642
+      "ms": 508
+    },
+    "truchet": {
+      "sample": 3,
+      "bytes": 228588,
+      "mode": "q0.8",
+      "ms": 108
+    },
+    "shatter": {
+      "sample": 3,
+      "bytes": 77094,
+      "mode": "q0.8",
+      "ms": 1210
+    },
+    "stippling": {
+      "sample": 4,
+      "bytes": 239974,
+      "mode": "q0.8",
+      "ms": 151
+    },
+    "forensics": {
+      "sample": 4,
+      "bytes": 161742,
+      "mode": "q0.8",
+      "ms": 77
+    },
+    "block-chars": {
+      "sample": 5,
+      "bytes": 29728,
+      "mode": "q0.8",
+      "ms": 83
+    },
+    "twirl": {
+      "sample": 5,
+      "bytes": 50428,
+      "mode": "q0.8",
+      "ms": 48
+    },
+    "molten": {
+      "sample": 5,
+      "bytes": 53236,
+      "mode": "q0.8",
+      "ms": 452
+    },
+    "dither": {
+      "sample": 6,
+      "bytes": 13310,
+      "mode": "q1",
+      "ms": 69
+    },
+    "pixelsort": {
+      "sample": 6,
+      "bytes": 34458,
+      "mode": "q0.8",
+      "ms": 78
+    },
+    "hexmosaic": {
+      "sample": 7,
+      "bytes": 91752,
+      "mode": "q0.8",
+      "ms": 104
+    },
+    "radialblur": {
+      "sample": 7,
+      "bytes": 16458,
+      "mode": "q0.8",
+      "ms": 481
+    },
+    "smudge": {
+      "sample": 8,
+      "bytes": 37366,
+      "mode": "q0.8",
+      "ms": 328
     },
     "chrome": {
-      "sample": 2,
-      "bytes": 132978,
+      "sample": 8,
+      "bytes": 91416,
       "mode": "q0.8",
-      "ms": 181
+      "ms": 213
+    },
+    "comic": {
+      "sample": 9,
+      "bytes": 138356,
+      "mode": "q0.8",
+      "ms": 479
+    },
+    "datamosh": {
+      "sample": 9,
+      "bytes": 39348,
+      "mode": "q0.8",
+      "ms": 1045
+    },
+    "sketch": {
+      "sample": 10,
+      "bytes": 35586,
+      "mode": "q0.8",
+      "ms": 320
+    },
+    "lofi": {
+      "sample": 10,
+      "bytes": 128424,
+      "mode": "q0.8",
+      "ms": 95
+    },
+    "diagonal": {
+      "sample": 11,
+      "bytes": 125124,
+      "mode": "q0.8",
+      "ms": 129
+    },
+    "edgeglow": {
+      "sample": 11,
+      "bytes": 107698,
+      "mode": "q0.8",
+      "ms": 196
+    },
+    "halftone": {
+      "sample": 12,
+      "bytes": 248832,
+      "mode": "q0.8",
+      "ms": 207
+    },
+    "beacon": {
+      "sample": 12,
+      "bytes": 157590,
+      "mode": "q0.8",
+      "ms": 166
+    },
+    "braille": {
+      "sample": 13,
+      "bytes": 7544,
+      "mode": "q1",
+      "ms": 75
+    },
+    "polar": {
+      "sample": 13,
+      "bytes": 35004,
+      "mode": "q0.8",
+      "ms": 79
+    },
+    "pixel": {
+      "sample": 14,
+      "bytes": 10540,
+      "mode": "q0.8",
+      "ms": 61
+    },
+    "shear": {
+      "sample": 14,
+      "bytes": 19548,
+      "mode": "q0.8",
+      "ms": 71
+    },
+    "topography": {
+      "sample": 15,
+      "bytes": 36734,
+      "mode": "q0.8",
+      "ms": 215
+    },
+    "liquidglass": {
+      "sample": 15,
+      "bytes": 88810,
+      "mode": "q0.8",
+      "ms": 164
+    },
+    "isoextrude": {
+      "sample": 16,
+      "bytes": 117578,
+      "mode": "q0.8",
+      "ms": 487
+    },
+    "vitrine": {
+      "sample": 16,
+      "bytes": 15228,
+      "mode": "q0.8",
+      "ms": 234
+    },
+    "neongrid": {
+      "sample": 17,
+      "bytes": 26924,
+      "mode": "q0.8",
+      "ms": 314
+    },
+    "watercolor": {
+      "sample": 17,
+      "bytes": 27198,
+      "mode": "q0.8",
+      "ms": 861
+    },
+    "3d": {
+      "sample": 18,
+      "bytes": 69140,
+      "mode": "q0.8",
+      "ms": 272
+    },
+    "gaussianblur": {
+      "sample": 18,
+      "bytes": 9182,
+      "mode": "q0.8",
+      "ms": 110
+    },
+    "pointillize": {
+      "sample": 19,
+      "bytes": 219666,
+      "mode": "q0.8",
+      "ms": 470
+    },
+    "prism": {
+      "sample": 19,
+      "bytes": 23520,
+      "mode": "q0.8",
+      "ms": 188
+    },
+    "lattice": {
+      "sample": 20,
+      "bytes": 34024,
+      "mode": "q0.8",
+      "ms": 145
+    },
+    "flutedglass": {
+      "sample": 20,
+      "bytes": 12360,
+      "mode": "q0.8",
+      "ms": 50
+    },
+    "posterize": {
+      "sample": 21,
+      "bytes": 55056,
+      "mode": "q0.8",
+      "ms": 38
+    },
+    "anaglyph": {
+      "sample": 21,
+      "bytes": 28582,
+      "mode": "q0.8",
+      "ms": 166
+    },
+    "engraving": {
+      "sample": 22,
+      "bytes": 247240,
+      "mode": "q0.8",
+      "ms": 451
+    },
+    "rgbsplit": {
+      "sample": 22,
+      "bytes": 48822,
+      "mode": "q0.8",
+      "ms": 48
+    },
+    "mezzotint": {
+      "sample": 23,
+      "bytes": 17240,
+      "mode": "q1",
+      "ms": 192
+    },
+    "gradientmap": {
+      "sample": 23,
+      "bytes": 21664,
+      "mode": "q0.8",
+      "ms": 30
+    },
+    "characters": {
+      "sample": 24,
+      "bytes": 105090,
+      "mode": "q0.8",
+      "ms": 83
+    },
+    "pinch": {
+      "sample": 24,
+      "bytes": 68172,
+      "mode": "q0.8",
+      "ms": 47
+    },
+    "thinfilm": {
+      "sample": 24,
+      "bytes": 96066,
+      "mode": "q0.8",
+      "ms": 265
+    },
+    "forms": {
+      "sample": 25,
+      "bytes": 34004,
+      "mode": "q0.8",
+      "ms": 58
+    },
+    "waves": {
+      "sample": 25,
+      "bytes": 11336,
+      "mode": "q0.8",
+      "ms": 50
+    },
+    "specimen": {
+      "sample": 26,
+      "bytes": 78558,
+      "mode": "q0.8",
+      "ms": 245
+    },
+    "lens": {
+      "sample": 26,
+      "bytes": 25642,
+      "mode": "q0.8",
+      "ms": 151
+    },
+    "lego": {
+      "sample": 27,
+      "bytes": 10796,
+      "mode": "q1",
+      "ms": 99
+    },
+    "tiltshift": {
+      "sample": 27,
+      "bytes": 12286,
+      "mode": "q0.8",
+      "ms": 349
+    },
+    "diamond": {
+      "sample": 28,
+      "bytes": 54454,
+      "mode": "q0.8",
+      "ms": 62
+    },
+    "warpbloom": {
+      "sample": 28,
+      "bytes": 9670,
+      "mode": "q0.8",
+      "ms": 243
+    },
+    "asciiStudio": {
+      "sample": 29,
+      "bytes": 9648,
+      "mode": "q1",
+      "ms": 81
+    },
+    "spherize": {
+      "sample": 29,
+      "bytes": 8606,
+      "mode": "q0.8",
+      "ms": 64
     },
     "marble": {
-      "sample": 2,
-      "bytes": 94306,
+      "sample": 29,
+      "bytes": 23456,
       "mode": "q0.8",
-      "ms": 408
+      "ms": 359
+    },
+    "lines": {
+      "sample": 30,
+      "bytes": 17802,
+      "mode": "q0.8",
+      "ms": 85
+    },
+    "duotone": {
+      "sample": 30,
+      "bytes": 13850,
+      "mode": "q0.8",
+      "ms": 14
+    },
+    "mixed": {
+      "sample": 31,
+      "bytes": 193082,
+      "mode": "q0.8",
+      "ms": 59
+    },
+    "ripple": {
+      "sample": 31,
+      "bytes": 50506,
+      "mode": "q0.8",
+      "ms": 65
+    },
+    "emboss": {
+      "sample": 31,
+      "bytes": 59438,
+      "mode": "q0.8",
+      "ms": 112
+    },
+    "dots": {
+      "sample": 32,
+      "bytes": 23430,
+      "mode": "q0.8",
+      "ms": 57
+    },
+    "zigzag": {
+      "sample": 32,
+      "bytes": 37500,
+      "mode": "q0.8",
+      "ms": 38
     },
     "crystallize": {
-      "sample": 2,
-      "bytes": 171786,
+      "sample": 32,
+      "bytes": 31656,
       "mode": "q0.8",
-      "ms": 598
+      "ms": 458
+    },
+    "blueprint": {
+      "sample": 33,
+      "bytes": 15674,
+      "mode": "q0.8",
+      "ms": 162
+    },
+    "thermal": {
+      "sample": 33,
+      "bytes": 11928,
+      "mode": "q0.8",
+      "ms": 155
+    },
+    "risograph": {
+      "sample": 34,
+      "bytes": 314782,
+      "mode": "q0.8",
+      "ms": 343
+    },
+    "glitch": {
+      "sample": 34,
+      "bytes": 49434,
+      "mode": "q0.8",
+      "ms": 21
+    },
+    "mosaic": {
+      "sample": 35,
+      "bytes": 39056,
+      "mode": "q0.8",
+      "ms": 35
+    },
+    "motionblur": {
+      "sample": 35,
+      "bytes": 14464,
+      "mode": "q0.8",
+      "ms": 328
+    },
+    "warhol": {
+      "sample": 36,
+      "bytes": 4168,
+      "mode": "q1",
+      "ms": 109
+    },
+    "scanline": {
+      "sample": 36,
+      "bytes": 15540,
+      "mode": "q0.8",
+      "ms": 7
+    },
+    "cross": {
+      "sample": 37,
+      "bytes": 45976,
+      "mode": "q0.8",
+      "ms": 119
+    },
+    "starburst": {
+      "sample": 37,
+      "bytes": 46842,
+      "mode": "q0.8",
+      "ms": 115
+    },
+    "halftonecmyk": {
+      "sample": 38,
+      "bytes": 409252,
+      "mode": "q0.8",
+      "ms": 443
+    },
+    "lightwind": {
+      "sample": 38,
+      "bytes": 73112,
+      "mode": "q0.8",
+      "ms": 313
+    },
+    "lowpoly": {
+      "sample": 39,
+      "bytes": 33362,
+      "mode": "q0.8",
+      "ms": 200
+    },
+    "frostedglass": {
+      "sample": 39,
+      "bytes": 33906,
+      "mode": "q0.8",
+      "ms": 135
+    },
+    "ukiyoe": {
+      "sample": 40,
+      "bytes": 71820,
+      "mode": "q0.8",
+      "ms": 202
+    },
+    "disco": {
+      "sample": 40,
+      "bytes": 12434,
+      "mode": "q0.8",
+      "ms": 15
+    },
+    "droste": {
+      "sample": 41,
+      "bytes": 30494,
+      "mode": "q0.8",
+      "ms": 77
+    },
+    "stainedglass": {
+      "sample": 41,
+      "bytes": 52446,
+      "mode": "q0.8",
+      "ms": 478
+    },
+    "ledmatrix": {
+      "sample": 42,
+      "bytes": 58356,
+      "mode": "q0.8",
+      "ms": 250
+    },
+    "crt": {
+      "sample": 42,
+      "bytes": 22598,
+      "mode": "q0.8",
+      "ms": 384
+    },
+    "crosshatch": {
+      "sample": 43,
+      "bytes": 321274,
+      "mode": "q0.8",
+      "ms": 363
+    },
+    "dreamdust": {
+      "sample": 43,
+      "bytes": 21104,
+      "mode": "q0.8",
+      "ms": 94
     }
   }
 }

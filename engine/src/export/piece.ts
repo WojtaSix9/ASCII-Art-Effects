@@ -9,31 +9,43 @@ import { getEffect } from '../registry.ts';
 import { medianCut } from './svg.ts';
 import { NOISE, LEAN, HEAD, TRAIL, TICKS, SOLID_T, INK_T } from '../effects/grid.ts';
 
-/** Znaki dozwolone przez checker biblioteki poza kategorią scenes (scripts/check.ts @ 8fd792e). */
+/** Znaki dozwolone przez checker biblioteki (scripts/check.ts @ 8fd792e): scenes dopuszcza dodatkowo • i ●. */
 export const PIECE_CHARSET = /^[\x20-\x7E·°─-▟]*$/;
-/** Limit siatki biblioteki dla kategorii innych niż scenes (scripts/check.ts). */
-export const PIECE_MAX = { cols: 80, rows: 32 };
+export const SCENE_CHARSET = /^[\x20-\x7E·°─-▟•●]*$/;
+/** Limity siatki biblioteki: scenes (szerokie, gęste, kolorowe obrazy; ≥ 4 kolory) i pozostałe kategorie. Decyzja użytkownika:
+ *  zdjęcia jako scenes (dokładniej); obraz z mniej niż 4 kolorami tuszu nie spełnia wymagań scenes, więc idzie jako effects. */
+export const PIECE_LIMITS = { scenes: { cols: 320, rows: 120 }, effects: { cols: 80, rows: 32 } } as const;
+export type PieceCategory = keyof typeof PIECE_LIMITS;
+/** Najmniejsza liczba kolorów tuszu w pierwszej klatce sceny (scripts/check.ts). */
+export const SCENE_MIN_COLORS = 4;
 /** Opóźnienie pierwszego przejścia w pliku (s), jak START w logo-file.ts ascii.rest: klatka w chwili t = faza (t − START) / loop. */
 export const PIECE_START = 0.5;
 /** Chwile, w których checker biblioteki próbkuje klatki; chce ≥ 3 różnych przy fps > 0 (scripts/check.ts). */
 export const PIECE_SAMPLE_AT = [0, 1, 2, 3, 4, 6];
 export type PieceMotion = { id: 'glint' | 'scan'; p: Record<string, number> };
-export type PieceOptions = { name: string; note: string; motion: PieceMotion; loop: number; fps: number; maxColors?: number; from?: string };
+export type PieceOptions = { name: string; note: string; motion: PieceMotion; loop: number; fps: number; maxColors?: number; from?: string; category?: PieceCategory };
 
 /** Znaki siatki spoza zestawu biblioteki (puste = można eksportować). */
-export const pieceBadChars = (g: CellGrid) => [...new Set([...g.text.join('')])].filter((c) => !PIECE_CHARSET.test(c)).join('');
+export const pieceBadChars = (g: CellGrid, category: PieceCategory = 'effects') => [...new Set([...g.text.join('')])].filter((c) => !(category === 'scenes' ? SCENE_CHARSET : PIECE_CHARSET).test(c)).join('');
+/** Kolory tuszu obrazu po redukcji (median cut, najwyżej 10): komórki puste się nie liczą. */
+function inkColors(base: CellGrid, max: number) {
+  const { cols, rows } = base; const inked: number[] = []; for (let i = 0; i < cols * rows; i++) if (base.text[Math.floor(i / cols)][i % cols] !== ' ') inked.push(i);
+  const rgb = new Uint8Array(Math.max(1, inked.length) * 3); inked.forEach((c, k) => rgb.set(base.rgb.subarray(c * 3, c * 3 + 3), k * 3));
+  return { inked, ...medianCut(rgb, Math.min(10, max)) };
+}
+export const pieceInkColors = (base: CellGrid) => inkColors(base, 10).palette.length;
 export const pieceSlug = (name: string) => { const s = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'picture'; return /^[a-z]/.test(s) ? s : `picture-${s}`; };
 const hex = (c: number[]) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
 const tintC = (v: number, k: number) => v + (255 - v) * k;   // jak w effects/grid.ts
 
-/** Kod pliku piece. base: siatka efektu w fazie 0 (bez ruchu), najwyżej 80×32 (PIECE_MAX). */
+/** Kod pliku piece. base: siatka efektu w fazie 0 (bez ruchu), w limicie kategorii (PIECE_LIMITS). */
 export function pieceSource(base: CellGrid, o: PieceOptions): { code: string; slug: string; colors: number } {
-  const { cols, rows } = base; if (cols > PIECE_MAX.cols || rows > PIECE_MAX.rows) throw new Error(`grid ${cols}x${rows} exceeds ${PIECE_MAX.cols}x${PIECE_MAX.rows}`);
-  const bad = pieceBadChars(base); if (bad) throw new Error(`characters outside the ascii.rest set: ${bad}`);
+  const category = o.category ?? 'effects'; const lim = PIECE_LIMITS[category];
+  const { cols, rows } = base; if (cols > lim.cols || rows > lim.rows) throw new Error(`grid ${cols}x${rows} exceeds ${lim.cols}x${lim.rows}`);
+  const bad = pieceBadChars(base, category); if (bad) throw new Error(`characters outside the ascii.rest set: ${bad}`);
   /* kolory komórek z tuszem → ≤ maxColors (median cut); komórki puste nie liczą się do palety */
-  const inked: number[] = []; for (let i = 0; i < cols * rows; i++) if (base.text[Math.floor(i / cols)][i % cols] !== ' ') inked.push(i);
-  const rgb = new Uint8Array(Math.max(1, inked.length) * 3); inked.forEach((c, k) => rgb.set(base.rgb.subarray(c * 3, c * 3 + 3), k * 3));
-  const { palette: pal, index } = medianCut(rgb, Math.min(10, o.maxColors ?? 10)); const n = pal.length;
+  const { inked, palette: pal, index } = inkColors(base, o.maxColors ?? 10); const n = pal.length;
+  if (category === 'scenes' && n < SCENE_MIN_COLORS) throw new Error(`a scene needs at least ${SCENE_MIN_COLORS} colours, the picture has ${n}`);
   const ink = Array.from({ length: rows }, () => Array(cols).fill(' ')); inked.forEach((c, k) => { ink[Math.floor(c / cols)][c % cols] = index[k].toString(36); });
   /* klasa tonu: ' ' ruch nie zmienia znaku, '.' tusz poniżej INK_T, ':' scan może zamienić, '#' glint i scan mogą zamienić */
   const cls = Array.from({ length: rows }, (_, y) => Array.from({ length: cols }, (_, x) => { const t = base.tone[y * cols + x]; return base.text[y][x] === ' ' || t < 0 ? ' ' : t >= SOLID_T ? '#' : t >= INK_T ? ':' : '.'; }).join(''));
@@ -83,7 +95,7 @@ export interface ${Type}Options {
 
 export const meta = {
   name: ${JSON.stringify(name)},
-  category: "effects",
+  category: ${JSON.stringify(category)},
   note: ${JSON.stringify(o.note)},
   cols: ${cols},
   rows: ${rows},
@@ -145,15 +157,24 @@ export default function ${id}({ speed = meta.options.speed, pass = meta.options.
   return { code, slug, colors: n };
 }
 
-/** Siatka do piece: gdy przekracza 80×32, zwiększamy Cell size (gęstość siatki nie zależy od skali), aż się zmieści.
+/** Siatka do piece: gdy przekracza limit kategorii (domyślnie 80×32), zwiększamy Cell size (gęstość siatki nie zależy od skali), aż się zmieści.
  *  Zwraca stan z nowym cellSize, siatkę bazową (faza 0) i wymiary przed zmianą. */
-export function pieceGrid(src: Img, state: RenderState, opts: RenderOpts = {}) {
+export function pieceGrid(src: Img, state: RenderState, opts: RenderOpts = {}, lim: { cols: number; rows: number } = PIECE_LIMITS.effects) {
   const cellsAt = (s: RenderState) => { const c = renderCells(src, { ...s, motion: undefined }, { ...opts, phase: 0 }); if (!c) throw new Error(`effect "${s.style.id}" has no text version`); return c; };
-  const p0 = Number(state.style.params?.cellSize ?? getEffect(state.style.id).params.find((q) => q.id === 'cellSize')?.default); let s = state, c = cellsAt(s); const from = { cols: c.cols, rows: c.rows, cellSize: p0 };
-  if (c.cols > PIECE_MAX.cols || c.rows > PIECE_MAX.rows) {
-    if (!Number.isFinite(p0)) throw new Error(`effect "${state.style.id}" has no cell size to fit ${PIECE_MAX.cols}x${PIECE_MAX.rows}`);
-    let cs = Math.max(p0 + 1, Math.ceil(p0 * Math.max(c.cols / PIECE_MAX.cols, c.rows / PIECE_MAX.rows)));
-    for (;; cs++) { s = { ...state, style: { ...state.style, params: { ...state.style.params, cellSize: cs } } }; c = cellsAt(s); if (c.cols <= PIECE_MAX.cols && c.rows <= PIECE_MAX.rows) break; if (cs >= 400) throw new Error('cannot fit the grid'); }
+  /* parametr gęstości siatki: Cell size (Characters, Block, Mixed) albo Dot pitch (Braille: komórka 2×4 kropki) */
+  const key = ['cellSize', 'dotPitch'].find((k) => getEffect(state.style.id).params.some((q) => q.id === k));
+  const p0 = Number(key ? state.style.params?.[key] ?? getEffect(state.style.id).params.find((q) => q.id === key)?.default : NaN); let s = state, c = cellsAt(s); const from = { cols: c.cols, rows: c.rows, cellSize: p0 };
+  if (c.cols > lim.cols || c.rows > lim.rows) {
+    if (!Number.isFinite(p0)) throw new Error(`effect "${state.style.id}" has no cell size to fit ${lim.cols}x${lim.rows}`);
+    let cs = Math.max(p0 + 1, Math.ceil(p0 * Math.max(c.cols / lim.cols, c.rows / lim.rows)));
+    for (;; cs++) { s = { ...state, style: { ...state.style, params: { ...state.style.params, [key!]: cs } } }; c = cellsAt(s); if (c.cols <= lim.cols && c.rows <= lim.rows) break; if (cs >= 400) throw new Error('cannot fit the grid'); }
   }
-  return { state: s, base: c, from, cellSize: Number(s.style.params?.cellSize ?? p0) };
+  return { state: s, base: c, from, cellSize: Number((key && s.style.params?.[key]) ?? p0), param: key ?? null };
+}
+
+/** Kategoria i siatka: scenes (do 320×120), gdy obraz ma ≥ 4 kolory tuszu; inaczej effects (do 80×32). */
+export function pieceFit(src: Img, state: RenderState, opts: RenderOpts = {}) {
+  const sc = pieceGrid(src, state, opts, PIECE_LIMITS.scenes);
+  if (pieceInkColors(sc.base) >= SCENE_MIN_COLORS) return { category: 'scenes' as PieceCategory, ...sc };
+  return { category: 'effects' as PieceCategory, ...pieceGrid(src, state, opts, PIECE_LIMITS.effects) };
 }

@@ -1,6 +1,7 @@
 // Katalog 91 efektów z rejestru silnika (engine/src/data/effects.json): kategorie, wyszukiwanie, filtr.
 // Czyste funkcje (bez DOM), używane przez stronę główną, /effects i testy.
 import effects from '../../../engine/src/data/effects.json' with { type: 'json' };
+import { DESCRIPTIONS } from '../config/descriptions.ts';
 
 export type Effect = { id: string; name: string; category: string; categoryIndex: number; description: string; phase: number; status: 'ready' | 'soon';
   /** Etap 2: efekt ma ruchy animacji (pole z rejestru silnika, gen-effects-json.ts). */
@@ -16,7 +17,7 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
 export function matches(e: Effect, q: string, cat: string) {
   if (cat && slug(e.category) !== cat) return false;
   const words = norm(q).split(/\s+/).filter(Boolean); if (!words.length) return true;
-  const hay = norm(`${e.name} ${e.id} ${e.category} ${e.description}`);
+  const hay = norm(`${e.name} ${e.id} ${e.category} ${e.description} ${DESCRIPTIONS[e.id] ?? ''}`);
   return words.every((w) => hay.includes(w));
 }
 
@@ -26,5 +27,5 @@ export const passesAnim = (e: Effect, animOnly: boolean) => !animOnly || !!e.ani
 /** Efekty pogrupowane w kategorie (puste grupy pominięte). */
 export const grouped = (list: Effect[]) => CATEGORIES.map((c) => ({ category: c, items: list.filter((e) => e.category === c) })).filter((g) => g.items.length);
 
-/** Opis do wyświetlenia: bez znaczników kodu z katalogu. Docelowe krótkie opisy: pytanie 7 z pliku 05. */
-export const displayDescription = (e: Effect) => e.description.replace(/`/g, '');
+/** Opis do wyświetlenia: krótki opis dla użytkownika (config/descriptions.ts); bez niego opis z katalogu bez znaczników kodu. */
+export const displayDescription = (e: Effect) => DESCRIPTIONS[e.id] ?? e.description.replace(/`/g, '');

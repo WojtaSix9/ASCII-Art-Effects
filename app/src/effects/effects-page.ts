@@ -14,11 +14,11 @@ export const effectsHtml = () => `
   <div class="fx-tools">
     <label class="sr-only" for="fx-q">Szukaj efektu</label>
     <input id="fx-q" class="fx-search" data-q type="search" placeholder="Szukaj nazwy lub opisu" autocomplete="off">
-    <div class="fx-cats" role="group" aria-label="Kategoria">
+    <div class="fx-cats" role="group" aria-label="Filtr: kategoria i animacja">
       <button type="button" class="chip" data-cat="" aria-pressed="true">Wszystkie</button>
       ${CATEGORIES.map((c) => `<button type="button" class="chip" data-cat="${slug(c)}" aria-pressed="false">${esc(c)}</button>`).join('')}
+      <button type="button" class="chip chip--anim" data-anim aria-pressed="false" title="Pokaż tylko efekty z animacją (łączy się z kategorią)">Animation</button>
     </div>
-    <button type="button" class="chip chip--anim" data-anim aria-pressed="false" title="Pokaż tylko efekty z animacją">Animation</button>
   </div>
   <p class="fx-count" data-count role="status"></p>
 </div>

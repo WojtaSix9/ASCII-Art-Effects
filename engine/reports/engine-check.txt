@@ -342,4 +342,7 @@ OK   TS block-chars.glint: meta wg checkera biblioteki (kategoria, note ≤ 72, 
 OK   TS block-chars.glint: deterministyczny (dwie instancje dają te same klatki)
 OK   TS: siatka 100×40 zmniejszona do ≤ 80×32 przez Cell size; najmniejsza komórka, która się mieści (o 1 px mniej już nie)  [75x31, cellSize 10 → 13]
 OK   TS: siatka mieszcząca się w 80×32 bez zmian (50×20, Cell size 10)  [50x20]
+OK   TS scenes: obraz testowy (kolorowy) → kategoria scenes, siatka 100×40 bez zmniejszania, ≥ 4 kolory; klatki pliku = silnik  [scenes 100x40, 10 kolorów, złych 0]
+OK   TS scenes: siatka 300×134 (Cell size 3, komórka 2×3 px) zmniejszona do ≤ 320×120, najmniejsza komórka, która się mieści  [300x134 → 300x100, cellSize 4]
+OK   TS: obraz w jednym kolorze (mono) → kategoria effects i ≤ 80×32; jako scenes pieceSource odmawia (scena wymaga ≥ 4 kolorów)  [effects 75x31 | a scene needs at least 4 colours, the picture has 1]
 OK   TS: znaki spoza zestawu biblioteki wykryte (Mixed domyślnie: ∙; Braille: U+28xx) i pieceSource odmawia  [∙ | 19 znaków Braille | characters outside the ascii.rest set: ∙]

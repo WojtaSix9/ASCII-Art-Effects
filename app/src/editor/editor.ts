@@ -90,7 +90,7 @@ export const editorHtml = () => `
       <label data-anim-only><input type="radio" name="format" value="gif"> GIF <span class="ed-hint">(animacja, pętla z zakładki Animation)</span></label>
       <label data-anim-only><input type="radio" name="format" value="mp4"> MP4 <span class="ed-hint">(wideo H.264, pętla z zakładki Animation)</span></label>
       <label data-svg-only><input type="radio" name="format" value="svg"> SVG <span class="ed-hint">(animowane znaki, CSS bez skryptu, 15 fps)</span></label>
-      <label data-svg-only><input type="radio" name="format" value="ts"> TS <span class="ed-hint">(plik piece dla biblioteki ascii.rest, najwyżej 80×32 znaków)</span></label></fieldset>
+      <label data-svg-only><input type="radio" name="format" value="ts"> TS <span class="ed-hint">(plik piece dla biblioteki ascii.rest, do 320×120 znaków)</span></label></fieldset>
     <fieldset data-for="anim" hidden><legend>Rozmiar animacji</legend>
       <label for="ed-gif-side" class="sr-only">Dłuższy bok</label>
       <select id="ed-gif-side" name="side"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select>
@@ -402,7 +402,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   /** Opis eksportu TS: siatka (po dopasowaniu do limitu biblioteki), kolory, znaki spoza zestawu, próbki checkera. */
   const distinctWarn = (r: PieceRes) => r.distinct >= 3 ? '' : `Uwaga: w chwilach 0, 1, 2, 3, 4 i 6 s widać tylko ${r.distinct === 1 ? 'jedną klatkę' : `${r.distinct} różne klatki`}, a checker biblioteki wymaga 3 (dłuższe przejście lub więcej przejść na pętlę to zmieni).`;
   const pieceInfo = (r: PieceRes) => [
-    r.from.cols !== r.cols || r.from.rows !== r.rows ? `Siatka ${r.from.cols}×${r.from.rows} zmniejszona do ${r.cols}×${r.rows} znaków (Cell size ${r.from.cellSize} → ${r.cellSize} px): biblioteka ascii.rest przyjmuje najwyżej 80×32.` : `Siatka ${r.cols}×${r.rows} znaków.`,
+    r.from.cols !== r.cols || r.from.rows !== r.rows ? `Siatka ${r.from.cols}×${r.from.rows} zmniejszona do ${r.cols}×${r.rows} znaków (${r.param === 'dotPitch' ? 'Dot pitch' : 'Cell size'} ${r.from.cellSize} → ${r.cellSize} px): biblioteka ascii.rest przyjmuje w kategorii ${r.category} najwyżej ${r.limit.cols}×${r.limit.rows}.` : `Siatka ${r.cols}×${r.rows} znaków (kategoria ${r.category}, najwyżej ${r.limit.cols}×${r.limit.rows}).`,
+    r.category === 'effects' ? 'Obraz ma mniej niż 4 kolory, a kategoria scenes (do 320×120) ich wymaga, więc plik idzie jako effects.' : '',
     'Kolory zdjęcia zredukowane do najwyżej 10 (każdy w 3 odcieniach dla ruchu); tylko znaki efektu, bez Post FX, Color i napisów.',
     r.bad ? `Znaki spoza zestawu biblioteki: ${[...r.bad].join(' ')}. Zmień zestaw znaków, inaczej plik nie przejdzie jej sprawdzenia.` : '',
     r.bad ? '' : distinctWarn(r),
