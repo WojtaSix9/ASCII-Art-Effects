@@ -3,6 +3,7 @@ const svg = (d: string) => `<svg viewBox="0 0 24 24" width="18" height="18" fill
 export const ICON = {
   style: svg('<path d="M4 19 9 5l5 14M6 14h6"/><path d="M15 19c0-2 1-3 3-3s3 1 3 3-1 3-3 3"/>'),
   play: svg('<path d="M8 5v14l11-7z"/>'),
+  pause: svg('<path d="M8 5v14M16 5v14"/>'),
   sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>'),
   drop: svg('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'),
   spark: svg('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>'),

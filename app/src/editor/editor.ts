@@ -1,13 +1,13 @@
 // Edytor (05, sekcja 8; krok 5 briefu). Układ: pasek górny (zoom, porównanie, cofnij/ponów) │ lewy panel stylów │
 // płótno z paskiem dolnym (Wczytaj, Losuj, Eksport) │ szyna ikon │ prawy panel (Styl, Color, Post FX).
-// Decyzje użytkownika: bez Ulubionych; eksport PNG i JPG @1x/@2x; Lights i Animacja wyszarzone (Lights: projekt do akceptacji).
+// Decyzje użytkownika: bez Ulubionych; eksport PNG i JPG @1x/@2x. Etap 2: zakładka Animation aktywna dla efektów z ruchem (anim-ui.ts).
 import { SAMPLES } from '../config/sample.ts';
 import { MAX_SOURCE } from '../config/limits.ts';
 import { READY, thumbUrl } from '../config/thumbs.ts';
 import { sharedEngine } from '../engine/client.ts';
 import { LIMIT_ERROR, type EffectMeta, type ExportRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
 import { cropPixels, loadImage, paint, previewScale } from '../engine/preview.ts';
-import { CATEGORIES, matches } from '../effects/catalog.ts';
+import { CATEGORIES, matches, passesAnim } from '../effects/catalog.ts';
 import { mountParamPanel, type Values } from '../ui/param-panel.ts';
 import { mountCurves } from '../ui/curves-editor.ts';
 import type { Curves } from '../../../engine/src/post/grade.ts';
@@ -15,6 +15,7 @@ import { ICON } from './icons.ts';
 import { lightsHtml, mountLights } from './lights-ui.ts';
 import { cropHtml, mountCrop } from './crop-ui.ts';
 import { mountText, textHtml } from './text-ui.ts';
+import { animHtml, mountAnim } from './anim-ui.ts';
 import { cropRect } from '../../../engine/src/core/crop.ts';
 import { History, initialState, toRenderState, type EditorState } from './state.ts';
 
@@ -30,6 +31,7 @@ export const editorHtml = () => `
     <div id="ed-left-body" class="ed-left__body">
       <label class="sr-only" for="ed-search">Szukaj stylu</label>
       <input id="ed-search" class="ed-search" data-search type="search" placeholder="Szukaj nazwy lub tagu" autocomplete="off">
+      <p class="ed-left__filter"><button type="button" class="ed-chip" data-anim-filter aria-pressed="false" title="Pokaż tylko efekty z animacją">Animation</button></p>
       <div data-styles></div>
       <p class="ed-left__more"><a href="/effects">Wszystkie efekty (także „wkrótce”)</a></p>
     </div>
@@ -53,7 +55,7 @@ export const editorHtml = () => `
   </section>
   <nav class="ed-rail" aria-label="Zakładki panelu" data-rail>
     <button type="button" data-tab="style" aria-pressed="true" title="Parametry stylu">${ICON.style}<span class="sr-only">Styl</span></button>
-    <button type="button" disabled title="Animacja: wersja 2">${ICON.play}<span class="sr-only">Animacja (wersja 2)</span></button>
+    <button type="button" data-tab="anim" aria-pressed="false" title="Animation">${ICON.play}<span class="sr-only">Animation</span></button>
     <button type="button" data-tab="lights" aria-pressed="false" title="Lights">${ICON.sun}<span class="sr-only">Lights</span></button>
     <button type="button" data-tab="color" aria-pressed="false" title="Color">${ICON.drop}<span class="sr-only">Color</span></button>
     <button type="button" data-tab="postfx" aria-pressed="false" title="Post FX">${ICON.spark}<span class="sr-only">Post FX</span></button>
@@ -75,6 +77,7 @@ export const editorHtml = () => `
     <div data-tabpanel="lights" hidden>${lightsHtml()}</div>
     <div data-tabpanel="crop" hidden>${cropHtml()}</div>
     <div data-tabpanel="text" hidden>${textHtml()}</div>
+    <div data-tabpanel="anim" hidden>${animHtml()}</div>
     <p class="ed-meta" data-meta aria-live="off"></p>
   </aside>
 </div>
@@ -114,7 +117,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const note = $('[data-note]'), meta = $('[data-meta]'), dialog = $<HTMLDialogElement>('[data-dialog]');
   const engine = sharedEngine();
   let alive = true, defs: EffectMeta[] = [], post: PostDefs = { postFx: [], glyphStyles: [], color: [], lights: { params: [], ambient: { id: 'ambient', label: 'Ambient', kind: 'range', default: 100 }, max: 4, skip: [] }, text: { params: [], fonts: [], max: 4 } };
-  let lights: ReturnType<typeof mountLights> | null = null, cropUi: ReturnType<typeof mountCrop> | null = null, textUi: ReturnType<typeof mountText> | null = null;
+  let lights: ReturnType<typeof mountLights> | null = null, cropUi: ReturnType<typeof mountCrop> | null = null, textUi: ReturnType<typeof mountText> | null = null, anim: ReturnType<typeof mountAnim> | null = null;
   let state: EditorState = initialState('characters');
   const history = new History();
   let img: CanvasImageSource & { width: number; height: number } | null = null;
@@ -133,6 +136,10 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
 
   // ---------- render ----------
   const render = async () => {
+    if (anim?.playing) { anim.changed(); return; }   // anim.changed() sam pokaże zwykły podgląd i przeliczy pętlę
+    await renderStatic();
+  };
+  const renderStatic = async () => {
     if (!img || !defs.length) return;
     stage.setAttribute('aria-busy', 'true');
     try {
@@ -188,7 +195,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   // ---------- historia ----------
   const syncHistoryButtons = () => { T<HTMLButtonElement>('[data-undo]').disabled = !history.canUndo; T<HTMLButtonElement>('[data-redo]').disabled = !history.canRedo; };
   const commit = () => { history.commit(state); syncHistoryButtons(); };
-  const restore = (s: EditorState | null) => { if (!s) return; state = s; syncUrl(); buildStylePanel(); buildColor(); buildPostFx(); lights?.build(); cropUi?.build(); textUi?.build(); markStyle(); syncLightsTab(); syncHistoryButtons(); layout(true); };
+  const restore = (s: EditorState | null) => { if (!s) return; state = s; state.anim ??= { byStyle: {}, loopSeconds: 4, fps: 24 }; syncUrl(); buildStylePanel(); buildColor(); buildPostFx(); lights?.build(); cropUi?.build(); textUi?.build(); markStyle(); syncLightsTab(); syncAnimTab(); syncHistoryButtons(); layout(true); };
   const onKey = (e: KeyboardEvent) => {
     if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).closest('input[type="text"], input[type="search"], input[type="number"], textarea')) return;
     const k = e.key.toLowerCase();
@@ -206,16 +213,18 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
 
   // ---------- lewy panel: style ----------
   const stylesBox = $('[data-styles]');
-  const drawStyles = (q = '') => {
-    const list = READY.filter((e) => matches(e, q, ''));
+  let animOnly = false;
+  const drawStyles = (q = $<HTMLInputElement>('[data-search]').value) => {
+    const list = READY.filter((e) => matches(e, q, '') && passesAnim(e, animOnly));
     stylesBox.innerHTML = list.length ? CATEGORIES.map((c) => {
       const items = list.filter((e) => e.category === c); if (!items.length) return '';
       return `<h3 class="ed-cat">${esc(c)}</h3><ul class="ed-styles">${items.map((e) => `<li><button type="button" data-pick="${e.id}" aria-pressed="${e.id === state.style}">
-        <img src="${thumbUrl(e.id)}" alt="" width="96" height="67" loading="lazy" decoding="async"><span>${esc(e.name)}</span></button></li>`).join('')}</ul>`;
-    }).join('') : '<p class="ed-empty">Brak stylu o tej nazwie.</p>';
+        <img src="${thumbUrl(e.id)}" alt="" width="96" height="67" loading="lazy" decoding="async">${e.animated ? '<span class="badge-anim">Animation</span>' : ''}<span>${esc(e.name)}</span></button></li>`).join('')}</ul>`;
+    }).join('') : `<p class="ed-empty">${animOnly ? 'Brak efektu z animacją o tej nazwie.' : 'Brak stylu o tej nazwie.'}</p>`;
   };
   const markStyle = () => stylesBox.querySelectorAll<HTMLElement>('[data-pick]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pick === state.style)));
   $<HTMLInputElement>('[data-search]').addEventListener('input', (e) => drawStyles((e.target as HTMLInputElement).value));
+  $('[data-anim-filter]').addEventListener('click', (e) => { animOnly = !animOnly; (e.currentTarget as HTMLElement).setAttribute('aria-pressed', String(animOnly)); drawStyles(); });
   stylesBox.addEventListener('click', (e) => { const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-pick]'); if (b) selectStyle(b.dataset.pick!); });
   const left = $('[data-left]');
   $('[data-collapse]').addEventListener('click', (e) => {
@@ -233,13 +242,20 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   };
   const selectStyle = (id: string) => {
     if (!defs.some((d) => d.id === id)) return;
-    state.style = id; buildStylePanel(); markStyle(); syncLightsTab(); syncGlyphFx(); syncUrl(); commit(); render();
+    state.style = id; buildStylePanel(); markStyle(); syncLightsTab(); syncAnimTab(); syncGlyphFx(); syncUrl(); commit(); render();
   };
   /** Dither nie używa świateł (plik 01): zakładka Lights wyłączona, przy otwartej wracamy do Stylu. */
   const syncLightsTab = () => {
     const b = $<HTMLButtonElement>('[data-tab="lights"]'); const off = post.lights.skip.includes(state.style);
     b.disabled = off; b.title = off ? `${defs.find((d) => d.id === state.style)?.name ?? ''} nie używa świateł` : 'Lights';
     if (off && b.getAttribute('aria-pressed') === 'true') showTab('style');
+  };
+  /** Zakładka Animation tylko dla efektów z ruchem (plik 09, sekcja 4); dla pozostałych wyłączona, odtwarzanie zatrzymane. */
+  const syncAnimTab = () => {
+    const b = $<HTMLButtonElement>('[data-tab="anim"]'); const e = defs.find((d) => d.id === state.style); const on = !!e?.motions?.length;
+    b.disabled = !on; b.title = on ? 'Animation' : `${e?.name ?? ''} nie ma animacji`;
+    if (!on) { if (anim?.playing) anim.stop(false); if (b.getAttribute('aria-pressed') === 'true') showTab('style'); }
+    anim?.build();
   };
   styleSel.addEventListener('change', () => selectStyle(styleSel.value));
 
@@ -374,6 +390,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     /** Nic się nie dzieje: brak renderu w toku/kolejce, brak oczekującego przeliczenia układu i wczytywania. */
     isIdle: () => started && engine.idle && !layoutPending && !loading,
     renderAt: (s: number) => engine.call<RenderRes>({ type: 'render', state: toRenderState(state), scale: s }),
+    anim: () => anim?.status() ?? null,
   };
 
   // ---------- start ----------
@@ -387,10 +404,11 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     lights = mountLights($('[data-tabpanel="lights"]'), post.lights, { get: () => state, source: cropped, change: () => render(), commit, say });
     textUi = mountText($('[data-tabpanel="text"]'), tlayer, post.text, { get: () => state, change: () => render(), commit, say, open: () => showTab('text') });
     cropUi = mountCrop($('[data-tabpanel="crop"]'), { get: () => state, source: () => img, change: () => { lights?.drawBg(); layout(true); }, commit });
-    drawStyles(); buildStylePanel(); buildColor(); buildPostFx(); lights.build(); cropUi.build(); textUi.build(); markStyle(); syncLightsTab(); syncUrl(); commit();
+    anim = mountAnim($('[data-tabpanel="anim"]'), () => defs, { get: () => state, engine, canvas, view: () => ({ scale, sw: view().sw, sh: view().sh }), commit, staticRender: () => { renderStatic(); } });
+    drawStyles(); buildStylePanel(); buildColor(); buildPostFx(); lights.build(); cropUi.build(); textUi.build(); markStyle(); syncLightsTab(); syncAnimTab(); syncUrl(); commit();
     if (want && !ok) say(`Efekt „${want}” nie jest jeszcze dostępny. Pokazuję Characters.`);
     layout(true); ro.observe(stage); started = true;
   })().catch((e) => say(`Błąd: ${(e as Error).message}`, 'error'));
 
-  return () => { alive = false; ro.disconnect(); clearTimeout(t); lights?.dispose(); document.removeEventListener('keydown', onKey); delete (window as any).__editorTest; };
+  return () => { alive = false; ro.disconnect(); clearTimeout(t); lights?.dispose(); anim?.dispose(); document.removeEventListener('keydown', onKey); delete (window as any).__editorTest; };
 }

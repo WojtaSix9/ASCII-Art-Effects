@@ -15,17 +15,21 @@ export type EditorState = {
   crop: Crop | null; cropAspect: string;
   /** Napisy (docs/08): do 4, parametry jak TEXT_PARAMS silnika (x, y, size w %). */
   text: Values[];
+  /** Etap 2: ruch wybrany osobno dla każdego stylu i ustawienia pętli podglądu (anim-ui.ts). */
+  anim: { byStyle: Record<string, { id: string; params: Values }>; loopSeconds: number; fps: number };
 };
 
-export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {}, lights: { enabled: false, items: [], ambient: 100 }, crop: null, cropAspect: 'free', text: [] });
+export const initialState = (style: string): EditorState => ({ style, params: {}, color: {}, postFx: {}, lights: { enabled: false, items: [], ambient: 100 }, crop: null, cropAspect: 'free', text: [], anim: { byStyle: {}, loopSeconds: 4, fps: 24 } });
 
-export const toRenderState = (s: EditorState): RenderState => ({
+/** withMotion: stan klatki animacji (z ruchem bieżącego stylu); bez tego obraz statyczny, jak w etapie 1. */
+export const toRenderState = (s: EditorState, withMotion = false): RenderState => ({
   style: { id: s.style, params: s.params[s.style] ?? {} },
   postFx: Object.keys(s.postFx).length ? s.postFx : undefined,
   color: Object.keys(s.color).length ? s.color : undefined,
   lights: s.lights.enabled ? { lights: s.lights.items, ambient: s.lights.ambient } : undefined,
   crop: s.crop ?? undefined,
   text: s.text?.length ? s.text : undefined,
+  ...(withMotion && s.anim?.byStyle[s.style] ? { motion: { id: s.anim.byStyle[s.style].id, params: s.anim.byStyle[s.style].params } } : {}),
 });
 
 /** Historia migawek: commit() zapisuje stan (pomija powtórzenia), undo()/redo() zwracają stan do przywrócenia. */

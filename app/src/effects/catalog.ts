@@ -2,7 +2,9 @@
 // Czyste funkcje (bez DOM), używane przez stronę główną, /effects i testy.
 import effects from '../../../engine/src/data/effects.json' with { type: 'json' };
 
-export type Effect = { id: string; name: string; category: string; categoryIndex: number; description: string; phase: number; status: 'ready' | 'soon' };
+export type Effect = { id: string; name: string; category: string; categoryIndex: number; description: string; phase: number; status: 'ready' | 'soon';
+  /** Etap 2: efekt ma ruchy animacji (pole z rejestru silnika, gen-effects-json.ts). */
+  animated?: boolean; motions?: { id: string; name: string }[] };
 export const ALL = effects as Effect[];
 
 /** 10 kategorii w kolejności z pliku 01 (categoryIndex). */
@@ -17,6 +19,9 @@ export function matches(e: Effect, q: string, cat: string) {
   const hay = norm(`${e.name} ${e.id} ${e.category} ${e.description}`);
   return words.every((w) => hay.includes(w));
 }
+
+/** Filtr „Animation” (plik 09, sekcja 4): tylko efekty z ruchem. */
+export const passesAnim = (e: Effect, animOnly: boolean) => !animOnly || !!e.animated;
 
 /** Efekty pogrupowane w kategorie (puste grupy pominięte). */
 export const grouped = (list: Effect[]) => CATEGORIES.map((c) => ({ category: c, items: list.filter((e) => e.category === c) })).filter((g) => g.items.length);

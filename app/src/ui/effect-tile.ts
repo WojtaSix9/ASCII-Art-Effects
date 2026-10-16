@@ -1,5 +1,5 @@
 // Kafelek efektu (05, sekcje 5.2 i 6): miniatura, po najechaniu lub fokusie oryginał z etykietą „Przed”.
-// Efekt „wkrótce”: bez miniatury (wzór CSS) i bez linku.
+// Efekt „wkrótce”: bez miniatury (wzór CSS) i bez linku. Etap 2: badge „Animation” na efektach z ruchem (plik 09, sekcja 4).
 import { beforeUrl, sampleNoFor, thumbUrl, THUMB } from '../config/thumbs.ts';
 import { displayDescription, type Effect } from '../effects/catalog.ts';
 
@@ -14,6 +14,6 @@ export function tileHtml(e: Effect, opts: { eager?: boolean } = {}) {
     <span class="tile__media">
       <img class="tile__after" src="${thumbUrl(e.id)}" width="${THUMB.w}" height="${THUMB.h}" alt=""${load} decoding="async">
       <img class="tile__before" src="${beforeUrl(n)}" width="${THUMB.w}" height="${THUMB.h}" alt=""${load} decoding="async">
-      <span class="tile__tag" aria-hidden="true">Przed</span>
+      <span class="tile__tag" aria-hidden="true">Przed</span>${e.animated ? '\n      <span class="badge-anim tile__badge">Animation</span>' : ''}
     </span>${body}</a></li>`;
 }

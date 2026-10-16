@@ -43,7 +43,7 @@ try {
     disabled: [...document.querySelectorAll<HTMLButtonElement>('[data-rail] button')].filter((b) => b.disabled).length,
     tools: !!document.querySelector('[data-ed-tools] [data-undo]'), fav: /ulubione/i.test(document.body.textContent ?? ''),
   }));
-  t(`układ: ${READY.length} stylów w lewym panelu, szyna 7 ikon (Animacja wyłączona, Kadr i Tekst od kroku 7), narzędzia w pasku górnym, bez Ulubionych`, L.styles === READY.length && L.rail === 7 && L.disabled === 1 && L.tools && !L.fav, L);
+  t(`układ: ${READY.length} stylów w lewym panelu, szyna 7 ikon (Animation wyłączona dla Characters, Kadr i Tekst od kroku 7), narzędzia w pasku górnym, bez Ulubionych`, L.styles === READY.length && L.rail === 7 && L.disabled === 1 && L.tools && !L.fav, L);
 
   // Lewy panel
   const h0 = await hash(page);
@@ -352,6 +352,34 @@ try {
   await page.setInputFiles('[data-file]', { name: 'notatka.txt', mimeType: 'text/plain', buffer: Buffer.from('x') }); await page.waitForTimeout(200);
   t('własne zdjęcie: plik, który nie jest obrazem → komunikat błędu', !!(await page.textContent('[data-note]'))?.includes('nie jest obrazem'));
 
+  // Etap 2, krok 3: filtr i zakładka Animation, odtwarzacz (pętla liczona z góry w Workerze, potem odtwarzana)
+  const ANIM = READY.filter((e) => e.animated).map((e) => e.id);
+  await page.goto(BASE + '/editor?style=rgbsplit&sample=1'); await settle(page);
+  const lb = await page.$$eval('[data-styles] .badge-anim', (b) => b.map((x) => (x.closest('[data-pick]') as HTMLElement).dataset.pick));
+  await page.click('[data-anim-filter]'); const lf = await page.$$eval('[data-pick]', (b) => b.map((x) => (x as HTMLElement).dataset.pick));
+  await page.click('[data-anim-filter]'); const lf2 = await page.$$eval('[data-pick]', (b) => b.length);
+  t(`lewy panel: badge na ${ANIM.length} stylach z ruchem; filtr Animation → tylko one; ponowny klik → wszystkie`, JSON.stringify(lb) === JSON.stringify(ANIM) && JSON.stringify(lf) === JSON.stringify(ANIM) && lf2 === READY.length, { lb, lf, lf2 });
+  const tabOn = !(await page.isDisabled('[data-tab="anim"]')); await page.click('[data-tab="anim"]');
+  const motionOpts = await page.$$eval('[data-motion] option', (o) => o.map((x) => (x as HTMLOptionElement).value));
+  t('zakładka Animation: aktywna dla RGB Split, lista ruchów z silnika, parametry speed i intensity, długość pętli i fps', tabOn && JSON.stringify(motionOpts) === '["pulse"]' && !!(await page.$('[data-motion-params] [data-p="speed"]')) && !!(await page.$('[data-motion-params] [data-p="intensity"]')) && !!(await page.$('[data-loop-params] [data-p="loopSeconds"]')) && !!(await page.$('[data-loop-params] [data-p="fps"]')), motionOpts);
+  const still = await hash(page); const stillW = await page.$eval('[data-canvas]', (c) => (c as HTMLCanvasElement).width);
+  const animSt = () => page.evaluate(() => (window as any).__editorTest.anim());
+  const t0 = Date.now(); await page.click('[data-play]');
+  await page.waitForFunction(() => (window as any).__editorTest.anim()?.phase === 'playing', null, { timeout: 120_000, polling: 100 }); const prepMs = Date.now() - t0;
+  const a1 = await animSt();
+  const seen = new Set<string>(); for (let i = 0; i < 12; i++) { seen.add(await hash(page)); await page.waitForTimeout(90); }
+  const a2 = await animSt(); const cw = await page.$eval('[data-canvas]', (c) => (c as HTMLCanvasElement).width);
+  t('odtwarzanie: pętla 4 s × 24 fps = 96 klatek policzonych z góry, potem odtwarzanie; klatki ≤ 720 px; kanwa pokazuje różne klatki', a1.total === 96 && a1.frames === 96 && Math.max(a1.w, a1.h) <= 720 && cw === a1.w && seen.size >= 4 && a2.shown > a1.shown, { a1, a2, seen: seen.size, prepMs });
+  await page.$eval('[data-motion-params] [data-p="intensity"]', (el) => { const i = el as HTMLInputElement; i.value = '100'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+  const a3 = await animSt();
+  await page.waitForFunction(() => (window as any).__editorTest.anim()?.phase === 'playing', null, { timeout: 120_000, polling: 100 });
+  t('zmiana ruchu w trakcie: pętla zatrzymana i liczona od nowa, potem dalej gra', a3.phase !== 'playing' && (await animSt()).frames === 96, a3);
+  await page.click('[data-play]'); await settle(page); await page.waitForTimeout(150); await settle(page);
+  const a4 = await animSt(); const backW = await page.$eval('[data-canvas]', (c) => (c as HTMLCanvasElement).width);
+  t('pauza: koniec odtwarzania, zwykły podgląd w pełnej rozdzielczości, obraz statyczny jak przed odtwarzaniem', a4.phase === 'idle' && backW === stillW && (await hash(page)) === still, { a4, backW, stillW });
+  await page.click('[data-play]'); await page.waitForFunction(() => (window as any).__editorTest.anim()?.phase !== 'idle', null, { timeout: 10_000 });
+  await page.click('[data-pick="characters"]'); await settle(page);
+  t('zmiana stylu na efekt bez ruchu: odtwarzanie zatrzymane, zakładka Animation wyłączona, panel wraca do Stylu', (await animSt()).phase === 'idle' && (await page.isDisabled('[data-tab="anim"]')) && !(await page.isHidden('[data-tabpanel="style"]')));
   t('brak błędów w konsoli', errors.length === 0, errors.join(' | '));
 } finally { await browser.close(); server.kill(); }
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${!ok && info ? `  [${info}]` : ''}`);

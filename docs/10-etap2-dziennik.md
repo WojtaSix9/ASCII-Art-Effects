@@ -131,3 +131,74 @@ Plan zaakceptowany przez użytkownika. Decyzje: podgląd zapętla się w niesko�
 - Safari i Firefox.
 - Odtwarzania w pętli na kanwie i jego płynności (krok 3).
 - Pełnych `test:engine` i `test:a11y`: interfejs się nie zmienił, a z `test:engine` uruchomiłem tylko część zgodności (`QUICK`).
+
+## Krok 3: UI (badge, filtr, zakładka Animation, odtwarzacz)
+
+Decyzje użytkownika:
+- filtr „Animation” tylko na `/effects` i w lewym panelu edytora; na stronie głównej sam badge;
+- zakładka Animation z ruchem, `speed`, `intensity`, długością pętli i fps; odtwarzanie dopiero po kliknięciu;
+- podgląd **liczy całą pętlę z góry w niższej rozdzielczości, potem odtwarza gotowe klatki**.
+
+### Co zrobiono (`kod`)
+
+- **Badge „Animation”:**
+  - na kafelku efektu: prawy górny róg miniatury, strona główna i `/effects`;
+  - na miniaturze stylu w lewym panelu edytora.
+  - Na stronie głównej dziś żaden z 9 kafelków nie ma ruchu, więc badge się tam nie pojawia.
+- **Filtr „Animation”:**
+  - przycisk na `/effects`, łączy się z kategorią i wyszukiwaniem; stan w adresie `?anim=1`;
+  - przycisk w lewym panelu edytora.
+  - Wspólna funkcja `passesAnim` w `catalog.ts`.
+- **Zakładka Animation** (`editor/anim-ui.ts`):
+  - aktywna tylko dla efektów z `motions`; dla pozostałych wyłączona z podpowiedzią;
+  - zmiana stylu na efekt bez ruchu zatrzymuje odtwarzanie i wraca do zakładki Styl.
+  - Zawartość: lista ruchów, parametry ruchu z silnika (`speed`, `intensity`), pętla (`Loop length` 1–10 s, domyślnie 4 s; `Preview fps` 12/24/30, domyślnie 24), przycisk Odtwórz/Pauza, pasek postępu i komunikat.
+  - Ruch zapamiętany jest osobno dla każdego stylu (`EditorState.anim`), z historią cofnij/ponów.
+- **Odtwarzacz (`proj`):**
+  - N = długość × fps klatek, faza i/N, liczone kolejno w Workerze; potem pętla na `requestAnimationFrame` w czasie rzeczywistym.
+  - Limity klatek podglądu:
+    - dłuższy bok ≤ 720 px i nie więcej niż podgląd;
+    - cała pętla ≤ 96 MB RGBA;
+    - przekroczenie limitu obniża skalę.
+  - Zmiana dowolnego ustawienia w trakcie odtwarzania: pętla stoi, widać zwykły podgląd, po 400 ms pętla liczy się od nowa i gra dalej.
+  - Pauza kasuje klatki i przywraca zwykły podgląd w pełnej rozdzielczości.
+- **Worker:** `defs` przekazuje `motions`. `toRenderState(s, withMotion)` dodaje ruch tylko dla klatek animacji, więc eksport PNG i zwykły podgląd są dalej statyczne.
+- **Ikona pauzy** w przycisku podczas odtwarzania.
+
+### Testy (`test`)
+
+| Test | Wynik |
+|---|---|
+| `test:editor` | 71/71 (6 nowych) |
+| `test:ui` | 41/41 (2 nowe) |
+| `smoke` / `test:a11y` / `check:tokens` | 63/63 / 24/24 / 34/34 |
+
+**Nowe testy:**
+- **Badge:** na `/effects` i w lewym panelu badge mają dokładnie efekty z `animated` (dziś: RGB Split).
+- **Filtr:**
+  - `/effects`: filtr pokazuje tylko te efekty, `?anim=1` w adresie;
+  - `?anim=1&cat=glass` daje pusty wynik z komunikatem;
+  - lewy panel: filtr włącza i wyłącza się.
+- **Zakładka:** aktywna dla RGB Split, wyłączona dla Characters; ma ruch „pulse” i 4 kontrolki.
+- **Odtwarzanie:**
+  - 96 klatek (4 s × 24 fps) policzonych przed startem; klatki ≤ 720 px;
+  - kanwa ma rozmiar klatki;
+  - w 12 próbkach co 90 ms co najmniej 4 różne obrazy; licznik pokazanych klatek rośnie.
+- **Zmiana intensity w trakcie:** pętla zatrzymana, policzona od nowa, gra dalej.
+- **Pauza:** zwykły podgląd w pełnej rozdzielczości, hash kanwy równy obrazowi sprzed odtwarzania.
+- **Zmiana stylu na Characters:** odtwarzanie zatrzymane, zakładka wyłączona, panel Styl.
+
+**Pomiar (headless Chromium, dpr 1):**
+- przy oknie 1440×900 i 1920×1080 podgląd ma ok. 726×558 px;
+- 96 klatek 584×449 px liczy się w 1,3 s i 1,9 s;
+- 726×558 przy 96 klatkach przekracza 96 MB, więc skala została obniżona.
+
+**Przy zrzucie ekranu:** miniatura Comic w lewym panelu była czarna. Sprawdziłem plik: poprawny (średnia jasność 110). To leniwe ładowanie (`loading="lazy"`) w chwili zrzutu, nie błąd.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- **Płynności na realnym sprzęcie:** licznik pokazanych klatek rośnie, ale nie mierzyłem fps ani pomijanych klatek.
+- **Wydajności na wolniejszym sprzęcie:** wolniejsze efekty (Risograph ok. 1,3 s na klatkę w 1600 px) będą liczyć pętlę znacznie dłużej. Pasek postępu jest, ale anulowanie działa tylko przez Pauzę albo zmianę ustawień.
+- **Ekranów HiDPI (dpr 2):** podgląd ma tam więcej pikseli, więc limit 96 MB mocniej obniży rozdzielczość klatek.
+- **Safari i Firefox; telefony** (pamięć 96 MB może być za dużo na iOS).
+- **`prefers-reduced-motion`:** animacja startuje tylko po kliknięciu, więc nie gra sama. Osobnej obsługi nie dodawałem.

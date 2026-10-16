@@ -191,6 +191,16 @@ try {
     t('/effects: brak wyników → komunikat i „Wyczyść filtr” przywraca 91', f.tiles === 0 && empty && f2.tiles === 91 && f2.url === '', { f, f2 });
     await page.click('[data-tile="lego"]'); await rendered(page, 'lego');
     t('/effects: klik w kafelek → edytor z efektem', (await page.inputValue('[data-style]')) === 'lego');
+    // Etap 2: badge i filtr „Animation” (plik 09, sekcja 4)
+    const ANIM = ALL.filter((e) => e.animated).map((e) => e.id).sort();
+    await page.goto(BASE + '/effects'); await page.waitForSelector('[data-results] .tile');
+    const badges = await page.$$eval('.tile__badge', (b) => b.map((x) => (x.closest('a') as HTMLAnchorElement).dataset.tile).sort());
+    await page.click('[data-anim]'); await page.waitForTimeout(100);
+    const fa = await page.evaluate(() => ({ ids: [...document.querySelectorAll<HTMLElement>('[data-tile]')].map((a) => a.dataset.tile).sort(), url: location.search, pressed: document.querySelector('[data-anim]')!.getAttribute('aria-pressed') }));
+    t(`/effects: badge „Animation” na ${ANIM.length} efektach z ruchem; filtr Animation → tylko one, ?anim=1`, JSON.stringify(badges) === JSON.stringify(ANIM) && JSON.stringify(fa.ids) === JSON.stringify(ANIM) && fa.url === '?anim=1' && fa.pressed === 'true', { badges, fa, ANIM });
+    await page.goto(BASE + '/effects?anim=1&cat=glass'); await page.waitForSelector('[data-count]');
+    const fg = await page.evaluate(() => ({ n: document.querySelectorAll('[data-tile]').length, empty: !!document.querySelector('.fx-empty') }));
+    t('/effects: adres ?anim=1&cat=glass odtwarza oba filtry (dziś 0 efektów: pusty wynik z komunikatem)', fg.n === ALL.filter((e) => e.animated && e.category === 'Glass').length && fg.empty === (fg.n === 0), fg);
 
     // Nieznany efekt
     const soonId = ALL.find((e) => e.status !== 'ready')?.id ?? 'no-such-effect';   // pierwszy efekt „wkrótce” (lista się kurczy)

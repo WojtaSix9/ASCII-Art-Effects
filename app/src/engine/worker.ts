@@ -87,7 +87,7 @@ async function handle(req: Req): Promise<{ data: unknown; transfer?: Transferabl
   if (req.type === 'init') return { data: await init() };
   await init();
   switch (req.type) {
-    case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params })) satisfies EffectMeta[] };
+    case 'defs': return { data: EFFECTS.map((e) => ({ id: e.id, name: e.name, category: e.category, params: e.params, motions: e.motions })) satisfies EffectMeta[] };
     case 'postDefs': return { data: { postFx: POSTFX.map((f) => ({ id: f.id, name: f.name, params: f.params, glyphOnly: f.glyphOnly })), glyphStyles: [...GLYPH_STYLES], color: COLOR_PARAMS, lights: { params: LIGHT_PARAMS, ambient: AMBIENT_PARAM, max: MAX_LIGHTS, skip: [...NO_LIGHTS] }, text: { params: TEXT_PARAMS, fonts: TEXT_FONTS, max: MAX_TEXTS } } satisfies PostDefs };
     case 'export': {
       if (!source) throw new Error('no source image');
