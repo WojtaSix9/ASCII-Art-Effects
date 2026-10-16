@@ -6,7 +6,7 @@ import { blur, cellAverages, clamp, hash01, lerp, lum, mulberry32, over, parseCo
 import { backdrop, cellVisible } from '../core/compose.ts';
 import { valueNoise } from '../core/screen.ts';
 import { CHARSETS } from '../data/charsets.ts';
-import { CELL, COLOR_PARAMS, GRID_COMMON, charAt, charCell, runGlyphGrid, runGrid } from './grid.ts';
+import { ASCII_MOTIONS, CELL, COLOR_PARAMS, GRID_COMMON, charAt, charCell, gridMotion, motionChar, runGlyphGrid, runGrid } from './grid.ts';
 import { seg } from './geo3.ts';
 
 const PX = { unit: 'px', px: true } as const;
@@ -28,6 +28,7 @@ const mixed: EffectDef = {
   params: [CELL(10), select('shadowSet', 'Shadows', 'dots', SETS), select('midSet', 'Midtones', 'alpha', SETS), select('highlightSet', 'Highlights', 'blocks', SETS),
     range('split1', 'Shadow / mid split', 35, 0, 100, { unit: '%' }), range('split2', 'Mid / highlight split', 70, 0, 100, { unit: '%' }), range('mixRatio', 'Mix', 20, 0, 100, { unit: '%' }),
     ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   glyphText: (p) => [p.shadowSet, p.midSet, p.highlightSet].map(rampOf).join(''),
   render(ctx) {
     if (!ctx.glyphs) throw new Error('Mixed needs a glyph provider (canvasGlyphs)'); const { fs, cw, ch } = charCell(ctx); const masks = new Map<string, Uint8Array>();
@@ -38,7 +39,8 @@ const mixed: EffectDef = {
   },
   text(ctx) {
     const { cw, ch } = charCell(ctx); const a = cellAverages(ctx.prep, cw, ch); const rows: string[] = [];
-    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; s += mixedChar(ctx.p, t, x, y); } rows.push(s); }
+    const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);
+    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; s += motionChar(mm, x, y, t, mixedChar(ctx.p, t, x, y)); } rows.push(s); }
     return rows.join('\n') + '\n';
   },
 };

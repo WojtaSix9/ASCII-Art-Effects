@@ -12,5 +12,6 @@ export const HASH_CASES = (effectIds: string[], postFx: { id: string; glyphOnly?
   /* etap 2: klatki animacji (faza φ) przez Worker → kanwa, ta sama ścieżka co podgląd */
   ...[0, 0.1, 0.25, 0.5].map((phase) => ({ name: `motion:rgbsplit.pulse@${phase}`, state: { style: { id: 'rgbsplit' }, motion: { id: 'pulse' } } as RenderState, phase })),
   /* Tier A i kolejne: każdy ruch z rejestru w fazie 0,3 (lista ruchów przekazywana przez wywołującego) */
-  ...motions.filter((m) => m.effect !== 'rgbsplit').map((m) => ({ name: `motion:${m.effect}.${m.id}@0.3`, state: { style: { id: m.effect }, motion: { id: m.id } } as RenderState, phase: 0.3 })),
+  ...motions.filter((m) => m.effect !== 'rgbsplit' && m.id !== 'glint' && m.id !== 'scan')   /* glint/scan rysują znaki czcionką: zależą od rasteryzera */
+    .map((m) => ({ name: `motion:${m.effect}.${m.id}@0.3`, state: { style: { id: m.effect }, motion: { id: m.id } } as RenderState, phase: 0.3 })),
 ];

@@ -47,7 +47,7 @@ try {
     disabled: [...document.querySelectorAll<HTMLButtonElement>('[data-rail] button')].filter((b) => b.disabled).length,
     tools: !!document.querySelector('[data-ed-tools] [data-undo]'), fav: /ulubione/i.test(document.body.textContent ?? ''),
   }));
-  t(`układ: ${READY.length} stylów w lewym panelu, szyna 7 ikon (Animation wyłączona dla Characters, Kadr i Tekst od kroku 7), narzędzia w pasku górnym, bez Ulubionych`, L.styles === READY.length && L.rail === 7 && L.disabled === 1 && L.tools && !L.fav, L);
+  t(`układ: ${READY.length} stylów w lewym panelu, szyna 7 ikon (Animation aktywna dla Characters: glint/scan, etap 2; Kadr i Tekst od kroku 7), narzędzia w pasku górnym, bez Ulubionych`, L.styles === READY.length && L.rail === 7 && L.disabled === 0 && L.tools && !L.fav, L);
 
   // Lewy panel
   const h0 = await hash(page);
@@ -382,10 +382,18 @@ try {
   const a4 = await animSt(); const backW = await page.$eval('[data-canvas]', (c) => (c as HTMLCanvasElement).width);
   t('pauza: koniec odtwarzania, zwykły podgląd w pełnej rozdzielczości, obraz statyczny jak przed odtwarzaniem', a4.phase === 'idle' && backW === stillW && (await hash(page)) === still, { a4, backW, stillW });
   await page.click('[data-play]'); await page.waitForFunction(() => (window as any).__editorTest.anim()?.phase !== 'idle', null, { timeout: 10_000 });
-  await page.click('[data-pick="characters"]'); await settle(page);
-  t('zmiana stylu na efekt bez ruchu: odtwarzanie zatrzymane, zakładka Animation wyłączona, panel wraca do Stylu', (await animSt()).phase === 'idle' && (await page.isDisabled('[data-tab="anim"]')) && !(await page.isHidden('[data-tabpanel="style"]')));
+  await page.click('[data-pick="lego"]'); await settle(page);
+  t('zmiana stylu na efekt bez ruchu (LEGO): odtwarzanie zatrzymane, zakładka Animation wyłączona, panel wraca do Stylu', (await animSt()).phase === 'idle' && (await page.isDisabled('[data-tab="anim"]')) && !(await page.isHidden('[data-tabpanel="style"]')));
+  // Etap 2, krok 6: glint i scan w edytorze (Characters: znaki „/” i szumu z czcionki w Workerze)
+  await page.click('[data-pick="characters"]'); await settle(page); await page.click('[data-tab="anim"]');
+  const cm = await page.$$eval('[data-motion] option', (o) => o.map((x) => (x as HTMLOptionElement).value));
+  await page.click('[data-play]'); await page.waitForFunction(() => (window as any).__editorTest.anim()?.phase === 'playing', null, { timeout: 120_000, polling: 100 });
+  const cs = new Set<string>(); for (let i = 0; i < 16; i++) { cs.add(await hash(page)); await page.waitForTimeout(120); }
+  const ca = await animSt(); await page.click('[data-play]'); await settle(page);
+  t('Characters: ruchy glint i scan w zakładce Animation; pętla policzona (96 klatek) i odtwarzana, kanwa pokazuje różne klatki (przejście pasa)', JSON.stringify(cm) === '["glint","scan"]' && ca.frames === 96 && cs.size >= 3, { cm, frames: ca.frames, seen: cs.size });
+  await page.click('[data-pick="lego"]'); await settle(page);
   // Etap 2, krok 4: eksport GIF
-  await page.click('[data-export]'); const gifHiddenChars = await page.isHidden('[data-anim-only]'); await page.click('[data-cancel]');
+  await page.click('[data-export]'); const gifHiddenChars = await page.isHidden('[data-anim-only]');   /* tu wybrany jest LEGO (bez ruchu) */ await page.click('[data-cancel]');
   await page.click('[data-pick="rgbsplit"]'); await settle(page); await page.click('[data-tab="anim"]');
   await page.$eval('[data-loop-params] [data-p="loopSeconds"]', (el) => { const i = el as HTMLInputElement; i.value = '1'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
   await page.selectOption('[data-loop-params] [data-p="fps"]', '12'); await settle(page);

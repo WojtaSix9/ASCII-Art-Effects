@@ -707,7 +707,7 @@ const SRC = testImage(300, 200);
 // 34. Etap 2, Tier A: własności wspólne dla każdego ruchu w rejestrze + po jednej własności na efekt
 {
   const S = testImage(160, 120); const W = 160, H = 120;
-  const R = (img: Img, id: string, mid: string | null, phase?: number, mp: any = {}, scale = 1, sp: any = {}) => render(img, { style: { id, params: sp }, ...(mid ? { motion: { id: mid, params: mp } } : {}) }, { phase, scale });
+  const R = (img: Img, id: string, mid: string | null, phase?: number, mp: any = {}, scale = 1, sp: any = {}) => render(img, { style: { id, params: sp }, ...(mid ? { motion: { id: mid, params: mp } } : {}) }, { phase, scale, glyphs: G });
   const md = (a: Img, b: Img) => { let m = 0; for (let k = 0; k < a.data.length; k++) m = Math.max(m, Math.abs(a.data[k] - b.data[k])); return m; };
   const rows: string[] = []; const bad: string[] = []; const perDiff: Record<string, number> = {};
   for (const e of EFFECTS) for (const m of e.motions ?? []) {
@@ -734,6 +734,34 @@ const SRC = testImage(300, 200);
   ok('Pixel Art breathe (50%): φ 0,5 → blok 12 → 6 px: 27×20 komórek zamiast 14×10', pz.cols === 27 && pz.rows === 20 && p0.cols === 14 && p0.rows === 10, `${JSON.stringify(pz)} ${JSON.stringify(p0)}`);
   const fg = (f?: number) => R(newImg(W, H, [150, 150, 150, 255]), 'flutedglass', f === undefined ? null : 'slide', f, {}, 1, { fluteWidth: 24 }).img; const fa = fg(1 / 3), fb = fg();
   ok('Fluted Glass slide: żłobki (soczewki) przesuwają się, obraz nie: na płaskim obrazie wzór cieniowania po 1/3 pętli = statyczny przesunięty o 8 px (1/3 z 24 px)', (() => { for (let y = 0; y < H; y += 7) for (let x = 0; x < W - 8; x++) if (fa.data[(y * W + x) * 4] !== fb.data[(y * W + x + 8) * 4]) return false; return sha(fa) !== sha(fb); })());
+}
+// 35. Etap 2, krok 6: glint i scan rodziny ASCII (zachowanie wg ascii.rest, logo-file.ts)
+{
+  const W = 160, H = 120; const S = testImage(W, H); const st = (id: string, mid?: string, phase?: number, mp: any = {}) => renderText(S, { style: { id }, ...(mid ? { motion: { id: mid, params: mp } } : {}) }, { phase, glyphs: G })!.split('\n');
+  const img = (id: string, mid?: string, phase?: number, mp: any = {}) => render(S, { style: { id }, ...(mid ? { motion: { id: mid, params: mp } } : {}) }, { phase, glyphs: G }).img;
+  const base = st('characters'); const cw = 6, ch = 10;
+  ok('glint/scan: eksport tekstowy przy φ 0 = statyczny (Characters, Block, Braille, Mixed); w przerwie między przejściami (φ 0,75 przy pass 50%) obraz i tekst = statyczne', ['characters', 'block-chars', 'braille', 'mixed'].every((id) => st(id, 'glint', 0).join() === st(id).join() && st(id, 'scan', 0).join() === st(id).join() && st(id, 'scan', 0.75).join() === st(id).join()) && sha(img('dots', 'glint', 0.75)) === sha(img('dots')));
+  /* glint w połowie przejścia (φ 0,25 przy pass 50% → f 0,5): środek pasu `at` wg wzoru z grid.ts */
+  const half = 5 * cw, at = -half + (W + 0.45 * H + 2 * half) * 0.5; const g = st('characters', 'glint', 0.25); const changed: [number, number, string][] = [];
+  for (let y = 0; y < base.length; y++) for (let x = 0; x < base[y].length; x++) if (g[y][x] !== base[y][x]) changed.push([x, y, g[y][x]]);
+  const inBand = changed.every(([x, y]) => Math.abs((x + 0.5) * cw + 0.45 * (y + 0.5) * ch - at) < half);
+  ok('glint (Characters): zmienione znaki tylko na „/”, tylko w ukośnym pasie (|x + 0,45·y − środek| < połowa szerokości), nigdy w miejscu spacji; pas niepusty', changed.length > 5 && changed.every(([x, y, c]) => c === '/' && base[y][x] !== ' ') && inBand, `${changed.length} zmian`);
+  const sc = st('characters', 'scan', 0.25); const row = -2 + (base.length - 1 + 2 + 5) * 0.5; const NZ = '#$%&*+<=>?@[]{}'; let headInk = 0, headCh = 0, bad = 0;
+  for (let y = 0; y < base.length; y++) for (let x = 0; x < base[y].length; x++) { const d = row - y; const head = d >= 0 && d < 2; if (head && base[y][x] !== ' ') { headInk++; if (sc[y][x] !== base[y][x]) headCh++; } if (sc[y][x] !== base[y][x] && (!head || !NZ.includes(sc[y][x]))) bad++; }
+  ok('scan (Characters): zmiany tylko w 2 wierszach głowy i tylko na znaki szumu #$%&*+<=>?@[]{}; zmieniona część znaków głowy ≈ 3/4 (0,55–0,95)', bad === 0 && headInk > 10 && headCh / headInk > 0.55 && headCh / headInk < 0.95, `${headCh}/${headInk}`);
+  ok('scan: szum zmienia się w czasie (12 tików na przejście): φ 0,25 i φ 0,27 mają inny szum lub inną linię', st('characters', 'scan', 0.25).join() !== st('characters', 'scan', 0.27).join());
+  /* piksele: glint rozjaśnia tylko w pasie; poza pasem obraz identyczny (Dots, kształty rysowane) */
+  const d0 = img('dots'), d1 = img('dots', 'glint', 0.25); let out = 0, inn = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const cx = Math.floor(x / 10), cy = Math.floor(y / 10); const dist = Math.abs((cx + 0.5) * 10 + 0.45 * (cy + 0.5) * 10 - (-50 + (W + 0.45 * H + 100) * 0.5)); const i = (y * W + x) * 4; const diff = d0.data[i] !== d1.data[i] || d0.data[i + 1] !== d1.data[i + 1]; if (diff) { if (dist >= 50) out++; else inn++; } }
+  ok('glint (Dots, kształty): piksele zmieniają się tylko w komórkach pasu (komórka 10 px, połowa szerokości 5 komórek), w pasie są zmiany', out === 0 && inn > 100, `poza ${out}, w pasie ${inn}`);
+  const mono = (phase?: number) => render(S, { style: { id: 'characters', params: { colorMode: 'mono', inkColor: '#808080', bgMode: 'solid', bgColor: '#000000' } }, ...(phase === undefined ? {} : { motion: { id: 'glint' } }) }, { phase, glyphs: G }).img;
+  const m0 = mono(), m1 = mono(0.25); const g1 = renderText(S, { style: { id: 'characters', params: { colorMode: 'mono', inkColor: '#808080' } }, motion: { id: 'glint' } }, { phase: 0.25, glyphs: G })!.split('\n');
+  const ratios: number[] = []; for (let cy = 0; cy < base.length; cy++) for (let cx = 0; cx < base[cy].length; cx++) { if (g1[cy][cx] !== base[cy][cx] || base[cy][cx] === ' ') continue;
+    let a0 = 0, a1 = 0; for (let y = cy * ch; y < Math.min(H, (cy + 1) * ch); y++) for (let x = cx * cw; x < Math.min(W, (cx + 1) * cw); x++) { a0 = Math.max(a0, m0.data[(y * W + x) * 4]); a1 = Math.max(a1, m1.data[(y * W + x) * 4]); } if (a0 > 60) ratios.push(a1 / a0); }
+  const ok3 = ratios.every((r) => [1, 172 / 128, 217 / 128].some((k) => Math.abs(r - k) < 0.03));
+  ok('glint rozjaśnia kolor tuszu (tusz #808080, ten sam znak w komórce): jasność × 1, × 172/128 (35%) albo × 217/128 (70%); są komórki rozjaśnione', ok3 && ratios.some((r) => r > 1.3) && ratios.some((r) => r > 1.6), `${ratios.length} komórek, ${[...new Set(ratios.map((r) => r.toFixed(2)))].join(' ')}`);
+  let thrown = ''; try { render(S, { style: { id: 'dots' }, motion: { id: 'glint' } }, { phase: 0.25 }); } catch (e) { thrown = (e as Error).message; }
+  ok('glint/scan bez dostawcy glifów: czytelny błąd (zamiana na znaki wymaga czcionki)', thrown.includes('glyph provider'), thrown);
 }
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

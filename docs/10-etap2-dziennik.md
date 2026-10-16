@@ -531,3 +531,67 @@ Na oko: pasma na niebie znikają, zostaje drobny, regularny wzór.
 - CSS pokazuje grupy po kolei; wiersze rozciągnięte do siatki (`textLength`), więc pasują w każdej czcionce o stałej szerokości;
 - czcionka systemowa (`ui-monospace, …`), bez osadzania;
 - przy `prefers-reduced-motion` jedna klatka.
+
+## Krok 6A: glint i scan dla rodziny ASCII
+
+Decyzje użytkownika: ruch przez **znaki, jak w oryginale**, dla wszystkich 9 efektów. SVG z wyborem: z czcionką osadzoną albo bez. TS: 6 odcieni na kolor (najwyżej 10 kolorów zdjęcia); siatka ponad 80×32 automatycznie zmniejszana z komunikatem.
+
+### Co zrobiono (`kod`)
+
+- **`grid.ts`:**
+  - `ASCII_MOTIONS` = **glint** (speed, pass %, width w komórkach) i **scan** (speed, pass %);
+  - dołączone do Characters, Block, Braille, Dots, Cross, Diamond, Lines, Diagonal i Mixed;
+  - zachowanie odczytane z `bas3line/ascii` @ `8fd792e` (`site/src/lib/logo-file.ts`); implementacja własna, okresowa w fazie; w nagłówku sekcji źródło i licencja MIT.
+- **Glint:**
+  - ukośny pas: 0,45 px w poziomie na 1 px w pionie (odpowiednik 0,9 komórki 1:2 na wiersz), połowa szerokości 5 komórek;
+  - siła k = smoothstep;
+  - komórka z tonem ≥ 0,3 przy k > 0,55 → znak `/` z czcionki;
+  - kolor rozjaśniony o 35% (k > 0,25) lub 70% (k > 0,6).
+- **Scan:**
+  - linia wierszy z góry na dół;
+  - głowa 2 wiersze: 3/4 komórek z tuszem → znaki szumu `#$%&*+<=>?@[]{}` (hasz komórki i tiku, 12 tików na przejście), kolor +70%;
+  - ogon 5 wierszy: kolor +35%.
+- **Czas:** `speed` przejść na pętlę; przejście zajmuje `pass`% cyklu (oryginał: 2 s co 4 s = 50%), reszta to przerwa. Przy φ = 0 pas jest przed obrazem.
+  - Z oryginału **pominięte**: początkowe 0,5 s opóźnienia (nasza pętla musi być okresowa od 0).
+- **Efekty kształtowe** (Dots, Cross, Diamond, Lines, Diagonal, Block, Braille):
+  - zastępowana komórka zamiast kształtu dostaje znak `/` lub szum z czcionki;
+  - pozostałe komórki w pasie zostają kształtem w rozjaśnionym kolorze;
+  - bez dostawcy glifów: czytelny błąd.
+- **Eksport tekstowy** (Characters, Block, Braille, Mixed) z tym samym ruchem (`motionChar`); puste znaki (spacja, U+2800) zostają puste, jak w oryginale.
+- **Aplikacja:** glint i scan wyłączone z porównania przeglądarka = Node, bo rysują znaki czcionką, a raster zależy od silnika.
+
+### Testy (`test`)
+
+**Silnik 330/330:**
+- **Własności wspólne** dla 26 ruchów (18 nowych): φ 0 = statyczny, okresowość bit w bit, ruch widoczny, speed 2, @2x.
+- **Sekcja 35:**
+  - **Przy φ 0 i w przerwie** (φ 0,75 przy pass 50%) tekst i obraz są statyczne.
+  - **Glint, tekst Characters:**
+    - 47 zmian, wyłącznie na `/`, wyłącznie w ukośnym pasie liczonym wzorem z kodu;
+    - nigdy w miejscu spacji.
+  - **Scan, tekst Characters:**
+    - zmiany tylko w 2 wierszach głowy i tylko na znaki szumu;
+    - zmieniona część znaków głowy 39/54 ≈ 0,72 (oczekiwane ≈ 3/4);
+    - szum zmienia się w czasie.
+  - **Glint, Dots (kształty):** poza komórkami pasu 0 zmienionych pikseli; w pasie 3900.
+  - **Kolor:** ten sam znak w komórce ma jasność × 1,00 / ×1,34–1,36 / × 1,70, czyli dokładnie poziomy 0 / 35% / 70% przy tuszu #808080.
+  - **Brak dostawcy glifów** daje czytelny błąd.
+- **`hash-baseline`:** 516/516 identyczny.
+
+**Błędy we własnych testach (poprawione bez zmiany progów):**
+1. **„Glint podnosi średnią jasność klatki”** to fałszywa własność: zamiana pełnej kropki na cienki `/` zmniejsza ilość tuszu. Zastąpiona przez stosunek jasności tej samej komórki z tym samym znakiem.
+2. **Druga wersja zakładała maksimum piksela 128 i 217.** Antyaliasing maski znaku nie daje pełnego krycia (wyszło 125 i 202). Stosunek w tej samej komórce nie zależy od krycia.
+3. **Brak czcionek w teście wspólnym:** sekcja 34 renderowała bez dostawcy glifów, a efekty znakowe go wymagają; dodany.
+
+**Aplikacja:**
+- `test:editor` 81/81:
+  - Characters ma teraz zakładkę Animation, więc testy z „efektem bez ruchu” używają LEGO;
+  - nowy test: Characters glint w podglądzie, 96 klatek, kanwa zmienia się w czasie.
+- `test:ui` 41/41, `smoke` 63/63, `test:a11y` 24/24, przeglądarka = Node 117/117.
+
+**Na oko:** arkusz 6 przypadków (Characters glint/scan, Dots glint, Braille scan, Block glint, Diagonal scan) na zdjęciu 1 przy 480 px: zachowanie jak w opisie oryginału.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Porównania 1:1 z animacją na ascii.rest (strony nie da się otworzyć w tym środowisku).
+- Czy w przeglądarce znaki `/` i szum zawsze mają już wczytaną czcionkę; podzbiór łaciński Geist Mono wczytuje się przy starcie, ale osobnego testu „świeży Worker” dla tych znaków nie ma.

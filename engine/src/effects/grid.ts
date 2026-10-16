@@ -1,5 +1,5 @@
 // Rodzina GRID: Characters, Block, Braille, Dots, Cross, Diamond, Lines, Diagonal (plik 02, sekcja 1 i 4). proj.
-import type { EffectDef, Img, RenderCtx } from '../core/types.ts';
+import type { EffectDef, Img, MotionDef, RenderCtx } from '../core/types.ts';
 import { color, common, range, select, seedParam, toggle } from '../core/params.ts';
 import { backdrop, cellVisible } from '../core/compose.ts';
 import { cellAverages, clamp, hash01, lerp, over, parseColor } from '../core/util.ts';
@@ -14,15 +14,67 @@ export const COLOR_PARAMS = [select('colorMode', 'Colour', 'image', [['image', '
 export const GRID_COMMON = () => [...common('coverage', 'brightness', 'contrast', 'invert', 'bgMode', 'bgBlur', 'bgColor'), { ...common('bgOpacity')[0], default: 40, level: 'main' as const }];
 
 export type Cell = { x0: number; y0: number; x1: number; y1: number; cx: number; cy: number; t: number; r: number; g: number; b: number };
+
+// ---------- Etap 2: glint i scan dla rodziny ASCII (plik 09, sekcja 2.1) ----------
+// Zachowanie wg ascii.rest (github.com/bas3line/ascii, site/src/lib/logo-file.ts @ 8fd792e, MIT, Copyright (c) 2026 bas3line);
+// implementacja własna, okresowa w fazie φ. Glint: ukośny pas (0,45 px w poziomie na 1 px w pionie, jak 0,9 komórki 1:2 na wiersz),
+// połowa szerokości `width` komórek, siła k = smoothstep(1 − d/połowa); „pełna” komórka (ton ≥ 0,3) przy k > 0,55 → znak „/”,
+// kolor rozjaśniony o 35% (k > 0,25) lub 70% (k > 0,6) w stronę bieli. Scan: linia wierszy z góry na dół, głowa 2 wiersze →
+// znaki szumu (3 z 4 komórek, hasz komórki i tiku; 12 tików na przejście), ogon 5 wierszy rozjaśniony o 35%.
+// Czas: `speed` przejść na pętlę; przejście trwa `pass`% cyklu (oryginał: 2 s co 4 s = 50%), potem przerwa. φ = 0: pas przed
+// obrazem, więc obraz statyczny bit w bit.
+const PASS_P = range('pass', 'Pass length', 50, 10, 100, { unit: '%' });
+const SPEED_P = range('speed', 'Speed (passes per loop)', 1, 1, 8);
+export const ASCII_MOTIONS: MotionDef[] = [
+  { id: 'glint', name: 'Glint', params: [SPEED_P, PASS_P, range('width', 'Glint width', 5, 1, 20, { unit: 'cells' })] },
+  { id: 'scan', name: 'Scan', params: [SPEED_P, PASS_P] },
+];
+const NOISE = '#$%&*+<=>?@[]{}', LEAN = 0.45, HEAD = 2, TRAIL = 5, TICKS = 12, SOLID_T = 0.3, INK_T = 0.05;
+export type CellMod = { tint: number; ch: string | null };
+/** Modyfikator komórki (cx, cy, ton) dla glint/scan albo null, gdy ruchu nie ma. W×H: obraz w px; cw×ch: komórka. */
+export function gridMotion(ctx: RenderCtx, cw: number, ch: number, ny: number, W: number, H: number): ((cx: number, cy: number, t: number) => CellMod | null) | null {
+  const m = ctx.motion; if (!m || (m.id !== 'glint' && m.id !== 'scan')) return null;
+  const v = m.p.speed * m.phase; const u = v - Math.floor(v); const P = m.p.pass / 100; if (u >= P) return () => null; const f = u / P;
+  if (m.id === 'glint') {
+    const half = m.p.width * cw; const at = -half + (W + LEAN * H + 2 * half) * f;
+    return (cx, cy, t) => {
+      const d = Math.abs((cx + 0.5) * cw + LEAN * (cy + 0.5) * ch - at); if (d >= half) return null; let k = 1 - d / half; k = k * k * (3 - 2 * k);
+      const tint = k > 0.6 ? 0.7 : k > 0.25 ? 0.35 : 0; const c = k > 0.55 && t >= SOLID_T ? '/' : null; return tint || c ? { tint, ch: c } : null;
+    };
+  }
+  const row = -HEAD + (ny + HEAD + TRAIL) * f; const tick = Math.floor(u * TICKS);
+  return (cx, cy, t) => {
+    const d = row - cy; if (d < 0 || d >= HEAD + TRAIL) return null;
+    if (d >= HEAD) return { tint: 0.35, ch: null };
+    const h = hash01(cx, cy, 977 + tick * 131); return { tint: 0.7, ch: t >= INK_T && h < 0.75 ? NOISE[Math.floor(hash01(cy, cx, 31 + tick) * NOISE.length)] : null };
+  };
+}
+/** Znak eksportu tekstowego po ruchu: pusty znak zostaje pusty (jak w oryginale), inaczej zamiana z modyfikatora. */
+export const motionChar = (mm: ReturnType<typeof gridMotion>, x: number, y: number, t: number, chr: string) => {
+  if (!mm || chr === ' ' || chr === '\u2800') return chr; const mod = mm(x, y, t); return mod?.ch ?? chr;
+};
+const tintC = (v: number, k: number) => v + (255 - v) * k;
 /** Wspolna petla: srednie komorek z `prep`, ton (z odwroceniem), kolor tuszu, coverage przez hasz; rysuje na tle. */
 export function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void, tone?: (t: number) => number, target?: Img): Img {
   const out = target ?? backdrop(ctx); const a = cellAverages(ctx.prep, cw, ch); const p = ctx.p; const ink = parseColor(p.inkColor ?? '#ffffff');
   ctx.info.cols = a.nx; ctx.info.rows = a.ny;
+  const mm = gridMotion(ctx, cw, ch, a.ny, out.w, out.h); const masks = new Map<string, Uint8Array>();
   for (let cy = 0; cy < a.ny; cy++) for (let cx = 0; cx < a.nx; cx++) {
     if (!cellVisible(hash01(cx, cy, p.seed ?? 1), p.coverage)) continue;
     const o = cy * a.nx + cx; let t = a.L[o]; if (p.invert) t = 1 - t; if (tone) t = tone(t);
-    const img = p.colorMode === 'mono' ? ink : [a.R[o], a.G[o], a.B[o]];
-    draw(out, { x0: cx * cw, y0: cy * ch, x1: Math.min(out.w, (cx + 1) * cw), y1: Math.min(out.h, (cy + 1) * ch), cx, cy, t: clamp(t, 0, 1), r: img[0], g: img[1], b: img[2] }, a);
+    let img = p.colorMode === 'mono' ? ink : [a.R[o], a.G[o], a.B[o]];
+    const c: Cell = { x0: cx * cw, y0: cy * ch, x1: Math.min(out.w, (cx + 1) * cw), y1: Math.min(out.h, (cy + 1) * ch), cx, cy, t: clamp(t, 0, 1), r: img[0], g: img[1], b: img[2] };
+    const mod = mm?.(cx, cy, c.t);
+    if (mod) {
+      if (mod.tint) { img = img.map((v) => tintC(v, mod.tint)); c.r = img[0]; c.g = img[1]; c.b = img[2]; }
+      if (mod.ch && c.t >= INK_T) {   // komórka zastąpiona znakiem (glint „/”, szum scanu), w kolorze komórki
+        if (!ctx.glyphs) throw new Error('glint/scan need a glyph provider (canvasGlyphs)');
+        let mk = masks.get(mod.ch); if (!mk) { mk = ctx.glyphs.mask(mod.ch, cw, ch, Math.min(ch, Math.round(cw / 0.6))); masks.set(mod.ch, mk); }
+        for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) { const v = mk[(y - c.y0) * cw + (x - c.x0)]; if (v) over(out.data, (y * out.w + x) * 4, c.r, c.g, c.b, v / 255); }
+        continue;
+      }
+    }
+    draw(out, c, a);
   }
   return out;
 }
@@ -51,6 +103,7 @@ const characters: EffectDef = {
   description: 'Each cell gets a character from a tonal ramp by brightness.',
   params: [CELL(10), select('charSet', 'Character set', 'standard', [...Object.entries(CHARSETS).map(([k, v]) => [k, v.name] as [string, string]), ['custom', 'Custom']]),
     { id: 'chars', label: 'Chars', kind: 'text', default: '@#S08Xx+=-;:. ', level: 'main' }, ...COLOR_PARAMS, range('edgeEmphasis', 'Edge emphasis', 0, 0, 100, { level: 'advanced', unit: '%' }), ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     if (!ctx.glyphs) throw new Error('Characters needs a glyph provider (canvasGlyphs)'); const { fs, cw, ch } = charCell(ctx); const ramp = rampOf(ctx.p); const eb = edgeBoost(ctx, cellAverages(ctx.prep, cw, ch));
     const masks = new Map<string, Uint8Array>();   // krok 6: maska znaku raz na render, nie klucz tekstowy na każdą komórkę
@@ -62,7 +115,8 @@ const characters: EffectDef = {
   },
   text(ctx) {
     const { cw, ch } = charCell(ctx); const ramp = rampOf(ctx.p); const a = cellAverages(ctx.prep, cw, ch); const eb = edgeBoost(ctx, a); const rows: string[] = [];
-    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; if (eb) t = clamp(t + eb[y * a.nx + x], 0, 1); s += charAt(ramp, t); } rows.push(s); }
+    const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);
+    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; if (eb) t = clamp(t + eb[y * a.nx + x], 0, 1); s += motionChar(mm, x, y, t, charAt(ramp, t)); } rows.push(s); }
     return rows.join('\n') + '\n';
   },
 };
@@ -86,6 +140,7 @@ const block: EffectDef = {
   id: 'block-chars', name: 'Block', category: 'ASCII & Text', engine: 'GRID', phase: 1,
   description: 'Unicode block characters (full, half, quarter, shaded) picked by tone.',
   params: [CELL(10), select('blockSet', 'Block set', 'quarter', [['full', 'Full'], ['half', 'Half'], ['quarter', 'Quarter'], ['shaded', 'Shaded']]), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     const { cw, ch } = charCell(ctx); const st = subTones(ctx, cw, ch); const hw = cw / 2, hh = ch / 2;
     return runGlyphGrid(ctx, cw, ch, (img, c) => {
@@ -98,7 +153,8 @@ const block: EffectDef = {
   },
   text(ctx) {
     const { cw, ch } = charCell(ctx); const st = subTones(ctx, cw, ch); const a = cellAverages(ctx.prep, cw, ch); const rows: string[] = [];
-    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; s += blockChar(ctx, { t }, st(x, y)); } rows.push(s); }
+    const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);
+    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; s += motionChar(mm, x, y, t, blockChar(ctx, { t }, st(x, y))); } rows.push(s); }
     return rows.join('\n') + '\n';
   },
 };
@@ -116,6 +172,7 @@ const braille: EffectDef = {
   id: 'braille', name: 'Braille', category: 'ASCII & Text', engine: 'GRID', phase: 1,
   description: '8-dot Braille cells: about twice the detail of a normal character ramp. Monochrome by default; copy as text.',
   params: [range('dotPitch', 'Dot pitch', 3, 1, 16, { unit: 'px', px: true }), range('threshold', 'Threshold', 50, 0, 100, { unit: '%' }), toggle('dither', 'Dither dots', true), ...COLOR_PARAMS.map((p) => (p.id === 'colorMode' ? { ...p, default: 'mono' } : p)), ...GRID_COMMON().map((p) => (p.id === 'bgMode' ? { ...p, default: 'solid' } : p)), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     const { dw, dh, cw, ch } = brailleGeom(ctx); const sub = cellAverages(ctx.prep, dw, dh);
     return runGlyphGrid(ctx, cw, ch, (img, c) => {
@@ -125,7 +182,8 @@ const braille: EffectDef = {
   },
   text(ctx) {
     const { dw, dh, cw, ch } = brailleGeom(ctx); const sub = cellAverages(ctx.prep, dw, dh); const nx = Math.ceil(ctx.prep.w / cw), ny = Math.ceil(ctx.prep.h / ch); const rows: string[] = [];
-    for (let y = 0; y < ny; y++) { let s = ''; for (let x = 0; x < nx; x++) s += String.fromCharCode(0x2800 + (cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage) ? brailleMask(ctx, sub, x, y) : 0)); rows.push(s); }
+    const mm = gridMotion(ctx, cw, ch, ny, ctx.prep.w, ctx.prep.h); const tn = mm ? cellAverages(ctx.prep, cw, ch) : null;
+    for (let y = 0; y < ny; y++) { let s = ''; for (let x = 0; x < nx; x++) { const chr = String.fromCharCode(0x2800 + (cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage) ? brailleMask(ctx, sub, x, y) : 0)); let t = tn ? tn.L[y * tn.nx + x] : 0; if (ctx.p.invert) t = 1 - t; s += motionChar(mm, x, y, t, chr); } rows.push(s); }
     return rows.join('\n') + '\n';
   },
 };
@@ -137,6 +195,7 @@ const dots: EffectDef = {
   id: 'dots', name: 'Dots', category: 'ASCII & Text', engine: 'GRID', phase: 1,
   description: 'Round dots whose size follows brightness (halftone-style).',
   params: [CELL(10), select('dotShape', 'Dot shape', 'circle', [['circle', 'Circle'], ['square', 'Square'], ['diamond', 'Diamond']]), range('minDot', 'Min dot', 0, 0, 100, { unit: '%' }), range('maxDot', 'Max dot', 100, 0, 100, { unit: '%' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     const cs = ctx.px(ctx.p.cellSize); const lo = ctx.p.minDot / 100, hi = Math.max(lo, ctx.p.maxDot / 100);
     const sh = ctx.p.dotShape;
@@ -151,6 +210,7 @@ const cross: EffectDef = {
   id: 'cross', name: 'Cross', category: 'Geometric', engine: 'GRID', phase: 1,
   description: 'A grid of plus signs scaled by brightness.',
   params: [CELL(12), range('strokeThickness', 'Stroke', 16, 4, 60, { unit: '%' }), range('rotation', 'Rotation', 0, 0, 90, { unit: '°' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.rotation * Math.PI) / 180; const ca = Math.cos(ang), sa = Math.sin(ang);   // = rot()
     return runGrid(ctx, cs, cs, (img, c) => {
@@ -164,6 +224,7 @@ const diamond: EffectDef = {
   id: 'diamond', name: 'Diamond', category: 'Geometric', engine: 'GRID', phase: 1,
   description: 'A grid of rhombi sized by tone.',
   params: [CELL(12), select('fill', 'Fill', 'solid', [['solid', 'Solid'], ['outline', 'Outline']]), range('rotation', 'Rotation', 0, 0, 90, { unit: '°' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.rotation * Math.PI) / 180; const lw = Math.max(1, ctx.scale * 1.2); const ca = Math.cos(ang), sa = Math.sin(ang); const outline = ctx.p.fill === 'outline';
     return runGrid(ctx, cs, cs, (img, c) => {
@@ -177,6 +238,7 @@ const lines: EffectDef = {
   id: 'lines', name: 'Lines', category: 'Geometric', engine: 'GRID', phase: 1,
   description: 'Horizontal or vertical segments whose thickness follows brightness.',
   params: [CELL(10), select('orientation', 'Orientation', 'horizontal', [['horizontal', 'Horizontal'], ['vertical', 'Vertical']]), range('thickness', 'Max thickness', 70, 5, 100, { unit: '%' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     const cs = ctx.px(ctx.p.cellSize); const vert = ctx.p.orientation === 'vertical';
     return runGrid(ctx, cs, cs, (img, c) => {
@@ -189,6 +251,7 @@ const diagonal: EffectDef = {
   id: 'diagonal', name: 'Diagonal', category: 'Geometric', engine: 'GRID', phase: 1,
   description: 'Slanted strokes whose thickness follows brightness.',
   params: [CELL(10), range('angle', 'Angle', 45, 0, 180, { unit: '°' }), range('thickness', 'Max thickness', 70, 5, 100, { unit: '%' }), ...COLOR_PARAMS, ...GRID_COMMON(), seedParam()],
+  motions: ASCII_MOTIONS,
   render(ctx) {
     const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.angle * Math.PI) / 180; const ca = Math.cos(-ang), sa = Math.sin(-ang);   // = rot(…, −ang)
     return runGrid(ctx, cs, cs, (img, c) => {
