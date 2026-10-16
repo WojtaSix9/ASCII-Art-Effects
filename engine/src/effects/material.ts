@@ -24,13 +24,15 @@ const waves: EffectDef = {
   description: 'The image on a rippling surface, or drawn with wavy lines.',
   params: [range('frequency', 'Frequency', 10, 1, 60), range('amplitude', 'Amplitude', 8, 0, 60, PX), range('direction', 'Direction', 0, -90, 90, { unit: '°' }), toggle('lineMode', 'Wavy lines', false),
     range('lineSpacing', 'Line spacing', 6, 2, 40, { ...PX, level: 'advanced' }), color('bgColor', 'Background', '#0a0a0a', { level: 'advanced' }), ...px1()],
+  // etap 2 (plik 09, Tier B): flow = faza fali przesuwa się o 2π·u, u = część ułamkowa speed·φ (fala biegnie wzdłuż kierunku, speed okresów na pętlę)
+  motions: [{ id: 'flow', name: 'Flow', params: [range('speed', 'Speed (cycles per loop)', 1, 1, 8)] }],
   // fala biegnie wzdłuż kierunku d (frequency okresów na szerokość obrazu); powierzchnia: próbka przesunięta prostopadle o A·sin,
   // jasność × (1 + 0,25·nachylenie); linie: rodzina linii prostopadłych do d przesuniętych o A·sin, grubość ∝ jasność, kolor z obrazu
   render(ctx) {
-    const s = ctx.prep; const { w, h } = s; const a = ctx.p.direction * DEG, dx = Math.cos(a), dy = Math.sin(a); const k = (2 * Math.PI * ctx.p.frequency) / w; const A = ctx.p.amplitude * ctx.scale; const out = out0(s);
+    const s = ctx.prep; const { w, h } = s; const a = ctx.p.direction * DEG, dx = Math.cos(a), dy = Math.sin(a); const k = (2 * Math.PI * ctx.p.frequency) / w; const A = ctx.p.amplitude * ctx.scale; const out = out0(s); const mo = ctx.motion; const sh = mo ? 2 * Math.PI * (mo.p.speed * mo.phase - Math.floor(mo.p.speed * mo.phase)) : 0;
     const sp = ctx.p.lineSpacing * ctx.scale; const bg = parseColor(ctx.p.bgColor); const sm = ctx.p.lineMode ? blur(s, Math.max(1, Math.round(sp / 2))).data : null;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4; const X = x + 0.5 - w / 2, Y = y + 0.5 - h / 2; const u = X * dx + Y * dy, v = -X * dy + Y * dx; const ph = k * u; const off = A * Math.sin(ph);
+      const i = (y * w + x) * 4; const X = x + 0.5 - w / 2, Y = y + 0.5 - h / 2; const u = X * dx + Y * dy, v = -X * dy + Y * dx; const ph = sh ? k * u - sh : k * u; const off = A * Math.sin(ph);
       if (sm) {
         const vv = (v - off) / sp; const dist = Math.abs(vv - Math.round(vv)) * sp; const L = lum(sm[i], sm[i + 1], sm[i + 2]); const wid = sp * 0.85 * L; const c = clamp(0.5 - (dist - wid / 2), 0, 1) * Math.min(1, wid);
         for (let q = 0; q < 3; q++) out.data[i + q] = lerp(bg[q], Math.min(255, sm[i + q] * 1.15 + 20), c);

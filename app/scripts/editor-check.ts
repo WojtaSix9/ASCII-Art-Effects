@@ -509,6 +509,12 @@ try {
   await page.waitForFunction(() => document.querySelector('[data-anim-info]')?.textContent?.startsWith('Siatka'), null, { timeout: 30_000 });
   const tm = { info: await page.textContent('[data-anim-info]'), go: await page.isDisabled('[data-go]') }; await page.click('[data-cancel]');
   t('TS dla Mixed (domyślnie znak ∙ spoza zestawu biblioteki): komunikat ze znakiem, Pobierz wyłączone', !!tm.info?.includes('Znaki spoza zestawu biblioteki: ∙') && tm.go, tm);
+  // Etap 2, Tier B: Dither z dyfuzją błędu nie ma ruchu (onlyIf): w zakładce Animation uwaga zamiast cichej, nieruchomej pętli
+  await pick('dither'); await settle(page); await page.click('[data-tab="anim"]');
+  const dn0 = await page.isHidden('[data-anim-only-note]'); const dm = await page.$$eval('[data-motion] option', (o) => o.map((x) => (x as HTMLOptionElement).value));
+  await page.$eval('[data-panel] [data-p="algorithm"]', (el) => { const s = el as HTMLSelectElement; s.value = 'floyd'; s.dispatchEvent(new Event('change', { bubbles: true })); }); await settle(page);
+  const dn1 = { hidden: await page.isHidden('[data-anim-only-note]'), text: await page.textContent('[data-anim-only-note]') };
+  t('Dither: ruchy flow i shimmer; przy Bayer bez uwagi, po wyborze Floyd–Steinberg uwaga, że dyfuzja błędu nie ma animacji', JSON.stringify(dm) === '["flow","shimmer"]' && dn0 && !dn1.hidden && !!dn1.text?.includes('Dyfuzja błędu'), { dm, dn0, dn1 });
   t('brak błędów w konsoli', errors.length === 0, errors.join(' | '));
 } finally { await browser.close(); server.kill(); }
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${!ok && info ? `  [${info}]` : ''}`);

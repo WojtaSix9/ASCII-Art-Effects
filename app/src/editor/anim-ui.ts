@@ -25,6 +25,7 @@ export const animHtml = () => `
   <div class="pp-sec">
     <button type="button" class="ed-btn ed-btn--primary" data-play aria-pressed="false"><span data-play-icon>${ICON.play}</span><span data-play-label>Odtwórz</span></button>
     <div class="ed-anim__bar" data-anim-bar hidden><span></span></div>
+    <p class="ed-note" data-anim-only-note hidden></p>
     <p class="ed-hint" data-anim-status role="status"></p>
   </div>`;
 
@@ -50,8 +51,14 @@ export function mountAnim(root: HTMLElement, defs: () => EffectMeta[], host: Hos
     let a = s.anim.byStyle[s.style]; if (!a || !m.some((x) => x.id === a!.id)) a = s.anim.byStyle[s.style] = { id: m[0].id, params: {} };
     return a;
   };
+  /** Ruch działa tylko przy części ustawień stylu (onlyIf, np. Dither bez dyfuzji błędu): wtedy uwaga zamiast cichej, nieruchomej pętli. */
+  const syncNote = () => {
+    const a = cur(); const def = motions().find((x) => x.id === a?.id); const el = root.querySelector<HTMLElement>('[data-anim-only-note]')!; const oi = def?.onlyIf;
+    const v = oi ? String(host.get().params[host.get().style]?.[oi.param] ?? effect()?.params.find((q) => q.id === oi.param)?.default) : '';
+    el.hidden = !oi || oi.values.includes(v); el.textContent = oi && !el.hidden ? oi.note : '';
+  };
   const build = () => {
-    const m = motions(); const a = cur();
+    syncNote(); const m = motions(); const a = cur();
     sel.innerHTML = m.map((x) => `<option value="${x.id}">${x.name}</option>`).join(''); if (a) sel.value = a.id;
     const def = m.find((x) => x.id === a?.id);
     const box = root.querySelector<HTMLElement>('[data-motion-params]')!;
@@ -110,9 +117,9 @@ export function mountAnim(root: HTMLElement, defs: () => EffectMeta[], host: Hos
 
   /** Zmiana ustawień (ruchu, stylu, koloru…): przy odtwarzaniu pokazujemy zwykły podgląd i liczymy pętlę od nowa po 400 ms. */
   const changed = () => {
-    if (!want) return;
+    syncNote(); if (!want) return;
     gen++; stopLoop(); frames = []; setPhase('idle'); status.textContent = 'Zmiana ustawień: przeliczę pętlę…'; host.staticRender();
     clearTimeout(restartT); restartT = window.setTimeout(() => { if (want) prepare(); }, 400);
   };
-  return { build, changed, stop, get playing() { return want; }, status: () => ({ ...st }), dispose: () => stop(false) };
+  return { build, changed, syncNote, stop, get playing() { return want; }, status: () => ({ ...st }), dispose: () => stop(false) };
 }

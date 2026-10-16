@@ -314,8 +314,8 @@ OK   RGB Split pulse: φ i φ + 1 (speed 2, 4 fazy) bit w bit (próg 0 = pomiar;
 OK   RGB Split pulse: przesunięcie R/B zgodne ze wzorem: φ 0 → ±10 px, φ 0,5 → ±4 px, φ 0,25 → ±7 px; G na miejscu; @2x → ±8 px  [90,80,70 | 84,80,76 | 87,80,73 | @2x 168,160,152]
 OK   RGB Split pulse: intensity 0 = brak ruchu (każda faza = obraz statyczny)
 OK   RGB Split pulse: 32 fazy z [0, 1): wymiary i alfa jak w źródle
-OK   ruchy (26): φ 0 = statyczny bit w bit; φ 1 = φ 0; φ 0,25 ≠ statyczny (ruch jest); determinizm; alfa i wymiary; speed 2 → okres 1/2; komórki @2x = @1x  [characters.glint, characters.scan, block-chars.glint, block-chars.scan, braille.glint, braille.scan, dots.glint, dots.scan, cross.glint, cross.scan, diamond.glint, diamond.scan, lines.glint, lines.scan, diagonal.glint, diagonal.scan, pixel.breathe, disco.hue, twirl.oscillate, zigzag.flow, ripple.spread, rgbsplit.pulse, scanline.roll, mixed.glint, mixed.scan, flutedglass.slide]
-OK   ruchy: φ i φ + 1 (fazy 0,1 / 0,25 / 0,6) bit w bit dla każdego ruchu (próg 0 = pomiar)  [{"characters.glint":0,"characters.scan":0,"block-chars.glint":0,"block-chars.scan":0,"braille.glint":0,"braille.scan":0,"dots.glint":0,"dots.scan":0,"cross.glint":0,"cross.scan":0,"diamond.glint":0,"diamond.scan":0,"lines.glint":0,"lines.scan":0,"diagonal.glint":0,"diagonal.scan":0,"pixel.breathe":0,"disco.hue":0,"twirl.oscillate":0,"zigzag.flow":0,"ripple.spread":0,"rgbsplit.pulse":0,"scanline.roll":0,"mixed.glint":0,"mixed.scan":0,"flutedglass.slide":0}]
+OK   ruchy (36): φ 0 = statyczny bit w bit; φ 1 = φ 0; φ 0,25 ≠ statyczny (ruch jest); determinizm; alfa i wymiary; speed 2 → okres 1/2; komórki @2x = @1x  [characters.glint, characters.scan, block-chars.glint, block-chars.scan, braille.glint, braille.scan, dots.glint, dots.scan, cross.glint, cross.scan, diamond.glint, diamond.scan, lines.glint, lines.scan, diagonal.glint, diagonal.scan, pixel.breathe, disco.hue, halftone.rotate, dither.flow, dither.shimmer, twirl.oscillate, zigzag.flow, ripple.spread, rgbsplit.pulse, scanline.roll, crt.flicker, crt.refresh, risograph.drift, ledmatrix.pulse, ledmatrix.sweep, glitch.jitter, mixed.glint, mixed.scan, flutedglass.slide, waves.flow]
+OK   ruchy: φ i φ + 1 (fazy 0,1 / 0,25 / 0,6) bit w bit dla każdego ruchu (próg 0 = pomiar)  [{"characters.glint":0,"characters.scan":0,"block-chars.glint":0,"block-chars.scan":0,"braille.glint":0,"braille.scan":0,"dots.glint":0,"dots.scan":0,"cross.glint":0,"cross.scan":0,"diamond.glint":0,"diamond.scan":0,"lines.glint":0,"lines.scan":0,"diagonal.glint":0,"diagonal.scan":0,"pixel.breathe":0,"disco.hue":0,"halftone.rotate":0,"dither.flow":0,"dither.shimmer":0,"twirl.oscillate":0,"zigzag.flow":0,"ripple.spread":0,"rgbsplit.pulse":0,"scanline.roll":0,"crt.flicker":0,"crt.refresh":0,"risograph.drift":0,"ledmatrix.pulse":0,"ledmatrix.sweep":0,"glitch.jitter":0,"mixed.glint":0,"mixed.scan":0,"flutedglass.slide":0,"waves.flow":0}]
 OK   Scanline roll: φ 0,2 przy okresie 5 px = wzór przesunięty o 1 wiersz (wiersz y = statyczny y + 1)
 OK   Twirl oscillate (100%): φ 0,5 = statyczny Twirl z amount −120 (bit w bit)
 OK   Disco hue: szarość bez zmian w każdej fazie; czerwień po 1/3 cyklu (120°) → zieleń  [0,255,0]
@@ -346,3 +346,17 @@ OK   TS scenes: obraz testowy (kolorowy) → kategoria scenes, siatka 100×40 be
 OK   TS scenes: siatka 300×134 (Cell size 3, komórka 2×3 px) zmniejszona do ≤ 320×120, najmniejsza komórka, która się mieści  [300x134 → 300x100, cellSize 4]
 OK   TS: obraz w jednym kolorze (mono) → kategoria effects i ≤ 80×32; jako scenes pieceSource odmawia (scena wymaga ≥ 4 kolorów)  [effects 75x31 | a scene needs at least 4 colours, the picture has 1]
 OK   TS: znaki spoza zestawu biblioteki wykryte (Mixed domyślnie: ∙; Braille: U+28xx) i pieceSource odmawia  [∙ | 19 znaków Braille | characters outside the ascii.rest set: ∙]
+OK   Dither flow (Bayer 8×8, E): na płaskiej szarości φ 1/24 = wzór statyczny przesunięty o 1 px (piksel x = statyczny x + 1)  [niezgodnych 0, zmienionych 19080]
+OK   Dither shimmer: na płaskiej szarości liczba jasnych pikseli w każdej fazie = statyczna (ten sam zestaw progów), a wzór się zmienia  [9600 / 9600 9600 9600]
+OK   Dither z dyfuzją błędu (Floyd–Steinberg): flow nie działa (onlyIf), każda klatka = obraz statyczny
+OK   LED Matrix pulse (intensity 50%): φ 0,5 = statyczny z Brightness 50% (bit w bit)
+OK   LED Matrix sweep (glow 0): zmiany tylko w diodach pasa (komórka 10 px, pas ±0,15 przekątnej wokół 0,5), żadna dioda nie ciemnieje  [poza 0, w pasie 5224, ciemniej 0]
+OK   Halftone rotate: φ 0,5 (kropki, okres 90°) = statyczny z kątem 45° + 45° = 90° (bit w bit)
+OK   Halftone rotate (linie, okres 180°): φ 0,25 = statyczny z kątem 45° + 45° (bit w bit)
+OK   Glitch jitter (6 kroków): φ 1,5/6 (krok 1) = statyczny z ziarnem seed + 7919 (bit w bit)
+OK   Glitch jitter: 6 kroków = 6 różnych klatek  [6]
+OK   CRT refresh (curvature 0, flicker 0): zmiany tylko w wierszach pasa (środek 60, ±15), tam jaśniej  [poza 0, w pasie 13310, ciemniej 0]
+OK   CRT flicker: 8 kroków = 8 różnych klatek  [8]
+OK   Waves flow: na płaskim obrazie φ 0,5 = fala przesunięta o pół długości (8 px przy 16 px), różnica ≤ 1 poziom (zaokrąglenie)  [max 0, zmienionych 18240]
+OK   Risograph drift: bez przesunięcia i ziarna (0, 0) nic się nie rusza: każda klatka = statyczna
+OK   Risograph drift: przy misregistration 0 zmienia się tylko ziarno (kroki 0 i 1 różne)

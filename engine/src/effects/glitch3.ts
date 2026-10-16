@@ -76,10 +76,13 @@ const glitch: EffectDef = {
   id: 'glitch', name: 'Digital Distortion', category: 'Glitch & Signal', engine: 'SHADER', phase: 3,
   description: 'A broken signal: shifted horizontal slices, split RGB, displaced blocks and noise lines.',
   params: [range('intensity', 'Intensity', 65, 0, 100, { unit: '%' }), range('sliceMax', 'Max slice', 24, 2, 120, PX), range('rgb', 'RGB shift', 40, 0, 100, { unit: '%' }), range('blockSize', 'Block size', 32, 4, 160, PX), seedParam(), ...px1()],
+  // etap 2 (plik 09, Tier B: „pętla z N ziaren cyklicznie”): jitter = pętla dzielona na `steps` równych kroków, krok k używa ziarna
+  // seed + 7919·k; krok 0 = seed z ustawień, więc φ = 0 daje obraz statyczny. Więcej kroków = żywiej, ale większy GIF
+  motions: [{ id: 'jitter', name: 'Jitter', params: [range('steps', 'Glitches per loop', 6, 2, 24)] }],
   // z seeda (w ułamkach obrazu): intensity·30 pasków przesuniętych o do ±15% szerokości z rozdzieleniem R/B (do 16 px × rgb),
   // intensity·20 bloków skopiowanych z przesuniętego miejsca z zamienionymi kanałami, intensity·10 linii szumu (1 px × skala)
   render(ctx) {
-    const s = ctx.prep; const { w, h } = s; const src = s.data; const out = copy(s); const d = out.data; const k = ctx.p.intensity / 100; if (!k) return out; const rnd = mulberry32(ctx.p.seed * 6151 + 29); const sc = ctx.scale;
+    const s = ctx.prep; const { w, h } = s; const src = s.data; const out = copy(s); const d = out.data; const k = ctx.p.intensity / 100; if (!k) return out; const mo = ctx.motion; const seed = ctx.p.seed + (mo ? 7919 * Math.floor((mo.phase - Math.floor(mo.phase)) * mo.p.steps) : 0); const rnd = mulberry32(seed * 6151 + 29); const sc = ctx.scale;
     const at = (x: number, y: number, c: number) => src[(clamp(y, 0, h - 1) * w + clamp(Math.round(x), 0, w - 1)) * 4 + c];
     for (let n = Math.round(k * 30), q = 0; q < n; q++) {
       const y0 = Math.floor(rnd() * h), sh = Math.max(1, Math.round((0.1 + rnd() * 0.9) * ctx.p.sliceMax * sc)), dx = (rnd() - 0.5) * 2 * 0.15 * w * k, rs = (ctx.p.rgb / 100) * rnd() * 16 * sc;
@@ -90,7 +93,7 @@ const glitch: EffectDef = {
       const bx = Math.floor(rnd() * w), by = Math.floor(rnd() * h), bw = Math.max(2, Math.round(B * (0.5 + rnd() * 1.5))), bh = Math.max(2, Math.round(B * (0.3 + rnd()))), ox = Math.round((rnd() - 0.5) * 4 * B), oy = Math.round((rnd() - 0.5) * B), sw = Math.floor(rnd() * 3);
       for (let y = by; y < Math.min(h, by + bh); y++) for (let x = bx; x < Math.min(w, bx + bw); x++) { const i = (y * w + x) * 4; const c = [at(x + ox, y + oy, 0), at(x + ox, y + oy, 1), at(x + ox, y + oy, 2)]; d[i] = c[sw]; d[i + 1] = c[(sw + 1) % 3]; d[i + 2] = c[(sw + 2) % 3]; }
     }
-    for (let n = Math.round(k * 10), q = 0; q < n; q++) { const y0 = Math.floor(rnd() * h), t = Math.max(1, Math.round(sc)); for (let y = y0; y < Math.min(h, y0 + t); y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; const v = 255 * hash01(Math.floor(x / sc), q, ctx.p.seed); d[i] = d[i + 1] = d[i + 2] = v; } }
+    for (let n = Math.round(k * 10), q = 0; q < n; q++) { const y0 = Math.floor(rnd() * h), t = Math.max(1, Math.round(sc)); for (let y = y0; y < Math.min(h, y0 + t); y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; const v = 255 * hash01(Math.floor(x / sc), q, seed); d[i] = d[i + 1] = d[i + 2] = v; } }
     return out;
   },
 };

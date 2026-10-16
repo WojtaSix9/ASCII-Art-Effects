@@ -28,6 +28,10 @@ const risograph: EffectDef = {
   params: [select('inkCount', 'Inks', '2', [['2', '2'], ['3', '3']]), color('ink1', 'Ink 1', '#ff48b0'), color('ink2', 'Ink 2', '#0078bf'), color('ink3', 'Ink 3', '#ffe800'),
     range('halftoneSize', 'Halftone size', 5, 2, 30, PX), range('misregistration', 'Misregistration', 2, 0, 20, PX), range('grain', 'Grain', 30, 0, 100, { unit: '%' }),
     toggle('overprint', 'Overprint (multiply)', true), color('paperColor', 'Paper', '#f2ede4'), seedParam(), ...px1()],
+  // etap 2 (plik 09, Tier B: „dryf niewspółosiowości warstw plus ziarno”; proj): drift = kierunek przesunięcia farb 2 i 3 obraca się
+  // o 2π·u (u = część ułamkowa speed·φ), długość bez zmian; ziarno zmienia się `grainSteps` razy na cykl (ziarno + 7919·k; 1 = stałe).
+  // Farba 1 stoi (jak w statycznym obrazie). Misregistration 0 = brak dryfu
+  motions: [{ id: 'drift', name: 'Drift', params: [range('speed', 'Speed (cycles per loop)', 1, 1, 8), range('grainSteps', 'Grain changes per cycle', 4, 1, 12)] }],
   // Rozdział: w modelu mnożenia (farby przepuszczają światło t_i) szukamy grubości c_i z log(piksel/papier) = Σ c_i·log(t_i)
   // metodą najmniejszych kwadratów (obcięte do 0–1), potem pole kropki a_i = (1 − t_i^c_i)/(1 − t_i) daje ten sam średni ton.
   render(ctx) {
@@ -43,11 +47,12 @@ const risograph: EffectDef = {
     }
     const out = new Uint8ClampedArray(d.length); for (let i = 0; i < out.length; i += 4) { out[i] = P[0]; out[i + 1] = P[1]; out[i + 2] = P[2]; out[i + 3] = d[i + 3]; }
     const cs = Math.max(2, ctx.p.halftoneSize * ctx.scale), mis = ctx.p.misregistration * ctx.scale, gr = ctx.p.grain / 100, sc = ctx.scale; const angles = [15, 75, 45];
+    const mo = ctx.motion; const ru = mo ? mo.p.speed * mo.phase - Math.floor(mo.p.speed * mo.phase) : 0; const gseed = ctx.p.seed + 7919 * (mo ? Math.floor(ru * mo.p.grainSteps) : 0);
     for (let q = 0; q < n; q++) {
-      const a = 2 * Math.PI * hash01(q, 3, ctx.p.seed); const al = amScreen(fields[q], w, h, cs, angles[q] * DEG, { ox: Math.cos(a) * mis * (q ? 1 : 0), oy: Math.sin(a) * mis * (q ? 1 : 0), soft: Math.max(1, sc) });
+      const a = 2 * Math.PI * hash01(q, 3, ctx.p.seed) + (ru ? 2 * Math.PI * ru : 0); const al = amScreen(fields[q], w, h, cs, angles[q] * DEG, { ox: Math.cos(a) * mis * (q ? 1 : 0), oy: Math.sin(a) * mis * (q ? 1 : 0), soft: Math.max(1, sc) });
       const ink = inks[q];
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const p = y * w + x; let k = al[p]; if (!k) continue; if (gr) k *= 1 - gr * 0.6 * hash01(Math.floor(x / sc), Math.floor(y / sc), ctx.p.seed + 11 + q); const i = p * 4;
+        const p = y * w + x; let k = al[p]; if (!k) continue; if (gr) k *= 1 - gr * 0.6 * hash01(Math.floor(x / sc), Math.floor(y / sc), gseed + 11 + q); const i = p * 4;
         for (let c = 0; c < 3; c++) out[i + c] = ctx.p.overprint ? out[i + c] * lerp(1, ink[c] / P[c], k) : lerp(out[i + c], ink[c], k);
       }
     }

@@ -750,3 +750,69 @@ Decyzje użytkownika: wariant 1 (6 odcieni na kolor, najwyżej 10 kolorów zdję
 ### Uwaga (`BRAK`, do decyzji)
 
 - Nazwy plików źródłowych (`…_53876-108161.jpg`, `…_23-2150491098.jpg`) wyglądają jak pobrania z Freepika. Darmowa licencja Freepika zwykle wymaga podania autora. Nie sprawdzałem licencji tych plików; to nie jest porada prawna.
+
+## Krok 7: Tier B (Dither, LED Matrix, Halftone, Glitch, CRT, Waves, Risograph)
+
+### Ruchy (`proj`, wg tabeli z pliku 09)
+
+Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 0,5 = obraz statyczny bit w bit.
+
+| Efekt | Ruch | Jak |
+|---|---|---|
+| Dither | `flow` | macierz przesuwa się w jednym z 8 kierunków o `tiles` kafli na cykl (kafel: Bayer n, halftone 8, blue noise 64); linie i radial przesuwają fazę (wzdłuż swojej normalnej, kierunek bez znaczenia); white noise przewija się przez cały obraz |
+| Dither | `shimmer` | każdy próg przesuwa się o u cyklu, wzór mieni się w miejscu |
+| LED Matrix | `pulse` | jasność diod × (1 − intensity·(1 − cos 2πu)/2) |
+| LED Matrix | `sweep` | ukośny pas światła raz na cykl, do × (1 + 1,5·intensity) |
+| Halftone | `rotate` | siatka rastra obraca się o pełny okres wzoru na cykl: 90° dla kropek i kwadratów, 180° dla linii |
+| Glitch | `jitter` | `steps` ziaren na pętlę (seed + 7919·k) |
+| CRT | `flicker` | `steps` kroków: pasy migotania z nowego ziarna i cały ekran ciemniejszy o do 15%·flicker |
+| CRT | `refresh` | jaśniejszy pas (1/8 wysokości) z góry na dół |
+| Waves | `flow` | faza fali przesuwa się o 2π·u |
+| Risograph | `drift` | kierunek niewspółosiowości farb 2 i 3 obraca się o pełny kąt; ziarno zmienia się `grainSteps` razy na cykl |
+
+- **Dither z dyfuzją błędu** (Floyd–Steinberg, Atkinson, Stucki, Sierra Lite) nie ma ruchu, zgodnie z plikiem 09:
+  - nowe pole `MotionDef.onlyIf`: silnik zwraca wtedy obraz statyczny;
+  - zakładka Animation pokazuje uwagę z prośbą o algorytm uporządkowany.
+- **Dither flow, domyślnie 3 kafle na cykl.** Przy 4 kaflach i Bayer 8×8 w ¼ pętli wzór przesuwa się o dokładnie jeden kafel (8 px) i wygląda jak statyczny. Wspólny test „ruch przy φ 0,25” to wychwycił. Wybrałem 3, bo to nie jest potęga 2, więc ćwiartki pętli nie trafiają w całe kafle.
+
+### Testy (`test`)
+
+- **Silnik 362/362:**
+  - wspólne własności dla 36 ruchów (10 nowych): φ 0 = statyczny, okresowość, ruch widoczny, speed 2, @2x;
+  - **sekcja 37 (14 nowych), wartości ze wzorów:**
+    - Dither flow na płaskiej szarości = wzór przesunięty o 1 px przy φ 1/24;
+    - Dither shimmer zachowuje liczbę jasnych pikseli;
+    - Floyd–Steinberg z ruchem = obraz statyczny;
+    - LED pulse 50% przy φ 0,5 = Brightness 50%;
+    - LED sweep zmienia tylko diody pasa;
+    - Halftone φ 0,5 = kąt 90° (kropki) i φ 0,25 = kąt 90° (linie);
+    - Glitch krok 1 = ziarno + 7919; Glitch 6 różnych klatek;
+    - CRT refresh zmienia tylko wiersze pasa; CRT flicker 8 różnych klatek;
+    - Waves φ 0,5 = fala przesunięta o pół długości (≤ 1 poziom: zaokrąglenie);
+    - Risograph bez przesunięcia i ziarna stoi.
+  - **Mój błąd w teście CRT:** środek pasa policzyłem jako 67,5 zamiast −15 + 75 = 60; poprawiony rachunek, kod bez zmian.
+- **`test:editor` 90/90:** Dither ma flow i shimmer; uwaga pojawia się po wyborze Floyd–Steinberg.
+- **hash-baseline** 516/516 identyczny.
+
+### Koszt klatki (`test`, Chromium, Worker, zdjęcie 1 przy dłuższym boku 1080 px, mediana z 3)
+
+| Efekt | Statyczny | Z ruchem | 240 klatek |
+|---|---|---|---|
+| Dither | 39 ms | 43 ms | ok. 10 s |
+| LED Matrix | 134 ms | 127 ms | ok. 30 s |
+| Halftone | 144 ms | 145 ms | ok. 35 s |
+| Glitch | 11 ms | 12 ms | ok. 3 s |
+| CRT | 192 ms | 166 ms | ok. 40 s |
+| Waves | 58 ms | 59 ms | ok. 14 s |
+| Risograph | 474 ms | 468 ms | ok. 2 min |
+
+### Na oko (arkusz 10 ruchów × 4 fazy, `photo-24-hibiscus`)
+
+- Wszystkie ruchy działają zgodnie z opisem.
+- CRT flicker przy domyślnym Flicker 20% jest subtelny; Risograph drift przy domyślnej niewspółosiowości 2 px ledwo widoczny (przy 6 px wyraźny).
+- Dither shimmer na Bayerze daje pionowe i poziome prążki w fazach pośrednich (cecha wzoru Bayera).
+
+### Czego nie sprawdzono (`BRAK`)
+
+- GIF i MP4 tych efektów w pełnym eksporcie (rozmiary plików); to krok 10 (test dymny).
+- Safari i Firefox.

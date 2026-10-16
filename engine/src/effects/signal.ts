@@ -56,6 +56,10 @@ const crt: EffectDef = {
   description: 'A tube screen: curved glass, scan lines, RGB phosphor mask, glow and a slight flicker.',
   params: [range('curvature', 'Curvature', 40, 0, 100, { unit: '%' }), range('scanlines', 'Scan lines', 50, 0, 100, { unit: '%' }), range('phosphorMask', 'Phosphor mask', 40, 0, 100, { unit: '%' }),
     range('bloom', 'Bloom', 30, 0, 100, { unit: '%' }), range('flicker', 'Flicker', 20, 0, 100, { unit: '%' }), seedParam(), ...px1()],
+  // etap 2 (plik 09, Tier B; proj): flicker = pętla w `steps` krokach, krok k: pasy migotania z ziarna seed + 7919·k i cały ekran
+  // przyciemniony o do 15%·flicker (krok 0 = obraz statyczny); refresh = jaśniejszy pas odświeżania (1/8 wysokości) biegnie z góry na dół
+  // raz na cykl (u = część ułamkowa speed·φ; przy u = 0 nad ekranem), rozjaśnia o do 60%·intensity
+  motions: [{ id: 'flicker', name: 'Flicker', params: [range('steps', 'Flickers per loop', 8, 2, 24)] }, { id: 'refresh', name: 'Refresh bar', params: motionCommon(50) }],
   // kolejność: poświata (z obrazu przed maską), maska luminoforu (kolumny R, G, B co 1 px × skala), linie (okres 3 px × skala),
   // migotanie (pasy jasności wysokości ok. 1/24 obrazu, zależne od seeda), na końcu zakrzywienie z czarnymi narożnikami
   render(ctx) {
@@ -63,8 +67,10 @@ const crt: EffectDef = {
     const bl = ctx.p.bloom / 100; if (bl) { const g = blur(s, Math.max(1, Math.round(4 * sc))).data; for (let i = 0; i < d.length; i += 4) for (let c = 0; c < 3; c++) d[i + c] = 255 - ((255 - d[i + c]) * (255 - g[i + c] * bl * 0.8)) / 255; }
     const pm = ctx.p.phosphorMask / 100; const cw = Math.max(1, Math.round(sc));
     const sl = ctx.p.scanlines / 100; const P = 3 * sc, T = 1 * sc; const fl = ctx.p.flicker / 100; const band = Math.max(1, h / 24);
+    const mo = ctx.motion; const step = mo?.id === 'flicker' ? Math.floor((mo.phase - Math.floor(mo.phase)) * mo.p.steps) : 0; const fseed = ctx.p.seed + 7919 * step; const gm = step ? 1 - fl * 0.15 * hash01(step, 3, ctx.p.seed) : 1;
+    const ru = mo?.id === 'refresh' ? mo.p.speed * mo.phase - Math.floor(mo.p.speed * mo.phase) : 0; const bh = h / 8; const bar = ru ? -bh + (h + 2 * bh) * ru : null;
     for (let y = 0; y < h; y++) {
-      const ms = 1 - sl * 0.6 * bandCover(y, P, T, 0); const mf = 1 - fl * 0.25 * hash01(Math.floor(y / band), 7, ctx.p.seed); const m = ms * mf;
+      const ms = 1 - sl * 0.6 * bandCover(y, P, T, 0); const mf = 1 - fl * 0.25 * hash01(Math.floor(y / band), 7, fseed); let m = ms * mf * gm; if (bar !== null) { const q = 1 - Math.abs(y + 0.5 - bar) / bh; if (q > 0) m *= 1 + 0.6 * (mo!.p.intensity / 100) * q * q * (3 - 2 * q); }
       for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; const col = Math.floor(x / cw) % 3; for (let c = 0; c < 3; c++) d[i + c] *= m * (c === col ? 1 : 1 - pm * 0.6); }
     }
     const k = (ctx.p.curvature / 100) * 0.25; if (!k) return img;

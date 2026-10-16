@@ -226,8 +226,17 @@
     "phase": 2,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "pulse",
+        "name": "Pulse"
+      },
+      {
+        "id": "sweep",
+        "name": "Sweep"
+      }
+    ]
   },
   {
     "id": "dither",
@@ -241,8 +250,17 @@
     "phase": 1,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "flow",
+        "name": "Flow"
+      },
+      {
+        "id": "shimmer",
+        "name": "Shimmer"
+      }
+    ]
   },
   {
     "id": "stippling",
@@ -271,8 +289,13 @@
     "phase": 2,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "drift",
+        "name": "Drift"
+      }
+    ]
   },
   {
     "id": "comic",
@@ -361,8 +384,13 @@
     "phase": 1,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "rotate",
+        "name": "Rotate"
+      }
+    ]
   },
   {
     "id": "ukiyoe",
@@ -922,8 +950,17 @@
     "phase": 2,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "flicker",
+        "name": "Flicker"
+      },
+      {
+        "id": "refresh",
+        "name": "Refresh bar"
+      }
+    ]
   },
   {
     "id": "pixelsort",
@@ -967,8 +1004,13 @@
     "phase": 3,
     "phaseAssigned": false,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "jitter",
+        "name": "Jitter"
+      }
+    ]
   },
   {
     "id": "datamosh",
@@ -1362,8 +1404,13 @@
     "phase": 3,
     "phaseAssigned": false,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "flow",
+        "name": "Flow"
+      }
+    ]
   },
   {
     "id": "oilpaint",

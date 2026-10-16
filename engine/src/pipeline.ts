@@ -58,6 +58,7 @@ function motionOf(effect: ReturnType<typeof getEffect>, state: RenderState, opts
   const phase = opts.phase ?? 0; if (!Number.isFinite(phase)) throw new Error('phase must be a finite number');
   if (!state.motion) return null;
   const m = effect.motions?.find((x) => x.id === state.motion!.id); if (!m) throw new Error(`effect "${effect.id}" has no motion "${state.motion.id}"`);
+  if (m.onlyIf && !m.onlyIf.values.includes(String((state.style.params ?? {})[m.onlyIf.param] ?? effect.params.find((q) => q.id === m.onlyIf!.param)?.default))) return null;   // np. Dither z dyfuzją błędu: bez ruchu
   return { id: m.id, phase, p: resolveParams(m.params, state.motion.params ?? {}, opts.strict ?? true) };
 }
 function makeCtx(src: Img, state: RenderState, opts: RenderOpts): { ctx: RenderCtx; effect: ReturnType<typeof getEffect> } {

@@ -25,7 +25,8 @@ export type RenderCtx = {
   motion?: { id: string; phase: number; p: Record<string, any> } | null;
 };
 /** Ruch efektu (plik 09, sekcja 3). Ruch musi być okresowy w φ z okresem 1 i przy φ = 0 dawać obraz statyczny bit w bit. */
-export type MotionDef = { id: string; name: string; params: ParamDef[] };
+/** onlyIf: ruch działa tylko przy tych wartościach parametru stylu (inaczej klatki są statyczne, a UI pokazuje `note`). */
+export type MotionDef = { id: string; name: string; params: ParamDef[]; onlyIf?: { param: string; values: string[]; note: string } };
 /** Siatka znaków efektu tekstowego: `rows` wierszy po `cols` znaków, kolor RGB każdej komórki (po ruchu: glint rozjaśnia),
  *  tło (kolor `bgColor`: SVG i TS nie mają rozmytego zdjęcia pod znakami) i wymiary komórki w px renderu. */
 /** Siatka znaków z kolorami (eksport SVG/TS). tone: ton komórki użyty przez glint/scan (−1 = pusta); w×h: obraz w px (geometria ruchu). */

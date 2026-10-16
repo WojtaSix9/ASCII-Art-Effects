@@ -147,6 +147,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
 
   // ---------- render ----------
   const render = async () => {
+    anim?.syncNote();   // uwaga onlyIf (np. Dither z dyfuzją błędu) śledzi parametry stylu
     if (anim?.playing) { anim.changed(); return; }   // anim.changed() sam pokaże zwykły podgląd i przeliczy pętlę
     await renderStatic();
   };

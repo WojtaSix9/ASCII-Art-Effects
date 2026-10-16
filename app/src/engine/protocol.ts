@@ -25,7 +25,7 @@ export type Req =
   | { type: 'gc' };                                                   // dev: wymuszenie GC (tylko z --js-flags=--expose-gc)
 
 export type InitRes = { fonts: { family: string; faces: number; loaded: number }[]; fontMs: number; workerFonts: boolean; offscreen: boolean };
-export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[]; motions?: { id: string; name: string; params: ParamDef[] }[]; cells?: boolean };
+export type EffectMeta = { id: string; name: string; category: string; params: ParamDef[]; motions?: { id: string; name: string; params: ParamDef[]; onlyIf?: { param: string; values: string[]; note: string } }[]; cells?: boolean };
 export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[]; glyphOnly?: boolean }[]; glyphStyles: string[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] };
   text: { params: ParamDef[]; fonts: { id: string; name: string; weights: number[] }[]; max: number } };
 export type ExportRes = { blob: Blob; w: number; h: number; ms: number; cols?: number; rows?: number; fontMissing?: string };

@@ -14,8 +14,12 @@ const halftone: EffectDef = {
   description: 'Classic halftone: dots, lines or squares on a rotated grid, sized by tone.',
   params: [range('cellSize', 'Cell size', 9, 3, 60, { unit: 'px', px: true }), range('angle', 'Angle', 45, 0, 90, { unit: '°' }), select('shape', 'Shape', 'dot', [['dot', 'Dot'], ['line', 'Line'], ['square', 'Square']]), select('colorMode', 'Colour', 'mono', [['mono', 'Single colour'], ['image', 'From image']]),
     color('inkColor', 'Ink', '#111111'), color('paperColor', 'Paper', '#f4f1ea'), toggle('invert', 'Invert', false, { level: 'advanced' }), ...px1()],
+  // etap 2 (plik 09, Tier B): rotate = siatka rastra obraca się wokół środka obrazu o pełny okres wzoru na cykl: 90° dla kropek i kwadratów,
+  // 180° dla linii (inaczej pętla ma szew). Kąt = angle + okres · u, u = część ułamkowa speed·φ (dokładnie 0 przy φ = 0 i φ = 1)
+  motions: [{ id: 'rotate', name: 'Rotate', params: [range('speed', 'Speed (turns of the pattern per loop)', 1, 1, 8)] }],
   render(ctx) {
-    const { w, h } = ctx.prep; const cs = ctx.px(ctx.p.cellSize); const ang = (ctx.p.angle * Math.PI) / 180; const ca = Math.cos(ang), sa = Math.sin(ang);
+    const m = ctx.motion; const turn = m ? (m.p.speed * m.phase - Math.floor(m.p.speed * m.phase)) * (ctx.p.shape === 'line' ? 180 : 90) : 0;
+    const { w, h } = ctx.prep; const cs = ctx.px(ctx.p.cellSize); const ang = ((ctx.p.angle + turn) * Math.PI) / 180; const ca = Math.cos(ang), sa = Math.sin(ang);
     const sm = blur(ctx.prep, Math.max(1, Math.round(cs * 0.5))); const ink = parseColor(ctx.p.inkColor), paper = parseColor(ctx.p.paperColor); const out = new Uint8ClampedArray(w * h * 4); const hw = w / 2, hh = h / 2;
     const inv = ctx.p.invert, shape = ctx.p.shape, fromImg = ctx.p.colorMode === 'image';   // krok 6: odczyt parametrów raz
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {

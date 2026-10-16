@@ -1,7 +1,7 @@
 // Reszta Fazy 2 (plik 02): LED Matrix (docs: kontrolki), Low Poly, Truchet, Smudge (proj). Wzory i zakresy: proj.
 // Punkty i losowość we współrzędnych źródła albo w ułamkach obrazu, więc eksport @2x ma ten sam układ.
 import type { EffectDef, Img } from '../core/types.ts';
-import { color, common, range, seedParam, select } from '../core/params.ts';
+import { color, common, motionCommon, range, seedParam, select } from '../core/params.ts';
 import { blur, cellAverages, clamp, hash01, lerp, lum, mulberry32, parseColor, resize } from '../core/util.ts';
 import { valueNoise } from '../core/screen.ts';
 
@@ -16,14 +16,19 @@ const ledmatrix: EffectDef = {
   params: [select('ledType', 'LED type', 'round', [['round', 'Round dot'], ['square', 'Square SMD'], ['stripe', 'RGB stripe'], ['bulb', 'Marquee bulb']]), range('scale', 'Scale', 10, 4, 40, PX),
     range('glow', 'Glow', 50, 0, 100, { unit: '%' }), range('ledBrightness', 'Brightness', 100, 20, 200, { unit: '%' }), select('colorMode', 'Colour', 'perLed', [['perLed', 'Per LED'], ['solid', 'Solid']]),
     color('ledColor', 'LED colour', '#ffb000'), ...px1()],
+  // etap 2 (plik 09, Tier B; proj; u = część ułamkowa speed·φ): pulse = jasność diod × (1 − intensity·(1 − cos 2πu)/2) (poświata idzie za nią);
+  // sweep = ukośny pas światła (szerokość 0,15 przekątnej, smoothstep) przechodzi przez panel raz na cykl, rozjaśnia diody do × (1 + 1,5·intensity);
+  // przy u = 0 pas jest przed panelem, więc φ = 0 daje obraz statyczny
+  motions: [{ id: 'pulse', name: 'Pulse', params: motionCommon(60) }, { id: 'sweep', name: 'Sweep', params: motionCommon(60) }],
   // komórka = średni kolor obszaru; per LED: ten kolor × jasność; solid: ledColor × jasność komórki. Wyłączona dioda jest lekko widoczna
   // (6% szarości). Kształty: koło r = 0,38 rozstawu, kwadrat SMD 0,7 z zaokrągleniem, 3 paski R/G/B po 0,22, żarówka r = 0,42 z jaśniejszym środkiem.
   // Poświata: rozmycie warstwy diod (promień 1,5 rozstawu × glow), dodane trybem screen.
   render(ctx) {
     const s = ctx.prep; const { w, h } = s; const P = Math.max(2, ctx.p.scale * ctx.scale); const cs = Math.round(P); const a = cellAverages(s, cs, cs); ctx.info.cols = a.nx; ctx.info.rows = a.ny;
-    const out = solid(w, h, [0, 0, 0], s); const d = out.data; const kb = ctx.p.ledBrightness / 100; const lc = parseColor(ctx.p.ledColor); const type = ctx.p.ledType; const off = 15;
+    const out = solid(w, h, [0, 0, 0], s); const d = out.data; const m = ctx.motion; const u = m ? m.p.speed * m.phase - Math.floor(m.p.speed * m.phase) : 0;
+    const kb = (ctx.p.ledBrightness / 100) * (m?.id === 'pulse' ? 1 - ((m.p.intensity / 100) * (1 - Math.cos(2 * Math.PI * u))) / 2 : 1); const band = m?.id === 'sweep' && u ? -0.15 + 1.3 * u : null; const lc = parseColor(ctx.p.ledColor); const type = ctx.p.ledType; const off = 15;
     for (let cy = 0; cy < a.ny; cy++) for (let cx = 0; cx < a.nx; cx++) {
-      const o = cy * a.nx + cx; const L = a.L[o]; const col = ctx.p.colorMode === 'solid' ? lc.map((v) => v * L) : [a.R[o], a.G[o], a.B[o]]; const c = col.map((v) => clamp(v * kb, 0, 255));
+      const o = cy * a.nx + cx; const L = a.L[o]; const col = ctx.p.colorMode === 'solid' ? lc.map((v) => v * L) : [a.R[o], a.G[o], a.B[o]]; let kc = kb; if (band !== null) { let q = 1 - Math.abs(((cx + 0.5) * cs + (cy + 0.5) * cs) / (w + h) - band) / 0.15; if (q > 0) { q = q * q * (3 - 2 * q); kc *= 1 + 1.5 * (m!.p.intensity / 100) * q; } } const c = col.map((v) => clamp(v * kc, 0, 255));
       const mx = (cx + 0.5) * cs, my = (cy + 0.5) * cs; const x0 = cx * cs, y0 = cy * cs, x1 = Math.min(w, x0 + cs), y1 = Math.min(h, y0 + cs);
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         const dx = x + 0.5 - mx, dy = y + 0.5 - my; const i = (y * w + x) * 4; let cov = 0, rgb = c;

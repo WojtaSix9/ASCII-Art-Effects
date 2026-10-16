@@ -816,5 +816,45 @@ const SRC = testImage(300, 200);
   let thr = ''; try { pieceSource(pieceGrid(S6, { style: { id: 'mixed' } }).base, { name: 'x', note: 'x', motion: { id: 'scan', p: { speed: 1, pass: 50 } }, loop: 4, fps: 30 }); } catch (e) { thr = (e as Error).message; }
   ok('TS: znaki spoza zestawu biblioteki wykryte (Mixed domyślnie: ∙; Braille: U+28xx) i pieceSource odmawia', bm.includes('∙') && [...bb].every((c) => c.codePointAt(0)! >= 0x2800 && c.codePointAt(0)! <= 0x28ff) && bb.length > 0 && thr.includes('outside'), `${bm} | ${bb.length} znaków Braille | ${thr}`);
 }
+// 37. Etap 2, Tier B: po jednej własności na efekt (wartości oczekiwane ze wzorów ruchu, nie z pomiaru)
+{
+  const W = 160, H = 120; const R = (img: Img, id: string, mid: string | null, phase?: number, mp: any = {}, sp: any = {}) => render(img, { style: { id, params: sp }, ...(mid ? { motion: { id: mid, params: mp } } : {}) }, { phase, glyphs: G }).img;
+  const flat = (v: number) => newImg(W, H, [v, v, v, 255]); const S = testImage(W, H);
+  /* Dither flow: na płaskiej szarości wynik zależy tylko od progu, więc przesunięty wzór = statyczny wzór przesunięty. tiles 3 × kafel 8 = 24 px na cykl, φ 1/24 → 1 px w prawo (E) */
+  const g = flat(128); const d0 = R(g, 'dither', null).data, d1 = R(g, 'dither', 'flow', 1 / 24, { direction: 'e' }).data; let sh = 0, diff = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W - 1; x++) { if (d1[(y * W + x) * 4] !== d0[(y * W + x + 1) * 4]) sh++; if (d1[(y * W + x) * 4] !== d0[(y * W + x) * 4]) diff++; }
+  ok('Dither flow (Bayer 8×8, E): na płaskiej szarości φ 1/24 = wzór statyczny przesunięty o 1 px (piksel x = statyczny x + 1)', sh === 0 && diff > 0, `niezgodnych ${sh}, zmienionych ${diff}`);
+  /* Dither shimmer: próg przesuwa się o u cyklu; na płaskiej szarości w obrazie 160×120 (wielokrotność kafla 8) zestaw progów się nie zmienia, więc liczba jasnych pikseli też */
+  const white = (img: Uint8ClampedArray) => { let n = 0; for (let i = 0; i < img.length; i += 4) if (img[i] > 127) n++; return n; };
+  const shm = [0.25, 0.5, 0.75].map((f) => R(g, 'dither', 'shimmer', f).data);
+  ok('Dither shimmer: na płaskiej szarości liczba jasnych pikseli w każdej fazie = statyczna (ten sam zestaw progów), a wzór się zmienia', shm.every((x) => white(x) === white(d0)) && shm.some((x) => sha({ w: W, h: H, data: x }) !== sha({ w: W, h: H, data: d0 })), `${white(d0)} / ${shm.map(white).join(' ')}`);
+  const fl = [0.1, 0.4, 0.8].map((f) => sha(R(S, 'dither', 'flow', f, {}, { algorithm: 'floyd' }))); const fl0 = sha(R(S, 'dither', null, undefined, {}, { algorithm: 'floyd' }));
+  ok('Dither z dyfuzją błędu (Floyd–Steinberg): flow nie działa (onlyIf), każda klatka = obraz statyczny', fl.every((x) => x === fl0));
+  /* LED pulse: jasność × (1 − 0,5·(1 − cos π)/2·2)… przy intensity 50 i φ 0,5: × 0,5 = statyczny z Brightness 50% */
+  ok('LED Matrix pulse (intensity 50%): φ 0,5 = statyczny z Brightness 50% (bit w bit)', sha(R(S, 'ledmatrix', 'pulse', 0.5, { intensity: 50 })) === sha(R(S, 'ledmatrix', null, undefined, {}, { ledBrightness: 50 })));
+  /* LED sweep: bez poświaty (glow 0) zmieniają się tylko diody w pasie: |środek komórki (x + y)/(W + H) − 0,5| < 0,15 przy φ 0,5; w pasie jaśniej */
+  const ls0 = R(S, 'ledmatrix', null, undefined, {}, { glow: 0 }).data, ls1 = R(S, 'ledmatrix', 'sweep', 0.5, {}, { glow: 0 }).data; let outB = 0, inB = 0, darker = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const cx = Math.floor(x / 10), cy = Math.floor(y / 10); const s2 = ((cx + 0.5) * 10 + (cy + 0.5) * 10) / (W + H); const i = (y * W + x) * 4; const ch = ls0[i] !== ls1[i] || ls0[i + 1] !== ls1[i + 1] || ls0[i + 2] !== ls1[i + 2];
+    if (ch) { if (Math.abs(s2 - 0.5) >= 0.15) outB++; else inB++; if (ls1[i] < ls0[i] || ls1[i + 1] < ls0[i + 1] || ls1[i + 2] < ls0[i + 2]) darker++; } }
+  ok('LED Matrix sweep (glow 0): zmiany tylko w diodach pasa (komórka 10 px, pas ±0,15 przekątnej wokół 0,5), żadna dioda nie ciemnieje', outB === 0 && inB > 100 && darker === 0, `poza ${outB}, w pasie ${inB}, ciemniej ${darker}`);
+  ok('Halftone rotate: φ 0,5 (kropki, okres 90°) = statyczny z kątem 45° + 45° = 90° (bit w bit)', sha(R(S, 'halftone', 'rotate', 0.5)) === sha(R(S, 'halftone', null, undefined, {}, { angle: 90 })));
+  ok('Halftone rotate (linie, okres 180°): φ 0,25 = statyczny z kątem 45° + 45° (bit w bit)', sha(R(S, 'halftone', 'rotate', 0.25, {}, { shape: 'line' })) === sha(R(S, 'halftone', null, undefined, {}, { shape: 'line', angle: 90 })));
+  const sd = Number(getEffect('glitch').params.find((q) => q.id === 'seed')!.default);
+  ok('Glitch jitter (6 kroków): φ 1,5/6 (krok 1) = statyczny z ziarnem seed + 7919 (bit w bit)', sha(R(S, 'glitch', 'jitter', 1.5 / 6)) === sha(R(S, 'glitch', null, undefined, {}, { seed: sd + 7919 })));
+  const jit = new Set([0, 1, 2, 3, 4, 5].map((k) => sha(R(S, 'glitch', 'jitter', (k + 0.5) / 6)))); ok('Glitch jitter: 6 kroków = 6 różnych klatek', jit.size === 6, String(jit.size));
+  /* CRT refresh (curvature 0, flicker 0): φ 0,5 → pas o środku −h/8 + (h + h/4)·0,5 = −15 + 75 = 60, połowa szerokości h/8 = 15; poza pasem wiersze bez zmian, w pasie jaśniej */
+  const c0 = R(S, 'crt', null, undefined, {}, { curvature: 0, flicker: 0 }).data, c1 = R(S, 'crt', 'refresh', 0.5, {}, { curvature: 0, flicker: 0 }).data; let rOut = 0, rIn = 0, rDark = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; for (let q = 0; q < 3; q++) if (c0[i + q] !== c1[i + q]) { if (Math.abs(y + 0.5 - 60) >= 15) rOut++; else rIn++; if (c1[i + q] < c0[i + q]) rDark++; } }
+  ok('CRT refresh (curvature 0, flicker 0): zmiany tylko w wierszach pasa (środek 60, ±15), tam jaśniej', rOut === 0 && rIn > 100 && rDark === 0, `poza ${rOut}, w pasie ${rIn}, ciemniej ${rDark}`);
+  const fk = new Set([0, 1, 2, 3, 4, 5, 6, 7].map((k) => sha(R(S, 'crt', 'flicker', (k + 0.5) / 8)))); ok('CRT flicker: 8 kroków = 8 różnych klatek', fk.size === 8, String(fk.size));
+  /* Waves flow: frequency 10 na 160 px → długość fali 16 px; φ 0,5 przesuwa fazę o π, czyli falę o 8 px. Na płaskim obrazie cieniowanie zależy tylko od fazy,
+     więc piksel x przy φ 0,5 = statyczny x + 8. Różnica do 1 poziomu: k·(u + 8) i k·u − π różnią się w ostatnich bitach (zaokrąglenie do bajtu) */
+  const wv0 = R(flat(150), 'waves', null).data, wv1 = R(flat(150), 'waves', 'flow', 0.5).data; let wmax = 0, wch = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W - 8; x++) { const i = (y * W + x) * 4, j = (y * W + x + 8) * 4; wmax = Math.max(wmax, Math.abs(wv1[i] - wv0[j])); if (wv1[i] !== wv0[i]) wch++; }
+  ok('Waves flow: na płaskim obrazie φ 0,5 = fala przesunięta o pół długości (8 px przy 16 px), różnica ≤ 1 poziom (zaokrąglenie)', wmax <= 1 && wch > 100, `max ${wmax}, zmienionych ${wch}`);
+  const rz = [0.2, 0.5, 0.9].map((f) => sha(R(S, 'risograph', 'drift', f, {}, { misregistration: 0, grain: 0 }))); const rz0 = sha(R(S, 'risograph', null, undefined, {}, { misregistration: 0, grain: 0 }));
+  ok('Risograph drift: bez przesunięcia i ziarna (0, 0) nic się nie rusza: każda klatka = statyczna', rz.every((x) => x === rz0));
+  const rg = [0.1, 0.4].map((f) => sha(R(S, 'risograph', 'drift', f, {}, { misregistration: 0 }))); ok('Risograph drift: przy misregistration 0 zmienia się tylko ziarno (kroki 0 i 1 różne)', rg[0] !== rg[1]);
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

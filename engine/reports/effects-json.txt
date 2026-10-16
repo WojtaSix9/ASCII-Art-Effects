@@ -2,6 +2,6 @@
 ASCII & Text: 6, Pixels & Blocks: 6, Print & Paper: 15, Geometric: 15, Distort: 8, Blur & Focus: 4, Glitch & Signal: 10, Light & Colour: 11, Glass: 7, Material & Texture: 9
 faza 1: 18, faza 2: 30, faza 3: 43
 status ready: 91
-animowane: characters, block-chars, dots, mixed, braille, pixel, cross, diamond, lines, diagonal, twirl, zigzag, ripple, rgbsplit, scanline, disco, flutedglass
+animowane: characters, block-chars, dots, mixed, braille, pixel, ledmatrix, dither, risograph, halftone, cross, diamond, lines, diagonal, twirl, zigzag, ripple, crt, glitch, rgbsplit, scanline, disco, flutedglass, waves
 bez przypisanej fazy w pliku 02 (domyslnie 3): 23: Mixed, Warhol, Cyanotype, Mezzotint, Specimen, Lattice, Topography, Forms, Schematic, Neon Grid, Forensics, Digital Distortion, Lofi, Beacon, Anaglyph 3D, Prism, Dreamdust, Light Wind, Kaleidoscope, Warpbloom, Waves, Molten Metal, Emboss
 zrodlo opisu: docs=24, docs/proj=5, proj=55, proj?=7
