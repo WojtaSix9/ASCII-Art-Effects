@@ -2,6 +2,10 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { chromium, type Page } from 'playwright';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { MAX_SOURCE } from '../src/config/limits.ts';
 import { READY } from '../src/config/thumbs.ts';
 
@@ -413,6 +417,37 @@ try {
   t('GIF (ImageDecoder w Chromium): 12 klatek 1080 px, pętla w nieskończoność, czasy 8/8/9 cs (suma 1 s)', G.n === 12 && Math.max(G.w, G.h) === 1080 && G.rep === Infinity && G.durs.reduce((a: number, b: number) => a + b, 0) === 1_000_000 && G.durs.every((d: number) => d === 80_000 || d === 90_000), G);
   t('GIF: każdy kolor klatki należy do palety globalnej; klatka k najbliższa renderowi silnika w fazie k/12 (nie k+1, k+3); klatka 6 różni się od 0', G.offPal === 0 && G.err.every((e: number[]) => e[0] < e[1] && e[0] < e[2]) && G.half > 2, { err: G.err, half: G.half, offPal: G.offPal });
   t('GIF: przerwanie w trakcie → błąd CANCELLED', G.cancel === 'CANCELLED', G.cancel);
+
+  // Etap 2, krok 4c: MP4. Chromium z Playwrighta nie ma kodera H.264, więc: ścieżka „brak H.264” w UI + kontener na wymuszonym VP9.
+  await page.click('[data-export]'); await page.check('input[name="format"][value="mp4"]');
+  await page.waitForFunction(() => !!document.querySelector('[data-export-msg]')?.textContent, null, { timeout: 10_000 });
+  const noAvc = { msg: await page.textContent('[data-export-msg]'), go: await page.isDisabled('[data-go]'), info: await page.textContent('[data-anim-info]') };
+  await page.selectOption('select[name="side"]', '480'); await page.waitForTimeout(300); await page.click('[data-cancel]');
+  t('MP4 bez kodera H.264 (Chromium z Playwrighta): komunikat zamiast pliku, przycisk Pobierz wyłączony', !!noAvc.msg?.includes('nie koduje wideo H.264') && noAvc.go && !!noAvc.info?.includes('12 klatek'), noAvc);
+  const M = await page.evaluate(async () => {
+    const T = (window as any).__editorTest; let avcErr = ''; try { await T.mp4('avc'); } catch (e) { avcErr = (e as Error).message; }
+    const m = await T.mp4('vp9'); const sw = T.view().sw;
+    const ph = async (f: number) => Array.from(new Uint8Array((await T.renderPhase(m.w / sw, f)).img.buffer));
+    const r = await T.renderPhase(m.w / sw, 0); let cancel = ''; try { await T.mp4('vp9', 3); } catch (e) { cancel = (e as Error).message; }
+    return { avcErr, w: m.w, h: m.h, type: m.type, bytes: Array.from(m.bytes as Uint8Array), rw: r.img.w, f3: await ph(3 / 12), f1: await ph(1 / 12), f5: await ph(5 / 12), cancel };
+  });
+  t('MP4: zlecenie H.264 bez kodera → błąd NO_CODEC (sprawdzenie w Workerze przed renderem); przerwanie → CANCELLED', M.avcErr === 'NO_CODEC:avc' && M.cancel === 'CANCELLED', { avcErr: M.avcErr, cancel: M.cancel });
+  const probe = spawnSync('ffprobe', ['-version']).status === 0;
+  if (!probe) t('MP4: POMINIĘTE — brak ffprobe w PATH (kontener niesprawdzony)', true);
+  else {
+    const dir = mkdtempSync(join(tmpdir(), 'mp4-')); const f = join(dir, 'a.mp4'); const buf = Buffer.from(M.bytes); writeFileSync(f, buf);
+    const pr = spawnSync('ffprobe', ['-v', 'error', '-count_frames', '-show_entries', 'stream=codec_name,width,height,pix_fmt,color_range,color_space,color_primaries,color_transfer,r_frame_rate,nb_read_frames,duration', '-of', 'json', f], { encoding: 'utf8' });
+    const s = JSON.parse(pr.stdout).streams[0];
+    t('MP4 (VP9 wymuszony, ffprobe): 12 klatek, 1,000 s, 12 fps, wymiary parzyste, yuv420p, zakres tv, BT.709 (primaries/transfer/matrix), moov przed mdat, typ video/mp4',
+      s.codec_name === 'vp9' && +s.nb_read_frames === 12 && Math.abs(+s.duration - 1) < 1e-6 && s.r_frame_rate === '12/1' && s.width % 2 === 0 && s.height % 2 === 0 && s.width === M.w && s.height === M.h && s.pix_fmt === 'yuv420p' && s.color_range === 'tv'
+      && s.color_primaries === 'bt709' && s.color_transfer === 'bt709' && s.color_space === 'bt709' && buf.indexOf('moov') < buf.indexOf('mdat') && M.type === 'video/mp4', { ...s, moov: buf.indexOf('moov'), mdat: buf.indexOf('mdat') });
+    /* piksele: klatka 3 zdekodowana przez ffmpeg (YUV→RGB wg znaczników BT.709) vs render silnika w fazach 3/12, 1/12, 5/12 (bez progu: 3 najbliżej).
+       Faza 3/12 = najszybszy ruch (offset 7 px vs 9,3 i 4,4); przy 6/12 (minimum cos) sąsiednie fazy różnią się o 0,4 px, poniżej szumu kompresji */
+    const raw = spawnSync('ffmpeg', ['-v', 'error', '-i', f, '-vf', 'select=eq(n\\,3)', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1 << 26 }).stdout as Buffer;
+    const mae = (e: number[]) => { let sum = 0, n = 0; for (let y = 0; y < M.h; y++) for (let x = 0; x < M.w; x++) for (let q = 0; q < 3; q++) { sum += Math.abs(raw[(y * M.w + x) * 3 + q] - e[(y * M.rw + x) * 4 + q]); n++; } return +(sum / n).toFixed(2); };
+    const E = [mae(M.f3), mae(M.f1), mae(M.f5)];
+    t('MP4: klatka 3 (dekodowana ffmpeg) najbliższa renderowi silnika w fazie 3/12, nie 1/12 i 5/12 (kolory i kolejność klatek zgodne)', raw.length === M.w * M.h * 3 && E[0] < E[1] && E[0] < E[2], { E, raw: raw.length });
+  }
   t('brak błędów w konsoli', errors.length === 0, errors.join(' | '));
 } finally { await browser.close(); server.kill(); }
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${!ok && info ? `  [${info}]` : ''}`);

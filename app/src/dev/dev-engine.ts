@@ -1,7 +1,7 @@
 // /dev/engine: testy silnika w przeglądarce (krok 2 z briefu 00, sekcja 6). Strona nie jest linkowana z nawigacji.
 // Można ją otworzyć w dowolnej przeglądarce (Safari, Firefox, telefon); Playwright czyta wynik z window.__engineReport.
 import { EngineClient } from '../engine/client.ts';
-import type { CoverageRes, BenchRes, HeapRes, InitRes } from '../engine/protocol.ts';
+import type { CoverageRes, BenchRes, HeapRes, InitRes, WebCodecsRow } from '../engine/protocol.ts';
 import { EFFECTS } from '../../../engine/src/index.ts';
 import expectedHashes from './fixtures/engine-hashes.json';
 import expectedCoverage from './fixtures/glyph-coverage.json';
@@ -11,6 +11,8 @@ export type EngineReport = {
   userAgent: string; init?: InitRes; checks: Check[]; coverage?: CoverageRes;
   roundTrip?: { size: string; workerMs: number; totalMs: number }[];
   bench?: BenchRes; memory?: { renders: number; workerHeap: number | null; pageHeap: number | null }[]; done: boolean;
+  /** Etap 2: które kodeki wideo zakoduje Worker (eksport MP4 wymaga H.264). */
+  webcodecs?: WebCodecsRow[];
 };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -92,6 +94,12 @@ export function mountDevEngine(main: HTMLElement): () => void {
     }
     show('rt', `<h2 class="label">/ czas w obie strony (pixel, średnia z 5)</h2><table class="dev-table"><tbody>${report.roundTrip.map((r) =>
       `<tr><td>${r.size}</td><td>render w Workerze ${r.workerMs.toFixed(1)} ms</td><td>razem z transferem i kanwą ${r.totalMs.toFixed(1)} ms</td></tr>`).join('')}</tbody></table>`);
+
+    // 5a. Etap 2: WebCodecs w Workerze (eksport MP4 = H.264). Tabela do odesłania z urządzeń użytkownika.
+    report.webcodecs = await client.call<WebCodecsRow[]>({ type: 'webcodecs' });
+    const avcOk = report.webcodecs.some((r) => r.codec.startsWith('avc1') && r.supported);
+    show('webcodecs', `<h2 class="label">/ WebCodecs w Workerze (eksport MP4)</h2><p>${report.webcodecs[0].supported === null ? 'Brak VideoEncoder: eksport MP4 niedostępny.' : avcOk ? 'H.264 dostępny: eksport MP4 działa.' : 'Brak kodera H.264: eksport MP4 niedostępny.'}</p><table class="dev-table"><thead><tr><th>kodek</th><th>1080×720</th><th>720×480</th><th>480×320</th></tr></thead><tbody>${
+      [...new Set(report.webcodecs.map((r) => r.codec))].map((c) => { const rs = report.webcodecs!.filter((r) => r.codec === c); return `<tr><td>${esc(rs[0].label)} <span>${c}</span></td>${rs.map((r) => `<td class="${r.supported ? 'ok' : 'fail'}">${r.supported === null ? '—' : r.supported ? 'tak' : 'nie'}</td>`).join('')}</tr>`; }).join('')}</tbody></table>`);
 
     // 5b. Świeży Worker: pierwszy render Katakana i Math musi już mieć czcionki (maski znaków są zapamiętywane na stałe)
     const digest = async (im: ImageData) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', im.data))].map((b) => b.toString(16).padStart(2, '0')).join('');

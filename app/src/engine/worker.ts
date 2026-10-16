@@ -7,9 +7,11 @@ import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
 import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK, registerTextFonts, ensureText, TEXT_STACKS } from './fonts.ts';
 import { LIMIT_ERROR } from './protocol.ts';
-import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes, Progress } from './protocol.ts';
-import { CANCELLED } from './protocol.ts';
+import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes, Progress, WebCodecsRow } from './protocol.ts';
+import { CANCELLED, NO_CODEC } from './protocol.ts';
 import { encodeGif } from './gif.ts';
+/* MP4 (Mediabunny, ok. 190 kB) ładowany dopiero przy eksporcie lub sprawdzeniu kodeka */
+const mp4 = () => import('./mp4.ts');
 
 const scope = self as unknown as DedicatedWorkerGlobalScope & { fonts?: FontFaceSet; gc?: () => void };
 let glyphs: GlyphProvider | null = null;
@@ -113,12 +115,26 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
       const t = performance.now(); const src = source;
       /* przerwanie: między klatkami oddajemy sterowanie pętli zdarzeń, żeby dotarła wiadomość cancel */
       const frame = async (i: number) => { await new Promise((r) => setTimeout(r, 0)); if (cancelled.has(id)) throw new Error(CANCELLED); return new Uint8ClampedArray(render(src, req.state, { scale: req.scale, glyphs, text: textR, phase: i / req.frames }).img.data); };
+      const prog = (done: number, total: number) => scope.postMessage({ id, progress: { done, total } } satisfies Progress);
       try {
-        const bytes = await encodeGif(frame, req.frames, w, h, req.fps, (done, total) => scope.postMessage({ id, progress: { done, total } } satisfies Progress), () => cancelled.has(id));
+        if (req.format === 'mp4') {
+          const { encodeMp4, evenDims, mp4Supported } = await mp4(); const e = evenDims(w, h); const codec = req.codec ?? 'avc';
+          if (!(await mp4Supported(codec, e.w, e.h))) throw new Error(`${NO_CODEC}:${codec}`);
+          const bytes = await encodeMp4(frame, req.frames, w, e.w, e.h, req.fps, codec, prog, () => cancelled.has(id));
+          return { data: { blob: new Blob([bytes as BlobPart], { type: 'video/mp4' }), w: e.w, h: e.h, ms: performance.now() - t } satisfies ExportRes };
+        }
+        const bytes = await encodeGif(frame, req.frames, w, h, req.fps, prog, () => cancelled.has(id));
         return { data: { blob: new Blob([bytes as BlobPart], { type: 'image/gif' }), w, h, ms: performance.now() - t } satisfies ExportRes };
       } finally { cancelled.delete(id); }
     }
     case 'cancel': cancelled.add(req.target); return { data: true };
+    case 'mp4Support': { const { evenDims, mp4Supported } = await mp4(); const e = evenDims(req.w, req.h); return { data: { avc: await mp4Supported('avc', e.w, e.h), vp9: await mp4Supported('vp9', e.w, e.h), w: e.w, h: e.h } }; }
+    case 'webcodecs': {
+      const rows: WebCodecsRow[] = []; const VE = (self as any).VideoEncoder;
+      for (const [codec, label] of [['avc1.640028', 'H.264 High 4.0'], ['avc1.4d0028', 'H.264 Main 4.0'], ['avc1.42001f', 'H.264 Baseline 3.1'], ['vp09.00.10.08', 'VP9'], ['av01.0.08M.08', 'AV1']]) for (const [w, h] of [[1080, 720], [720, 480], [480, 320]])
+        rows.push({ codec, label, w, h, supported: VE ? (await VE.isConfigSupported({ codec, width: w, height: h, bitrate: 8e6, framerate: 24 })).supported : null });
+      return { data: rows };
+    }
     case 'setSource': source = toImg(req.img); return { data: { w: source.w, h: source.h } };
     case 'testImage': source = testImage(req.w, req.h); return { data: { w: source.w, h: source.h } };
     case 'render': {

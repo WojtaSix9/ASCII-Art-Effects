@@ -331,3 +331,80 @@ Propozycja: Mediabunny w wersji co najmniej dwutygodniowej (np. 1.61.0 z 29 IX),
    - test dymny H.264 w prawdziwych przeglądarkach wykonuje użytkownik.
 4. **Raport wsparcia na `/dev/engine`:** sekcja „WebCodecs”, czyli lista `isConfigSupported` dla H.264/VP9/AV1. Użytkownik otwiera ją na swoich urządzeniach i odsyła wynik.
 5. **Bitrate (`proj?`):** ok. 8 Mb/s przy 1080 px. Rozmiar do oceny na zdjęciach (oczekiwany wielokrotnie mniejszy niż GIF).
+
+## Krok 4c: eksport MP4
+
+Decyzje użytkownika:
+- biblioteka Mediabunny;
+- bez H.264 w przeglądarce komunikat zamiast pliku (bez fallbacku);
+- sekcja WebCodecs na `/dev/engine`;
+- testy automatyczne na wymuszonym VP9, H.264 sprawdza użytkownik.
+
+### Co zrobiono (`kod`)
+
+- **Biblioteka:** `mediabunny` 1.61.0 (MPL-2.0, z 29 IX, więc ponad 2 tygodnie), przypięta dokładnie, używana bez zmian.
+  - Licencja: `LICENSES/MPL-2.0-mediabunny.txt`, `THIRD_PARTY_NOTICES.md` z linkiem do źródła.
+  - Ładowana w Workerze dopiero przy eksporcie MP4 albo sprawdzeniu kodeka (`import()`). Worker ma 337 kB jak przed zmianą; MP4 to osobny plik 189 kB. Bez tego Worker urósłby o 190 kB (+48 kB po gzip).
+- **`app/src/engine/mp4.ts`:**
+  - **Wymiary parzyste:** `evenDims`, w dół do parzystych; najwyżej 1 px z prawej lub z dołu.
+  - **Bitrate (`proj`):** `mp4Bitrate` = 8 Mb/s przy 1080×810, proporcjonalnie do liczby pikseli, min 1,5 Mb/s.
+  - **Kolory:** `rgbaToI420` zamienia RGBA → I420 macierzą **BT.709** w zakresie tv, z chromą uśrednioną 2×2. Klatka trafia do kodera jako I420 z `colorSpace` BT.709.
+    - Powód: w kroku 4b przy klatkach RGBA przeglądarka zapisywała BT.601 mimo jawnego `colorSpace`.
+    - Teraz macierz i oznaczenie są pod naszą kontrolą; `ffprobe` pokazuje BT.709.
+  - **Kodowanie:** `encodeMp4` przez `VideoSampleSource` → `Mp4OutputFormat({ fastStart: 'in-memory' })`. Klatka i ma czas i/fps, klatka kluczowa co 2 s; przerwanie anuluje plik.
+  - Tło czarne, jak w GIF.
+- **Worker:**
+  - `exportAnim` z `format: 'mp4'` (i `codec` tylko dla testów); sprawdza kodek **przed** renderem: brak → błąd `NO_CODEC:avc`;
+  - `mp4Support` (H.264 i VP9 w danych wymiarach);
+  - `webcodecs` (tabela dla `/dev/engine`).
+- **Okno eksportu:**
+  - opcja MP4 dla efektów z ruchem; rozmiar 480/720/1080 i opis z wymiarami parzystymi;
+  - po wyborze MP4 sprawdzenie H.264; bez niego komunikat „Ta przeglądarka nie koduje wideo H.264…” i wyłączony przycisk Pobierz;
+  - plik `ascii-art-<styl>-<bok>px.mp4`.
+- **`/dev/engine`:** sekcja „WebCodecs w Workerze (eksport MP4)” z tabelą `isConfigSupported` (H.264 High/Main/Baseline, VP9, AV1 × 1080/720/480) i werdyktem. Wynik też w `window.__engineReport.webcodecs`.
+
+### Testy (`test`)
+
+| Test | Wynik |
+|---|---|
+| `test:mp4` (Node, nowy) | 6/6 |
+| `test:editor` | 80/80 (4 nowe) |
+| `test:gif` / silnik | 7/7 / 316/316 |
+| `test:ui` / `smoke` / `test:a11y` | 41/41 / 63/63 / 24/24 |
+| przeglądarka = Node (`QUICK`) | 110/110 |
+
+**`test:mp4`:**
+- **Wartości referencyjne BT.709** (zakres tv, 8 bit, ±1): czerń 16/128/128, biel 235/128/128, czerwień 63/102/240, zieleń 173/42/26, niebieski 32/240/118.
+- **Odróżnienie od BT.601:** czerwień w BT.601 ma Y 81, a nie 63, więc test nie przejdzie przy złej macierzy.
+- **Struktura I420:** chroma 2×2; szerokość wiersza źródła różna od wyjścia.
+- **Wymiary parzyste i bitrate.**
+
+**`test:editor` (Chromium z Playwrighta, bez H.264):**
+- **UI bez kodera:** komunikat i wyłączony przycisk.
+- **Worker:** zlecenie H.264 kończy się `NO_CODEC:avc`; przerwanie daje `CANCELLED`.
+- **Kontener na wymuszonym VP9** (sprawdzenie `ffprobe`; bez `ffprobe` w PATH test jest jawnie oznaczony jako pominięty):
+  - 12 klatek, 1,000 s, 12 fps;
+  - wymiary parzyste, yuv420p, zakres tv;
+  - **primaries/transfer/matrix = BT.709**;
+  - `moov` przed `mdat`; typ `video/mp4`.
+- **Piksele:** klatka 3 zdekodowana przez `ffmpeg` (YUV→RGB według znaczników) jest najbliższa renderowi silnika w fazie 3/12, a nie 1/12 i 5/12.
+
+**Błąd we własnym teście:**
+- Pierwsza wersja porównywała klatkę 6 z fazami 6, 7 i 9/12.
+- Faza 6/12 to minimum cos, więc przesunięcie RGB Split wynosi 4,0 px przy 6/12 i 4,4 px przy 7/12. Różnica 0,4 px ginie w stratnej kompresji (błędy 2,81 i 2,77).
+- Teraz klatka 3, gdzie ruch jest najszybszy: 7 px wobec 9,3 i 4,4 px.
+- Progu nie ma.
+
+### Pomiar (`test`, VP9 jako zastępstwo H.264)
+
+RGB Split, domyślnie 4 s × 24 fps, 1080 px:
+- **zdjęcie 1:** 1080×830, 3,35 MB, 9,7 s;
+- **zdjęcie 2:** 1080×720, 3,33 MB, 9,2 s.
+
+Dla porównania GIF tych samych klatek: 26,7 i 41,8 MB.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- **Kodowania H.264**, a więc i wyglądu, rozmiaru oraz BT.709 w pliku H.264. Wymaga Chrome, Safari lub Firefoksa użytkownika: `/dev/engine`, sekcja WebCodecs, potem eksport MP4 w edytorze.
+- **Odtwarzania MP4** w QuickTime, na iOS i w odtwarzaczach systemowych.
+- **Pamięci przy 300 klatkach** z renderem efektu; w kroku 4b mierzyłem samo kodowanie.

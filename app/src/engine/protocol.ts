@@ -9,7 +9,9 @@ export type Req =
   | { type: 'postDefs' }                                             // definicje Post FX i Color
   | { type: 'export'; state: RenderState; scale: number; format: 'png' | 'jpeg'; quality?: number }
   /** Etap 2: animacja (stan z ruchem), n klatek faz i/n, fps; postęp przychodzi wiadomościami Progress. */
-  | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' }
+  | { type: 'exportAnim'; state: RenderState; scale: number; frames: number; fps: number; format: 'gif' | 'mp4'; codec?: 'avc' | 'vp9' }
+  | { type: 'mp4Support'; w: number; h: number }                     // czy Worker zakoduje H.264 (i VP9, testy) w tych wymiarach
+  | { type: 'webcodecs' }                                              // dev: tabela VideoEncoder.isConfigSupported
   | { type: 'cancel'; target: number }                                  // przerywa zlecenie `target` (exportAnim) przy najbliższej klatce
   | { type: 'setSource'; img: WireImg }
   | { type: 'render'; state: RenderState; scale?: number; phase?: number }   // phase: faza pętli animacji (etap 2)
@@ -24,8 +26,11 @@ export type EffectMeta = { id: string; name: string; category: string; params: P
 export type PostDefs = { postFx: { id: string; name: string; params: ParamDef[]; glyphOnly?: boolean }[]; glyphStyles: string[]; color: ParamDef[]; lights: { params: ParamDef[]; ambient: ParamDef; max: number; skip: string[] };
   text: { params: ParamDef[]; fonts: { id: string; name: string; weights: number[] }[]; max: number } };
 export type ExportRes = { blob: Blob; w: number; h: number; ms: number };
+export type WebCodecsRow = { codec: string; label: string; w: number; h: number; supported: boolean | null };
 /** Błąd zlecenia przerwanego przez cancel. */
 export const CANCELLED = 'CANCELLED';
+/** Błąd eksportu MP4, gdy przeglądarka nie koduje wybranego kodeka (NO_CODEC:avc). */
+export const NO_CODEC = 'NO_CODEC';
 /** Błąd eksportu, gdy przeglądarka nie utworzy kanwy tej wielkości (limit pamięci/kanwy, np. Safari na iOS). */
 export const LIMIT_ERROR = 'CANVAS_LIMIT';
 export type RenderRes = { img: WireImg; info: EffectInfo; ms: number; textBoxes?: (TextBox | null)[] };

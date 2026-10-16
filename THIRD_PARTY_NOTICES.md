@@ -19,3 +19,4 @@ All are licensed under the SIL Open Font License 1.1.
 | Library | npm package | Version | Used for | Copyright | License |
 |---|---|---|---|---|---|
 | gifenc | `gifenc` | 1.0.3 | GIF export of animations (`app/src/engine/gif.ts`, runs in the Web Worker) | 2017 Matt DesLauriers | MIT, [`LICENSES/MIT-gifenc.txt`](LICENSES/MIT-gifenc.txt) |
+| Mediabunny | `mediabunny` | 1.61.0 | MP4 export of animations (`app/src/engine/mp4.ts`, loaded on demand in the Web Worker; WebCodecs encoding and MP4 muxing) | Vanilagy and contributors | MPL-2.0, [`LICENSES/MPL-2.0-mediabunny.txt`](LICENSES/MPL-2.0-mediabunny.txt). Used unmodified from npm; source code: https://github.com/Vanilagy/mediabunny |

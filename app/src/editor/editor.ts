@@ -5,7 +5,7 @@ import { SAMPLES } from '../config/sample.ts';
 import { MAX_SOURCE } from '../config/limits.ts';
 import { READY, thumbUrl } from '../config/thumbs.ts';
 import { sharedEngine } from '../engine/client.ts';
-import { CANCELLED, LIMIT_ERROR, type EffectMeta, type ExportRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
+import { CANCELLED, NO_CODEC, LIMIT_ERROR, type EffectMeta, type ExportRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
 import { cropPixels, loadImage, paint, previewScale } from '../engine/preview.ts';
 import { CATEGORIES, matches, passesAnim } from '../effects/catalog.ts';
 import { mountParamPanel, type Values } from '../ui/param-panel.ts';
@@ -87,7 +87,8 @@ export const editorHtml = () => `
     <fieldset><legend>Format</legend>
       <label><input type="radio" name="format" value="png" checked> PNG</label>
       <label><input type="radio" name="format" value="jpeg"> JPG <span class="ed-hint">(bez przezroczystości, tło czarne)</span></label>
-      <label data-anim-only><input type="radio" name="format" value="gif"> GIF <span class="ed-hint">(animacja, pętla z zakładki Animation)</span></label></fieldset>
+      <label data-anim-only><input type="radio" name="format" value="gif"> GIF <span class="ed-hint">(animacja, pętla z zakładki Animation)</span></label>
+      <label data-anim-only><input type="radio" name="format" value="mp4"> MP4 <span class="ed-hint">(wideo H.264, pętla z zakładki Animation)</span></label></fieldset>
     <fieldset data-for="anim" hidden><legend>Rozmiar animacji</legend>
       <label for="ed-gif-side" class="sr-only">Dłuższy bok</label>
       <select id="ed-gif-side" name="side"><option value="480">480 px</option><option value="720">720 px</option><option value="1080" selected>1080 px</option></select>
@@ -372,17 +373,24 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const isAnimated = () => !!defs.find((d) => d.id === state.style)?.motions?.length;
   const animDims = () => { const v = view(); const side = Number((form.elements.namedItem('side') as HTMLSelectElement).value); const k = Math.min(1, side / Math.max(v.sw, v.sh)); return { k, w: Math.round(v.sw * k), h: Math.round(v.sh * k) }; };
   const syncExportForm = () => {
-    const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif';
+    const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif' || fmt === 'mp4';
     $('[data-for="anim"]').hidden = !anim; $('[data-for="still"]').hidden = anim;
     if (anim) { const d = animDims(); const n = Math.round(state.anim.loopSeconds * state.anim.fps);
-      $('[data-anim-info]').textContent = `${d.w}×${d.h} px, ${n} klatek (${state.anim.loopSeconds} s × ${state.anim.fps} fps). Szum i ziarno powiększają plik.`; }
+      $('[data-anim-info]').textContent = `${fmt === 'mp4' ? `${d.w - (d.w & 1)}×${d.h - (d.h & 1)}` : `${d.w}×${d.h}`} px, ${n} klatek (${state.anim.loopSeconds} s × ${state.anim.fps} fps).${fmt === 'gif' ? ' Szum i ziarno powiększają plik.' : ''}`; }
+    const go = $<HTMLButtonElement>('[data-go]'); go.disabled = false;
+    if (fmt === 'mp4') {   // H.264 w tej przeglądarce? Bez kodera: komunikat zamiast pliku (decyzja użytkownika, bez fallbacku)
+      const d = animDims(); const my = ++supportCheck; go.disabled = true;
+      engine.call<{ avc: boolean }>({ type: 'mp4Support', w: d.w, h: d.h }).then((s) => { if (my !== supportCheck) return;
+        go.disabled = !s.avc; $('[data-export-msg]').textContent = s.avc ? '' : 'Ta przeglądarka nie koduje wideo H.264 (WebCodecs), więc MP4 nie powstanie. Wybierz GIF albo użyj Chrome, Edge lub Safari.'; });
+    } else if ($('[data-export-msg]').textContent?.startsWith('Ta przeglądarka nie koduje')) $('[data-export-msg]').textContent = '';
   };
+  let supportCheck = 0;
   form.addEventListener('change', syncExportForm);
   let exportJob: { cancel: () => void } | null = null;
   $('[data-export]').addEventListener('click', () => {
     const v = view(); for (const s of [1, 2]) $(`[data-size="${s}"]`).textContent = `${Math.round(v.sw * s)}×${Math.round(v.sh * s)} px`;
     const animOk = isAnimated(); $('[data-anim-only]').hidden = !animOk;
-    if (!animOk && (form.elements.namedItem('format') as RadioNodeList).value === 'gif') form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
+    if (!animOk && ['gif', 'mp4'].includes((form.elements.namedItem('format') as RadioNodeList).value)) form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
     $('[data-export-msg]').textContent = ''; syncExportForm(); dialog.showModal();
   });
   $('[data-cancel]').addEventListener('click', () => { if (exportJob) { exportJob.cancel(); return; } dialog.close(); });
@@ -390,7 +398,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   $<HTMLFormElement>('[data-export-form]').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target as HTMLFormElement); const msg = $('[data-export-msg]'), go = $<HTMLButtonElement>('[data-go]');
-    if (fd.get('format') === 'gif') { await exportGif(msg, go); return; }
+    if (fd.get('format') === 'gif' || fd.get('format') === 'mp4') { await exportAnim(fd.get('format') as 'gif' | 'mp4', msg, go); return; }
     const format = fd.get('format') as 'png' | 'jpeg'; const s = Number(fd.get('scale'));
     go.disabled = true; msg.textContent = 'Renderuję w pełnej rozdzielczości…';
     try {
@@ -406,20 +414,22 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     } finally { go.disabled = false; }
   });
 
-  /** Eksport GIF: n = długość × fps klatek, faza i/n, w Workerze; postęp i anulowanie. */
-  const startGif = (onProgress: (done: number, total: number) => void) => {
+  /** Eksport animacji (GIF, MP4): n = długość × fps klatek, faza i/n, w Workerze; postęp i anulowanie.
+   *  codec tylko dla testów (Chromium z Playwrighta nie ma H.264, więc kontener sprawdzamy na VP9). */
+  const startAnim = (format: 'gif' | 'mp4', onProgress: (done: number, total: number) => void, codec?: 'avc' | 'vp9') => {
     const d = animDims(); const n = Math.max(2, Math.round(state.anim.loopSeconds * state.anim.fps));
-    return engine.callLong<ExportRes>({ type: 'exportAnim', state: toRenderState(state, true), scale: d.k, frames: n, fps: state.anim.fps, format: 'gif' }, onProgress);
+    return engine.callLong<ExportRes>({ type: 'exportAnim', state: toRenderState(state, true), scale: d.k, frames: n, fps: state.anim.fps, format, codec }, onProgress);
   };
-  const exportGif = async (msg: HTMLElement, go: HTMLButtonElement) => {
-    const bar = $('[data-export-bar]'), fill = bar.firstElementChild as HTMLElement; go.disabled = true; bar.hidden = false; fill.style.width = '0';
-    const job = startGif((done, total) => { fill.style.width = `${(100 * done) / total}%`; msg.textContent = `Renderuję i koduję GIF: ${done} z ${total}…`; }); exportJob = job;
+  const exportAnim = async (format: 'gif' | 'mp4', msg: HTMLElement, go: HTMLButtonElement) => {
+    const F = format.toUpperCase(); const bar = $('[data-export-bar]'), fill = bar.firstElementChild as HTMLElement; go.disabled = true; bar.hidden = false; fill.style.width = '0';
+    const job = startAnim(format, (done, total) => { fill.style.width = `${(100 * done) / total}%`; msg.textContent = `Renderuję i koduję ${F}: ${done} z ${total}…`; }); exportJob = job;
     try {
       const r = await job.promise; const mb = r.blob.size / 1048576;
-      const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = `ascii-art-${state.style}-${r.w}px.gif`; a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = `ascii-art-${state.style}-${r.w}px.${format}`; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-      msg.textContent = `Gotowe: GIF ${r.w}×${r.h} px, ${mb.toFixed(1)} MB, ${(r.ms / 1000).toFixed(1)} s.${mb > 20 ? ' Uwaga: plik ponad 20 MB (krótsza pętla, mniejszy rozmiar lub niższe fps go zmniejszą).' : ''}`;
-    } catch (err) { const m = (err as Error).message; msg.textContent = m === CANCELLED ? 'Eksport przerwany.' : `Błąd eksportu GIF: ${m}`; }
+      msg.textContent = `Gotowe: ${F} ${r.w}×${r.h} px, ${mb.toFixed(1)} MB, ${(r.ms / 1000).toFixed(1)} s.${format === 'gif' && mb > 20 ? ' Uwaga: plik ponad 20 MB (krótsza pętla, mniejszy rozmiar lub niższe fps go zmniejszą).' : ''}`;
+    } catch (err) { const m = (err as Error).message;
+      msg.textContent = m === CANCELLED ? 'Eksport przerwany.' : m.startsWith(NO_CODEC) ? 'Ta przeglądarka nie koduje wideo H.264 (WebCodecs), więc MP4 nie powstanie.' : `Błąd eksportu ${F}: ${m}`; }
     finally { exportJob = null; go.disabled = false; bar.hidden = true; }
   };
 
@@ -431,7 +441,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     renderAt: (s: number) => engine.call<RenderRes>({ type: 'render', state: toRenderState(state), scale: s }),
     anim: () => anim?.status() ?? null,
     /** Eksport GIF bez okna (testy): zwraca bajty i wymiary; cancelAfter = przerwij po tylu krokach postępu. */
-    gif: async (cancelAfter?: number) => { const j = startGif((done) => { if (cancelAfter && done >= cancelAfter) j.cancel(); }); const r = await j.promise; return { w: r.w, h: r.h, bytes: new Uint8Array(await r.blob.arrayBuffer()), ms: r.ms }; },
+    gif: async (cancelAfter?: number) => { const j = startAnim('gif', (done) => { if (cancelAfter && done >= cancelAfter) j.cancel(); }); const r = await j.promise; return { w: r.w, h: r.h, bytes: new Uint8Array(await r.blob.arrayBuffer()), ms: r.ms }; },
+    mp4: async (codec: 'avc' | 'vp9' = 'avc', cancelAfter?: number) => { const j = startAnim('mp4', (done) => { if (cancelAfter && done >= cancelAfter) j.cancel(); }, codec); const r = await j.promise; return { w: r.w, h: r.h, type: r.blob.type, bytes: new Uint8Array(await r.blob.arrayBuffer()), ms: r.ms }; },
     renderPhase: (s: number, phase: number) => engine.call<RenderRes>({ type: 'render', state: toRenderState(state, true), scale: s, phase }),
   };
 
