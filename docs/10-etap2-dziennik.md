@@ -647,3 +647,59 @@ Decyzja użytkownika: SVG z wyborem, z osadzoną czcionką albo bez.
 ### Otwarte (`decyzja użytkownika`)
 
 - **Efekty kształtowe** (Dots, Cross, Diamond, Lines, Diagonal) mają glint/scan, ale nie mają wersji tekstowej, więc SVG (i TS) dla nich nie ma.
+
+## Folder na zdjęcia (prośba użytkownika)
+
+- `photos-inbox/` z `README.md`: użytkownik wrzuca tam ok. 40 zdjęć (gałąź `etap2-animacje`). Folder nie trafia na stronę.
+- Po wrzuceniu: duplikaty po SHA-256 usunięte (podobne wypisane do decyzji), nazwy `photo-NN-temat.jpg`, wersje na stronę w `app/public/sample/` (dłuższy bok ≤ 1600 px), lista starych i nowych nazw w `docs/`. Podmiana na stronie dopiero na prośbę.
+
+## Krok 6C: eksport TS (piece ascii.rest)
+
+Decyzje użytkownika: wariant 1 (6 odcieni na kolor, najwyżej 10 kolorów zdjęcia); siatka ponad 80×32 zmniejszana automatycznie z komunikatem; SVG/TS bez efektów kształtowych.
+
+### Odczyt (`kod`, `bas3line/ascii` @ `8fd792e`)
+
+- **`src/types.ts`:** `meta` = { name, category, note ≤ 72, cols, rows, fps 0–60, options, clock, palette (2–64 `#rrggbb`), ground, cell (1 lub 2), loop, still }; `default(options) → (t, env) => string`; `env.color` = indeks palety na komórkę.
+- **`scripts/check.ts` (checker biblioteki):**
+  - znaki tylko ASCII, `·°` i U+2500–259F, więc **Braille nie przejdzie nigdy**, Mixed domyślnie też nie (znak `∙`);
+  - limit 80×32 dotyczy kategorii innych niż `scenes`; `scenes` ma 320×120, ale wymaga palety, tła i ≥ 4 kolorów;
+  - animacja musi dać **≥ 3 różne klatki w chwilach 0, 1, 2, 3, 4, 6 s**; tylko `import type`; bez `Math.random` i DOM; deterministyczna; ≤ 4 ms na klatkę.
+- **`mount.ts`:** przy ustawionym `ground` `env.paper` wynika z jasności tła, więc druga trójka palety (ciemna strona) jest u nas taka sama jak pierwsza.
+
+### Co zrobiono (`kod`)
+
+- **Silnik:**
+  - `text(ctx, tone)` zapisuje ton każdej komórki z tuszem; `CellGrid` ma `tone`, `w`, `h`;
+  - `gridMotion` zaokrągla fazę do 2⁻²⁰: plik liczy fazę z czasu, a k/N i (k·loop/N)/loop mogą różnić się o 1 ulp na granicy tiku szumu (zmiana ruchu niewidoczna, hash-baseline bez zmian).
+- **`engine/src/export/piece.ts`** (kod własny; nic nie skopiowane z ascii.rest, poza nazwami pól formatu i `import type { Frame, Meta } from "../types.ts"`; zachowanie glint/scan opisane w nagłówku pliku z MIT i autorem):
+  - `pieceGrid`: gdy siatka > 80×32, zwiększa Cell size do najmniejszego, przy którym się mieści;
+  - `pieceSource`: plik z `ART` (obraz w fazie 0), `INK` (kolor komórki, ≤ 10, median cut), `TONE` (czy ruch może zamienić znak), stałymi geometrii i funkcją klatki liczącą glint/scan tym samym wzorem co silnik;
+  - paleta = 10 kolorów × (bazowy, +35%, +70%) × 2; `category: "effects"`, `loop` = długość pętli, `still: 0`, `fps` z zakładki Animation;
+  - `START = 0,5 s` jak w oryginale: bez niego przy pętli 4 s i przejściu 50% checker widział tylko 2 różne klatki. Przesunięcie dotyczy tylko pliku TS; klatka w chwili t = faza (t − 0,5) / loop.
+- **Aplikacja:**
+  - radio **TS** obok SVG (te same efekty); w oknie siatka przed i po zmniejszeniu, informacja o 10 kolorach;
+  - znaki spoza zestawu biblioteki: komunikat i wyłączone Pobierz;
+  - ostrzeżenie, gdy checker zobaczyłby < 3 różne klatki (np. pętla 1 s: wszystkie próbki to ta sama chwila);
+  - plik `<efekt>-<ruch>.ts`.
+
+### Testy (`test`)
+
+- **Silnik 345/345** (15 nowych, sekcja 36), plik zapisany i zaimportowany w Node:
+  - Characters glint, Characters scan (speed 2, pass 40), Block glint: tekst klatki pliku w chwili START + k·loop/N = tekst silnika w fazie k/N, 60/60;
+  - poziom odcienia z `env.color` = poziom w silniku. Tolerancja ±1 to różnica zaokrągleń: silnik rozjaśnia średnią przed zaokrągleniem. Biel pasuje do każdego poziomu. Obie poprawki dotyczyły mojego testu, nie eksportu;
+  - meta wg reguł checkera; deterministyczność;
+  - dopasowanie siatki (100×40 → ≤ 80×32, komórka o 1 px mniejsza już się nie mieści; 50×20 bez zmian);
+  - wykrycie znaków spoza zestawu (Mixed `∙`, Braille).
+- **`test:editor` 89/89** (4 nowe): pętla 1 s z ostrzeżeniem, pętla 4 s bez; pobranie `characters-glint.ts`; plik ze zdjęcia 1 (69×32) importuje się w Node, ma poprawne wymiary i znaki, ≥ 3 różne klatki; Mixed z komunikatem i wyłączonym Pobierz.
+- **Checker biblioteki** (`node scripts/check.ts` w kopii repozytorium w scratchpadzie, poza naszym repo): obraz testowy 3/3 ok, zdjęcie 1 (250×116 → 69×32, Cell size 10 → 37) 3/3 ok, 0,17–0,26 ms na klatkę. Pliki usunięte z kopii po teście.
+- `hash-baseline` 516/516 identyczny.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Wyglądu na kanwie ascii.rest (`mount.ts`). Ich komórka ma proporcje 1:2, nasza ok. 1:1,67, więc na ich kanwie obraz będzie ok. 20% wyższy; w `<pre>` decyduje czcionka.
+- Trybu jednego tuszu na jasnej stronie (`env.paper` bez kolorów): obraz nie jest odwracany, więc w `<pre>` na jasnym tle wyjdzie negatyw. ascii.rest odwraca rampę tylko w stylu shade.
+- Dodania pliku do biblioteki przez PR (wymagałoby ich README i miniatur).
+
+### Otwarte (`decyzja użytkownika`)
+
+- Kategoria `effects` (limit 80×32) czy `scenes` (320×120, „szerokie, gęste, kolorowe obrazy”, co pasuje do zdjęć)?

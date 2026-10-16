@@ -1,13 +1,13 @@
 /// <reference lib="webworker" />
 // Silnik efektów w Web Workerze. Glify: OffscreenCanvas + Geist Mono załadowany w Workerze przed pierwszym renderem
 // (inaczej cache masek w canvasGlyphs zapamiętałby znaki z czcionki zastępczej).
-import { render, renderCells, animatedSvg, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES, cropRect, canvasText, TEXT_PARAMS, TEXT_FONTS, MAX_TEXTS } from '../../../engine/src/index.ts';
+import { render, renderCells, animatedSvg, pieceGrid, pieceSource, pieceBadChars, PIECE_START, PIECE_SAMPLE_AT, EFFECTS, POSTFX, COLOR_PARAMS, CHARSETS, canvasGlyphs, getEffect, isDrawnGlyph, LIGHT_PARAMS, AMBIENT_PARAM, MAX_LIGHTS, NO_LIGHTS, GLYPH_STYLES, cropRect, canvasText, TEXT_PARAMS, TEXT_FONTS, MAX_TEXTS } from '../../../engine/src/index.ts';
 import type { GlyphProvider, Img, RenderState, TextRenderer } from '../../../engine/src/index.ts';
 import { testImage } from '../../../engine/scripts/make-test-image.ts';
 import { HASH_CASES } from '../dev/hash-cases.ts';
 import { loadGlyphFonts, ensureGlyphs, GLYPH_FONTS, GLYPH_STACK, registerTextFonts, ensureText, TEXT_STACKS, svgFontFor } from './fonts.ts';
 import { LIMIT_ERROR } from './protocol.ts';
-import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes, Progress, WebCodecsRow } from './protocol.ts';
+import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes, Progress, WebCodecsRow, PieceRes } from './protocol.ts';
 import { CANCELLED, NO_CODEC } from './protocol.ts';
 import { encodeGif } from './gif.ts';
 /* MP4 (Mediabunny, ok. 190 kB) ładowany dopiero przy eksporcie lub sprawdzeniu kodeka */
@@ -135,6 +135,18 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
       } finally { cancelled.delete(id); }
     }
     case 'svgInfo': { if (!source) throw new Error('no source image'); await ensure(rampText(req.state)); const c = renderCells(source, { ...req.state, motion: undefined }, { glyphs }); return { data: c ? { cols: c.cols, rows: c.rows } : null }; }
+    case 'piece': {
+      if (!source) throw new Error('no source image'); const m = req.state.motion; if (!m) throw new Error('piece needs a motion');
+      await ensure(rampText(req.state)); const g = pieceGrid(source, req.state, { glyphs }); const bad = pieceBadChars(g.base);
+      /* ile różnych klatek zobaczy checker biblioteki w chwilach PIECE_SAMPLE_AT (klatka t = faza (t − START) / loop, jak w pliku) */
+      const distinct = new Set(PIECE_SAMPLE_AT.map((t) => renderCells(source!, { ...g.state, motion: m }, { glyphs, phase: (((t - PIECE_START) / req.loop) % 1 + 1) % 1 })!.text.join('\n'))).size;
+      const res: PieceRes = { from: g.from, cols: g.base.cols, rows: g.base.rows, cellSize: g.cellSize, bad, distinct };
+      if (req.dryRun || bad) return { data: res };
+      const def = getEffect(req.state.style.id); const glint = m.id === 'glint'; const p = { ...Object.fromEntries((def.motions!.find((x) => x.id === m.id)!.params).map((q) => [q.id, q.default])), ...m.params } as Record<string, number>;
+      const every = +(req.loop / p.speed).toFixed(2);
+      const r = pieceSource(g.base, { name: `${def.name} ${m.id}`, note: `a picture in ${def.name.toLowerCase()}, ${glint ? 'a glint crossing it' : 'a scan line running down it'} every ${every} s`.slice(0, 72), motion: { id: m.id as 'glint' | 'scan', p }, loop: req.loop, fps: req.fps });
+      return { data: { ...res, code: r.code, slug: r.slug, colors: r.colors } satisfies PieceRes };
+    }
     case 'cancel': cancelled.add(req.target); return { data: true };
     case 'mp4Support': { const { evenDims, mp4Supported } = await mp4(); const e = evenDims(req.w, req.h); return { data: { avc: await mp4Supported('avc', e.w, e.h), vp9: await mp4Supported('vp9', e.w, e.h), w: e.w, h: e.h } }; }
     case 'webcodecs': {

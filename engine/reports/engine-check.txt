@@ -328,3 +328,18 @@ OK   scan: szum zmienia się w czasie (12 tików na przejście): φ 0,25 i φ 0,
 OK   glint (Dots, kształty): piksele zmieniają się tylko w komórkach pasu (komórka 10 px, połowa szerokości 5 komórek), w pasie są zmiany  [poza 0, w pasie 3900]
 OK   glint rozjaśnia kolor tuszu (tusz #808080, ten sam znak w komórce): jasność × 1, × 172/128 (35%) albo × 217/128 (70%); są komórki rozjaśnione  [277 komórek, 1.00 1.35 1.36 1.34 1.70]
 OK   glint/scan bez dostawcy glifów: czytelny błąd (zamiana na znaki wymaga czcionki)  [glint/scan need a glyph provider (canvasGlyphs)]
+OK   TS characters.glint: tekst klatki pliku w chwili START + k·loop/N = tekst silnika w fazie k/N, 60 z 60 (ruch widać w 27 klatkach)  [złych 0]
+OK   TS characters.glint: kolor komórki z env.color: poziom odcienia (0/35/70%) taki jak w silniku, kolor = kolor obrazu z palety rozjaśniony o ten poziom  [poziom 0, kolor 0]
+OK   TS characters.glint: meta wg checkera biblioteki (kategoria, note ≤ 72, ≤ 80×32, fps 0–60, paleta 2–64 #rrggbb = 6 × 10 ≤ 60, ground, loop, still 0); tylko import type; bez Math.random i DOM  [75x31, 10 kolorów]
+OK   TS characters.glint: deterministyczny (dwie instancje dają te same klatki)
+OK   TS characters.scan: tekst klatki pliku w chwili START + k·loop/N = tekst silnika w fazie k/N, 60 z 60 (ruch widać w 20 klatkach)  [złych 0]
+OK   TS characters.scan: kolor komórki z env.color: poziom odcienia (0/35/70%) taki jak w silniku, kolor = kolor obrazu z palety rozjaśniony o ten poziom  [poziom 0, kolor 0]
+OK   TS characters.scan: meta wg checkera biblioteki (kategoria, note ≤ 72, ≤ 80×32, fps 0–60, paleta 2–64 #rrggbb = 6 × 10 ≤ 60, ground, loop, still 0); tylko import type; bez Math.random i DOM  [75x31, 10 kolorów]
+OK   TS characters.scan: deterministyczny (dwie instancje dają te same klatki)
+OK   TS block-chars.glint: tekst klatki pliku w chwili START + k·loop/N = tekst silnika w fazie k/N, 60 z 60 (ruch widać w 23 klatkach)  [złych 0]
+OK   TS block-chars.glint: kolor komórki z env.color: poziom odcienia (0/35/70%) taki jak w silniku, kolor = kolor obrazu z palety rozjaśniony o ten poziom  [poziom 0, kolor 0]
+OK   TS block-chars.glint: meta wg checkera biblioteki (kategoria, note ≤ 72, ≤ 80×32, fps 0–60, paleta 2–64 #rrggbb = 6 × 10 ≤ 60, ground, loop, still 0); tylko import type; bez Math.random i DOM  [75x31, 10 kolorów]
+OK   TS block-chars.glint: deterministyczny (dwie instancje dają te same klatki)
+OK   TS: siatka 100×40 zmniejszona do ≤ 80×32 przez Cell size; najmniejsza komórka, która się mieści (o 1 px mniej już nie)  [75x31, cellSize 10 → 13]
+OK   TS: siatka mieszcząca się w 80×32 bez zmian (50×20, Cell size 10)  [50x20]
+OK   TS: znaki spoza zestawu biblioteki wykryte (Mixed domyślnie: ∙; Braille: U+28xx) i pieceSource odmawia  [∙ | 19 znaków Braille | characters outside the ascii.rest set: ∙]

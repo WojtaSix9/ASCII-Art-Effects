@@ -29,12 +29,13 @@ export const ASCII_MOTIONS: MotionDef[] = [
   { id: 'glint', name: 'Glint', params: [SPEED_P, PASS_P, range('width', 'Glint width', 5, 1, 20, { unit: 'cells' })] },
   { id: 'scan', name: 'Scan', params: [SPEED_P, PASS_P] },
 ];
-const NOISE = '#$%&*+<=>?@[]{}', LEAN = 0.45, HEAD = 2, TRAIL = 5, TICKS = 12, SOLID_T = 0.3, INK_T = 0.05;
+export const NOISE = '#$%&*+<=>?@[]{}', LEAN = 0.45, HEAD = 2, TRAIL = 5, TICKS = 12, SOLID_T = 0.3, INK_T = 0.05;
 export type CellMod = { tint: number; ch: string | null };
 /** Modyfikator komórki (cx, cy, ton) dla glint/scan albo null, gdy ruchu nie ma. W×H: obraz w px; cw×ch: komórka. */
 export function gridMotion(ctx: RenderCtx, cw: number, ch: number, ny: number, W: number, H: number): ((cx: number, cy: number, t: number) => CellMod | null) | null {
   const m = ctx.motion; if (!m || (m.id !== 'glint' && m.id !== 'scan')) return null;
-  const v = m.p.speed * m.phase; const u = v - Math.floor(v); const P = m.p.pass / 100; if (u >= P) return () => null; const f = u / P;
+  /* faza zaokrąglona do 2^-20: eksport TS liczy ją z czasu (t / loop), a k/N i (k·loop/N)/loop mogą różnić się o 1 ulp na granicy tiku */
+  const ph = Math.round(m.phase * 1048576) / 1048576; const v = m.p.speed * ph; const u = v - Math.floor(v); const P = m.p.pass / 100; if (u >= P) return () => null; const f = u / P;
   if (m.id === 'glint') {
     const half = m.p.width * cw; const at = -half + (W + LEAN * H + 2 * half) * f;
     return (cx, cy, t) => {
@@ -50,13 +51,18 @@ export function gridMotion(ctx: RenderCtx, cw: number, ch: number, ny: number, W
   };
 }
 /** Znak eksportu tekstowego po ruchu: pusty znak zostaje pusty (jak w oryginale), inaczej zamiana z modyfikatora. */
-export const motionChar = (mm: ReturnType<typeof gridMotion>, x: number, y: number, t: number, chr: string) => {
-  if (!mm || chr === ' ' || chr === '\u2800') return chr; const mod = mm(x, y, t); return mod?.ch ?? chr;
+export const motionChar = (mm: ReturnType<typeof gridMotion>, x: number, y: number, t: number, chr: string, tone?: (x: number, y: number, t: number) => void) => {
+  if (chr === ' ' || chr === '\u2800') return chr; tone?.(x, y, t); if (!mm) return chr; const mod = mm(x, y, t); return mod?.ch ?? chr;
 };
 const tintC = (v: number, k: number) => v + (255 - v) * k;
 /** Siatka komórek z eksportu tekstowego efektu: kolor = średnia komórki albo tusz (mono), rozjaśniony przez glint/scan jak w renderze. */
-export function cellGridOf(ctx: RenderCtx, cw: number, ch: number, text: string): CellGrid {
+/** Siatka komórek efektu z wersją tekstową: tekst z `text(ctx, tone)`, który zapisuje też ton komórek z tuszem (dla eksportu TS). */
+export function cellsOf(ctx: RenderCtx, cw: number, ch: number, text: (ctx: RenderCtx, tone: (x: number, y: number, t: number) => void) => string): CellGrid {
+  const tones = new Map<number, number>(); const txt = text(ctx, (x, y, t) => tones.set(y * 65536 + x, t)); return cellGridOf(ctx, cw, ch, txt, tones);
+}
+export function cellGridOf(ctx: RenderCtx, cw: number, ch: number, text: string, tones?: Map<number, number>): CellGrid {
   const lines = text.replace(/\n$/, '').split('\n'); const rows = lines.length, cols = Math.max(...lines.map((l) => [...l].length));
+  const tone = new Float64Array(cols * rows).fill(-1); tones?.forEach((t, k) => { const x = k % 65536, y = Math.floor(k / 65536); if (x < cols && y < rows) tone[y * cols + x] = t; });
   const a = cellAverages(ctx.prep, cw, ch); const p = ctx.p; const ink = parseColor(p.inkColor ?? '#ffffff'); const mm = gridMotion(ctx, cw, ch, rows, ctx.prep.w, ctx.prep.h);
   const rgb = new Uint8Array(cols * rows * 3);
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
@@ -64,7 +70,7 @@ export function cellGridOf(ctx: RenderCtx, cw: number, ch: number, text: string)
     if (mm) { let t = a.L[o]; if (p.invert) t = 1 - t; const mod = mm(x, y, clamp(t, 0, 1)); if (mod?.tint) c = c.map((v) => tintC(v, mod.tint)); }
     const i = (y * cols + x) * 3; rgb[i] = Math.round(c[0]); rgb[i + 1] = Math.round(c[1]); rgb[i + 2] = Math.round(c[2]);
   }
-  return { cols, rows, cw, ch, text: lines.map((l) => [...l].join('').padEnd(cols)), rgb, ground: parseColor(p.bgColor ?? '#000000') as [number, number, number] };
+  return { cols, rows, cw, ch, text: lines.map((l) => [...l].join('').padEnd(cols)), rgb, ground: parseColor(p.bgColor ?? '#000000') as [number, number, number], tone, w: ctx.prep.w, h: ctx.prep.h };
 }
 /** Wspolna petla: srednie komorek z `prep`, ton (z odwroceniem), kolor tuszu, coverage przez hasz; rysuje na tle. */
 export function runGrid(ctx: RenderCtx, cw: number, ch: number, draw: (img: Img, c: Cell, avg: ReturnType<typeof cellAverages>) => void, tone?: (t: number) => number, target?: Img): Img {
@@ -125,11 +131,11 @@ const characters: EffectDef = {
       for (let y = c.y0; y < c.y1; y++) for (let x = c.x0; x < c.x1; x++) { const v = m[(y - c.y0) * cw + (x - c.x0)]; if (v && x - c.x0 < w) over(img.data, (y * img.w + x) * 4, c.r, c.g, c.b, v / 255); }
     });
   },
-  cells(ctx) { const { cw, ch } = charCell(ctx); return cellGridOf(ctx, cw, ch, this.text!(ctx)); },
-  text(ctx) {
+  cells(ctx) { const { cw, ch } = charCell(ctx); return cellsOf(ctx, cw, ch, this.text!.bind(this)); },
+  text(ctx, tone) {
     const { cw, ch } = charCell(ctx); const ramp = rampOf(ctx.p); const a = cellAverages(ctx.prep, cw, ch); const eb = edgeBoost(ctx, a); const rows: string[] = [];
     const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);
-    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; if (eb) t = clamp(t + eb[y * a.nx + x], 0, 1); s += motionChar(mm, x, y, t, charAt(ramp, t)); } rows.push(s); }
+    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; if (eb) t = clamp(t + eb[y * a.nx + x], 0, 1); s += motionChar(mm, x, y, t, charAt(ramp, t), tone); } rows.push(s); }
     return rows.join('\n') + '\n';
   },
 };
@@ -164,11 +170,11 @@ const block: EffectDef = {
       if (bits & 4) fillRect(img, c.x0, c.y0 + hh, c.x0 + hw, c.y1, c.r, c.g, c.b); if (bits & 8) fillRect(img, c.x0 + hw, c.y0 + hh, c.x1, c.y1, c.r, c.g, c.b);
     });
   },
-  cells(ctx) { const { cw, ch } = charCell(ctx); return cellGridOf(ctx, cw, ch, this.text!(ctx)); },
-  text(ctx) {
+  cells(ctx) { const { cw, ch } = charCell(ctx); return cellsOf(ctx, cw, ch, this.text!.bind(this)); },
+  text(ctx, tone) {
     const { cw, ch } = charCell(ctx); const st = subTones(ctx, cw, ch); const a = cellAverages(ctx.prep, cw, ch); const rows: string[] = [];
     const mm = gridMotion(ctx, cw, ch, a.ny, ctx.prep.w, ctx.prep.h);
-    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; s += motionChar(mm, x, y, t, blockChar(ctx, { t }, st(x, y))); } rows.push(s); }
+    for (let y = 0; y < a.ny; y++) { let s = ''; for (let x = 0; x < a.nx; x++) { if (!cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage)) { s += ' '; continue; } let t = a.L[y * a.nx + x]; if (ctx.p.invert) t = 1 - t; s += motionChar(mm, x, y, t, blockChar(ctx, { t }, st(x, y)), tone); } rows.push(s); }
     return rows.join('\n') + '\n';
   },
 };
@@ -194,11 +200,11 @@ const braille: EffectDef = {
       for (let r = 0; r < 4; r++) for (let q = 0; q < 2; q++) if (m & (1 << BIT[r][q])) { const mx = c.x0 + (q + 0.5) * dw, my = c.y0 + (r + 0.5) * dh; paintSDF(img, Math.floor(mx - rad - 1), Math.floor(my - rad - 1), Math.ceil(mx + rad + 1), Math.ceil(my + rad + 1), (x, y) => Math.hypot(x - mx, y - my) - rad, c.r, c.g, c.b); }
     });
   },
-  cells(ctx) { const { cw, ch } = brailleGeom(ctx); return cellGridOf(ctx, cw, ch, this.text!(ctx)); },
-  text(ctx) {
+  cells(ctx) { const { cw, ch } = brailleGeom(ctx); return cellsOf(ctx, cw, ch, this.text!.bind(this)); },
+  text(ctx, tone) {
     const { dw, dh, cw, ch } = brailleGeom(ctx); const sub = cellAverages(ctx.prep, dw, dh); const nx = Math.ceil(ctx.prep.w / cw), ny = Math.ceil(ctx.prep.h / ch); const rows: string[] = [];
     const mm = gridMotion(ctx, cw, ch, ny, ctx.prep.w, ctx.prep.h); const tn = mm ? cellAverages(ctx.prep, cw, ch) : null;
-    for (let y = 0; y < ny; y++) { let s = ''; for (let x = 0; x < nx; x++) { const chr = String.fromCharCode(0x2800 + (cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage) ? brailleMask(ctx, sub, x, y) : 0)); let t = tn ? tn.L[y * tn.nx + x] : 0; if (ctx.p.invert) t = 1 - t; s += motionChar(mm, x, y, t, chr); } rows.push(s); }
+    for (let y = 0; y < ny; y++) { let s = ''; for (let x = 0; x < nx; x++) { const chr = String.fromCharCode(0x2800 + (cellVisible(hash01(x, y, ctx.p.seed), ctx.p.coverage) ? brailleMask(ctx, sub, x, y) : 0)); let t = tn ? tn.L[y * tn.nx + x] : 0; if (ctx.p.invert) t = 1 - t; s += motionChar(mm, x, y, t, chr, tone); } rows.push(s); }
     return rows.join('\n') + '\n';
   },
 };

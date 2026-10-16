@@ -763,5 +763,46 @@ const SRC = testImage(300, 200);
   let thrown = ''; try { render(S, { style: { id: 'dots' }, motion: { id: 'glint' } }, { phase: 0.25 }); } catch (e) { thrown = (e as Error).message; }
   ok('glint/scan bez dostawcy glifów: czytelny błąd (zamiana na znaki wymaga czcionki)', thrown.includes('glyph provider'), thrown);
 }
+// 36. Etap 2, krok 6C: eksport TS (piece ascii.rest). Plik zapisany do katalogu tymczasowego i zaimportowany (Node usuwa typy).
+{
+  const { pieceGrid, pieceSource, pieceBadChars, PIECE_START, renderCells } = await import('../src/index.ts');
+  const { mkdtempSync, writeFileSync: wf } = await import('node:fs'); const { tmpdir } = await import('node:os'); const { join } = await import('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'piece-')); const S6 = testImage(600, 400); const LOOP = 4, N = 60;
+  const hex = (c: number[]) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+  for (const [id, m, p] of [['characters', 'glint', { speed: 1, pass: 50, width: 5 }], ['characters', 'scan', { speed: 2, pass: 40 }], ['block-chars', 'glint', { speed: 1, pass: 50, width: 5 }]] as const) {
+    const motion = { id: m, params: p }; const g = pieceGrid(S6, { style: { id }, motion });
+    const r = pieceSource(g.base, { name: `${id} ${m}`, note: 'a test picture', motion: { id: m, p: { ...p } }, loop: LOOP, fps: 30 });
+    const f = join(dir, `${r.slug}.ts`); wf(f, r.code); const mod = await import(f); const frame = mod.default({}); const meta = mod.meta; const n = meta.palette.length / 6;
+    let badText = 0, badLevel = 0, badInk = 0, moving = 0; const color = new Uint8Array(meta.cols * meta.rows);
+    const base = g.base; const B = (i: number) => [base.rgb[i * 3], base.rgb[i * 3 + 1], base.rgb[i * 3 + 2]];
+    for (let k = 0; k < N; k++) {
+      const e = renderCells(S6, { ...g.state, motion }, { phase: k / N })!; const txt = frame(PIECE_START + (k * LOOP) / N, { color });
+      if (txt !== e.text.join('\n')) badText++; if (e.text.join('\n') !== base.text.join('\n')) moving++;
+      for (let i = 0; i < meta.cols * meta.rows; i++) {
+        if (base.text[Math.floor(i / meta.cols)][i % meta.cols] === ' ') continue;
+        /* poziom z silnika: kolor komórki w fazie k = baza rozjaśniona o 0, 35% albo 70%. Silnik rozjaśnia średnią przed zaokrągleniem,
+           a baza w CellGrid jest już zaokrąglona, więc ±1 (różnica zaokrągleń, nie próg dobrany do wyniku). Biel pasuje do każdego
+           poziomu, więc poziom pliku ma być jednym z pasujących */
+        const lvs = [0, 1, 2].filter((l) => B(i).every((v, j) => Math.abs(v + (255 - v) * [0, 0.35, 0.7][l] - e.rgb[i * 3 + j]) <= 1));
+        const c = color[i] - 3 * n; const lv = Math.floor(c / n); if (!lvs.includes(lv)) badLevel++;
+        const pc = meta.palette[3 * n + c].slice(1).match(/../g)!.map((h: string) => parseInt(h, 16)); const q = meta.palette[3 * n + (c % n)].slice(1).match(/../g)!.map((h: string) => parseInt(h, 16));
+        if (hex(q.map((v: number) => Math.round(v + (255 - v) * [0, 0.35, 0.7][lv]))) !== hex(pc)) badInk++;
+      }
+    }
+    ok(`TS ${id}.${m}: tekst klatki pliku w chwili START + k·loop/N = tekst silnika w fazie k/N, ${N} z ${N} (ruch widać w ${moving} klatkach)`, badText === 0 && moving > 5, `złych ${badText}`);
+    ok(`TS ${id}.${m}: kolor komórki z env.color: poziom odcienia (0/35/70%) taki jak w silniku, kolor = kolor obrazu z palety rozjaśniony o ten poziom`, badLevel === 0 && badInk === 0, `poziom ${badLevel}, kolor ${badInk}`);
+    ok(`TS ${id}.${m}: meta wg checkera biblioteki (kategoria, note ≤ 72, ≤ 80×32, fps 0–60, paleta 2–64 #rrggbb = 6 × ${n} ≤ 60, ground, loop, still 0); tylko import type; bez Math.random i DOM`,
+      meta.category === 'effects' && meta.note.length <= 72 && meta.cols <= 80 && meta.rows <= 32 && Number.isInteger(meta.fps) && meta.palette.length === 6 * n && n <= 10 && meta.palette.every((c: string) => /^#[0-9a-f]{6}$/.test(c)) && /^#[0-9a-f]{6}$/.test(meta.ground) && meta.loop === LOOP && meta.still === 0
+      && !/^\s*import\s(?!type\s)/m.test(r.code) && !/Math\.random|\b(document|window|requestAnimationFrame|localStorage|navigator|globalThis)\b/.test(r.code), `${meta.cols}x${meta.rows}, ${n} kolorów`);
+    const again = mod.default({}); ok(`TS ${id}.${m}: deterministyczny (dwie instancje dają te same klatki)`, [0, 1, 2.5, 5].every((t) => again(t) === frame(t)));
+  }
+  /* dopasowanie siatki: 600×400, Characters cellSize 10 → 100×40 > 80×32; po zmianie mieści się, a o 1 px mniejsza komórka już nie */
+  const g = pieceGrid(S6, { style: { id: 'characters' } }); const smaller = renderCells(S6, { style: { id: 'characters', params: { cellSize: g.cellSize - 1 } } })!;
+  ok('TS: siatka 100×40 zmniejszona do ≤ 80×32 przez Cell size; najmniejsza komórka, która się mieści (o 1 px mniej już nie)', g.from.cols === 100 && g.from.rows === 40 && g.base.cols <= 80 && g.base.rows <= 32 && (smaller.cols > 80 || smaller.rows > 32), `${g.base.cols}x${g.base.rows}, cellSize ${g.from.cellSize} → ${g.cellSize}`);
+  const small = pieceGrid(testImage(300, 200), { style: { id: 'characters' } }); ok('TS: siatka mieszcząca się w 80×32 bez zmian (50×20, Cell size 10)', small.base.cols === 50 && small.base.rows === 20 && small.cellSize === 10, `${small.base.cols}x${small.base.rows}`);
+  const bm = pieceBadChars(pieceGrid(S6, { style: { id: 'mixed' } }).base), bb = pieceBadChars(renderCells(testImage(300, 200), { style: { id: 'braille' } })!);
+  let thr = ''; try { pieceSource(pieceGrid(S6, { style: { id: 'mixed' } }).base, { name: 'x', note: 'x', motion: { id: 'scan', p: { speed: 1, pass: 50 } }, loop: 4, fps: 30 }); } catch (e) { thr = (e as Error).message; }
+  ok('TS: znaki spoza zestawu biblioteki wykryte (Mixed domyślnie: ∙; Braille: U+28xx) i pieceSource odmawia', bm.includes('∙') && [...bb].every((c) => c.codePointAt(0)! >= 0x2800 && c.codePointAt(0)! <= 0x28ff) && bb.length > 0 && thr.includes('outside'), `${bm} | ${bb.length} znaków Braille | ${thr}`);
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);

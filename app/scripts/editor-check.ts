@@ -479,6 +479,32 @@ try {
   });
   t('SVG bez osadzania: typ image/svg+xml, bez @font-face, otwiera się jako <img>, ma animacje CSS', S.type === 'image/svg+xml' && !S.aFace && S.wA === S.cols * 10 && S.anims > 0, S);
   t(`SVG z osadzaniem (podzbiorów: ${S.faces}, ${S.kA} → ${S.kB} kB, siatka ${S.cols}×${S.rows}): podzbiory Geist Mono jako woff2 base64 (każdy wczytuje się jako FontFace), rodzina Geist Mono pierwsza w stosie; różnica rozmiaru ≈ długość base64`, S.faces >= 1 && S.loaded === S.faces && S.fam && S.wB === S.wA && Math.abs(S.extra - S.b64) < 400 * S.faces, S);
+  // Etap 2, krok 6C: TS (piece ascii.rest). Characters (zdjęcie 1, siatka ponad 80×32), pętla 1 s z testów GIF, potem 4 s.
+  await page.click('[data-export]'); await page.check('input[name="format"][value="ts"]');
+  await page.waitForFunction(() => document.querySelector('[data-anim-info]')?.textContent?.startsWith('Siatka'), null, { timeout: 30_000 });
+  const ts1 = { info: await page.textContent('[data-anim-info]'), go: await page.isDisabled('[data-go]') }; await page.click('[data-cancel]');
+  t('TS, pętla 1 s: siatka zdjęcia zmniejszona do ≤ 80×32 przez Cell size; ostrzeżenie, że checker biblioteki zobaczy tylko jedną klatkę (0, 1, 2, 3, 4, 6 s = ta sama chwila pętli); Pobierz aktywne',
+    !!ts1.info?.includes('zmniejszona do') && !!ts1.info.includes('najwyżej 80×32') && !!ts1.info.includes('jedną klatkę') && !ts1.go, ts1);
+  await page.$eval('[data-loop-params] [data-p="loopSeconds"]', (el) => { const i = el as HTMLInputElement; i.value = '4'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); }); await settle(page);
+  await page.click('[data-export]'); await page.check('input[name="format"][value="ts"]');
+  await page.waitForFunction(() => document.querySelector('[data-anim-info]')?.textContent?.startsWith('Siatka'), null, { timeout: 30_000 });
+  const ts4 = await page.textContent('[data-anim-info]');
+  const [tdl] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.click('[data-go]')]);
+  await page.waitForFunction(() => document.querySelector('[data-export-msg]')?.textContent?.startsWith('Gotowe'), null, { timeout: 60_000 });
+  const tmsg = await page.textContent('[data-export-msg]'); await page.click('[data-cancel]');
+  t('TS z okna (pętla 4 s): bez ostrzeżenia o klatkach; plik characters-glint.ts; komunikat z siatką i liczbą kolorów', !ts4?.includes('Uwaga') && tdl.suggestedFilename() === 'characters-glint.ts' && !!tmsg?.includes('Gotowe: characters-glint.ts, siatka') && !!tmsg.includes('× 6 odcieni'), { ts4, file: tdl.suggestedFilename(), tmsg });
+  const P = await page.evaluate(async () => (window as any).__editorTest.piece());
+  {
+    const dir = mkdtempSync(join(tmpdir(), 'piece-')); const f = join(dir, `${P.slug}.ts`); writeFileSync(f, P.code); const mod = await import(f); const m = mod.meta; const fr = mod.default({ ...m.options });
+    const color = new Uint8Array(m.cols * m.rows); const frames = [0, 1, 2, 3, 4, 6].map((x) => fr(x, { color })); const shape = frames.every((x: string) => x.split('\n').length === m.rows && x.split('\n').every((l) => [...l].length === m.cols));
+    t(`TS: plik importuje się w Node; ${m.cols}×${m.rows} ≤ 80×32, każda klatka ${m.rows} wierszy po ${m.cols} znaków, znaki z zestawu biblioteki, ≥ 3 różne klatki w chwilach checkera, indeksy kolorów < ${m.palette.length}`,
+      m.cols <= 80 && m.rows <= 32 && shape && frames.every((x: string) => /^[\x20-\x7E·°─-▟]*$/.test(x.replace(/\n/g, ''))) && new Set(frames).size >= 3 && color.every((v) => v < m.palette.length) && m.loop === 4,
+      { cols: m.cols, rows: m.rows, distinct: new Set(frames).size, pal: m.palette.length });
+  }
+  await pick('mixed'); await settle(page); await page.click('[data-export]'); await page.check('input[name="format"][value="ts"]');
+  await page.waitForFunction(() => document.querySelector('[data-anim-info]')?.textContent?.startsWith('Siatka'), null, { timeout: 30_000 });
+  const tm = { info: await page.textContent('[data-anim-info]'), go: await page.isDisabled('[data-go]') }; await page.click('[data-cancel]');
+  t('TS dla Mixed (domyślnie znak ∙ spoza zestawu biblioteki): komunikat ze znakiem, Pobierz wyłączone', !!tm.info?.includes('Znaki spoza zestawu biblioteki: ∙') && tm.go, tm);
   t('brak błędów w konsoli', errors.length === 0, errors.join(' | '));
 } finally { await browser.close(); server.kill(); }
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${!ok && info ? `  [${info}]` : ''}`);

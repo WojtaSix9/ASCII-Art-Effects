@@ -5,7 +5,7 @@ import { SAMPLES } from '../config/sample.ts';
 import { MAX_SOURCE } from '../config/limits.ts';
 import { READY, thumbUrl } from '../config/thumbs.ts';
 import { sharedEngine } from '../engine/client.ts';
-import { CANCELLED, NO_CODEC, LIMIT_ERROR, type EffectMeta, type ExportRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
+import { CANCELLED, NO_CODEC, LIMIT_ERROR, type EffectMeta, type ExportRes, type PieceRes, type PostDefs, type RenderRes } from '../engine/protocol.ts';
 import { cropPixels, loadImage, paint, previewScale } from '../engine/preview.ts';
 import { CATEGORIES, matches, passesAnim } from '../effects/catalog.ts';
 import { mountParamPanel, type Values } from '../ui/param-panel.ts';
@@ -89,7 +89,8 @@ export const editorHtml = () => `
       <label><input type="radio" name="format" value="jpeg"> JPG <span class="ed-hint">(bez przezroczystości, tło czarne)</span></label>
       <label data-anim-only><input type="radio" name="format" value="gif"> GIF <span class="ed-hint">(animacja, pętla z zakładki Animation)</span></label>
       <label data-anim-only><input type="radio" name="format" value="mp4"> MP4 <span class="ed-hint">(wideo H.264, pętla z zakładki Animation)</span></label>
-      <label data-svg-only><input type="radio" name="format" value="svg"> SVG <span class="ed-hint">(animowane znaki, CSS bez skryptu, 15 fps)</span></label></fieldset>
+      <label data-svg-only><input type="radio" name="format" value="svg"> SVG <span class="ed-hint">(animowane znaki, CSS bez skryptu, 15 fps)</span></label>
+      <label data-svg-only><input type="radio" name="format" value="ts"> TS <span class="ed-hint">(plik piece dla biblioteki ascii.rest, najwyżej 80×32 znaków)</span></label></fieldset>
     <fieldset data-for="anim" hidden><legend>Rozmiar animacji</legend>
       <label for="ed-gif-side" class="sr-only">Dłuższy bok</label>
       <select id="ed-gif-side" name="side"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select>
@@ -380,15 +381,17 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   const svgFrames = () => Math.max(2, Math.round(state.anim.loopSeconds * SVG_FPS));
   const animDims = () => { const v = view(); const side = Number((form.elements.namedItem('side') as HTMLSelectElement).value); const k = Math.min(1, side / Math.max(v.sw, v.sh)); return { k, w: Math.round(v.sw * k), h: Math.round(v.sh * k) }; };
   const syncExportForm = () => {
-    const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif' || fmt === 'mp4' || fmt === 'svg';
+    const fmt = (form.elements.namedItem('format') as RadioNodeList).value; const anim = fmt === 'gif' || fmt === 'mp4' || fmt === 'svg' || fmt === 'ts';
     $('[data-for="anim"]').hidden = !anim; $('[data-for="still"]').hidden = anim; $('[data-gif-only]').hidden = fmt !== 'gif'; $('[data-embed-only]').hidden = fmt !== 'svg';
-    $('#ed-gif-side').hidden = fmt === 'svg';
-    if (fmt === 'svg') { const my = ++supportCheck; $('[data-anim-info]').textContent = `${svgFrames()} klatek (${state.anim.loopSeconds} s × ${SVG_FPS} fps). Tylko znaki efektu: bez Post FX, Color i napisów.`;
+    $('#ed-gif-side').hidden = fmt === 'svg' || fmt === 'ts';
+    const go = $<HTMLButtonElement>('[data-go]'); go.disabled = false;
+    if (fmt === 'ts') { const my = ++supportCheck; go.disabled = true; $('[data-anim-info]').textContent = 'Sprawdzam siatkę…';
+      engine.call<PieceRes>({ type: 'piece', state: toRenderState(state, true), loop: state.anim.loopSeconds, fps: state.anim.fps, dryRun: true }).then((r) => { if (my !== supportCheck) return; $('[data-anim-info]').textContent = pieceInfo(r); go.disabled = !!r.bad; }); }
+    else if (fmt === 'svg') { const my = ++supportCheck; $('[data-anim-info]').textContent = `${svgFrames()} klatek (${state.anim.loopSeconds} s × ${SVG_FPS} fps). Tylko znaki efektu: bez Post FX, Color i napisów.`;
       engine.call<{ cols: number; rows: number } | null>({ type: 'svgInfo', state: toRenderState(state) }).then((c) => { if (my !== supportCheck || !c) return;
         $('[data-anim-info]').textContent = `Siatka ${c.cols}×${c.rows} znaków, ${svgFrames()} klatek (${state.anim.loopSeconds} s × ${SVG_FPS} fps). Tylko znaki efektu: bez Post FX, Color i napisów.`; }); }
     else if (anim) { const d = animDims(); const n = Math.round(state.anim.loopSeconds * state.anim.fps);
       $('[data-anim-info]').textContent = `${fmt === 'mp4' ? `${d.w - (d.w & 1)}×${d.h - (d.h & 1)}` : `${d.w}×${d.h}`} px, ${n} klatek (${state.anim.loopSeconds} s × ${state.anim.fps} fps).${fmt === 'gif' ? ' Szum i ziarno powiększają plik.' : ''}`; }
-    const go = $<HTMLButtonElement>('[data-go]'); go.disabled = false;
     if (fmt === 'mp4') {   // H.264 w tej przeglądarce? Bez kodera: komunikat zamiast pliku (decyzja użytkownika, bez fallbacku)
       const d = animDims(); const my = ++supportCheck; go.disabled = true;
       engine.call<{ avc: boolean }>({ type: 'mp4Support', w: d.w, h: d.h }).then((s) => { if (my !== supportCheck) return;
@@ -396,12 +399,20 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     } else if ($('[data-export-msg]').textContent?.startsWith('Ta przeglądarka nie koduje')) $('[data-export-msg]').textContent = '';
   };
   let supportCheck = 0;
+  /** Opis eksportu TS: siatka (po dopasowaniu do limitu biblioteki), kolory, znaki spoza zestawu, próbki checkera. */
+  const distinctWarn = (r: PieceRes) => r.distinct >= 3 ? '' : `Uwaga: w chwilach 0, 1, 2, 3, 4 i 6 s widać tylko ${r.distinct === 1 ? 'jedną klatkę' : `${r.distinct} różne klatki`}, a checker biblioteki wymaga 3 (dłuższe przejście lub więcej przejść na pętlę to zmieni).`;
+  const pieceInfo = (r: PieceRes) => [
+    r.from.cols !== r.cols || r.from.rows !== r.rows ? `Siatka ${r.from.cols}×${r.from.rows} zmniejszona do ${r.cols}×${r.rows} znaków (Cell size ${r.from.cellSize} → ${r.cellSize} px): biblioteka ascii.rest przyjmuje najwyżej 80×32.` : `Siatka ${r.cols}×${r.rows} znaków.`,
+    'Kolory zdjęcia zredukowane do najwyżej 10 (każdy w 3 odcieniach dla ruchu); tylko znaki efektu, bez Post FX, Color i napisów.',
+    r.bad ? `Znaki spoza zestawu biblioteki: ${[...r.bad].join(' ')}. Zmień zestaw znaków, inaczej plik nie przejdzie jej sprawdzenia.` : '',
+    r.bad ? '' : distinctWarn(r),
+  ].filter(Boolean).join(' ');
   form.addEventListener('change', syncExportForm);
   let exportJob: { cancel: () => void } | null = null;
   $('[data-export]').addEventListener('click', () => {
     const v = view(); for (const s of [1, 2]) $(`[data-size="${s}"]`).textContent = `${Math.round(v.sw * s)}×${Math.round(v.sh * s)} px`;
-    const animOk = isAnimated(); root.querySelectorAll<HTMLElement>('[data-anim-only]').forEach((l) => { l.hidden = !animOk; }); $('[data-svg-only]').hidden = !hasCells();
-    if ((form.elements.namedItem('format') as RadioNodeList).value === 'svg' && !hasCells()) form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
+    const animOk = isAnimated(); root.querySelectorAll<HTMLElement>('[data-anim-only]').forEach((l) => { l.hidden = !animOk; }); root.querySelectorAll<HTMLElement>('[data-svg-only]').forEach((l) => { l.hidden = !hasCells(); });
+    if (['svg', 'ts'].includes((form.elements.namedItem('format') as RadioNodeList).value) && !hasCells()) form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
     if (!animOk && ['gif', 'mp4'].includes((form.elements.namedItem('format') as RadioNodeList).value)) form.querySelector<HTMLInputElement>('input[name="format"][value="png"]')!.checked = true;
     $('[data-export-msg]').textContent = ''; syncExportForm(); dialog.showModal();
   });
@@ -410,6 +421,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   $<HTMLFormElement>('[data-export-form]').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target as HTMLFormElement); const msg = $('[data-export-msg]'), go = $<HTMLButtonElement>('[data-go]');
+    if (fd.get('format') === 'ts') { await exportPiece(msg, go); return; }
     if (fd.get('format') === 'gif' || fd.get('format') === 'mp4' || fd.get('format') === 'svg') { await exportAnim(fd.get('format') as 'gif' | 'mp4' | 'svg', msg, go); return; }
     const format = fd.get('format') as 'png' | 'jpeg'; const s = Number(fd.get('scale'));
     go.disabled = true; msg.textContent = 'Renderuję w pełnej rozdzielczości…';
@@ -448,6 +460,19 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     finally { exportJob = null; go.disabled = false; bar.hidden = true; }
   };
 
+  /** Eksport TS (krok 6C): plik piece z siatki efektu w fazie 0 i kodu ruchu; liczony w Workerze. */
+  const piece = () => engine.call<PieceRes>({ type: 'piece', state: toRenderState(state, true), loop: state.anim.loopSeconds, fps: state.anim.fps });
+  const exportPiece = async (msg: HTMLElement, go: HTMLButtonElement) => {
+    go.disabled = true; msg.textContent = 'Przygotowuję plik TS…';
+    try {
+      const r = await piece(); if (!r.code) { msg.textContent = pieceInfo(r); return; }
+      const blob = new Blob([r.code], { type: 'text/plain;charset=utf-8' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${r.slug}.ts`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+      msg.textContent = `Gotowe: ${r.slug}.ts, siatka ${r.cols}×${r.rows}, ${r.colors} ${r.colors === 1 ? 'kolor' : (r.colors ?? 0) < 5 ? 'kolory' : 'kolorów'} × 6 odcieni, ${Math.round(blob.size / 1024)} kB. Plik do src/pieces biblioteki ascii.rest.${r.distinct < 3 ? ' ' + distinctWarn(r) : ''}`;
+    } catch (err) { msg.textContent = `Błąd eksportu TS: ${(err as Error).message}`; }
+    finally { go.disabled = false; }
+  };
+
   // Haki dla testów (scripts/ui-check.ts): stan i porównanie eksportu z renderem w skali 1.
   (window as any).__editorTest = {
     state: () => structuredClone(state), exportBlob, view: () => view(),
@@ -460,6 +485,7 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     mp4: async (codec: 'avc' | 'vp9' = 'avc', cancelAfter?: number) => { const j = startAnim('mp4', (done) => { if (cancelAfter && done >= cancelAfter) j.cancel(); }, codec); const r = await j.promise; return { w: r.w, h: r.h, type: r.blob.type, bytes: new Uint8Array(await r.blob.arrayBuffer()), ms: r.ms }; },
     /** Eksport SVG bez okna (testy): tekst pliku i wymiary siatki. */
     svg: async (embedFont = false) => { const r = await startAnim('svg', () => {}, undefined, embedFont).promise; return { text: await r.blob.text(), type: r.blob.type, cols: r.cols, rows: r.rows, fontMissing: r.fontMissing, ms: r.ms }; },
+    piece,
     renderPhase: (s: number, phase: number) => engine.call<RenderRes>({ type: 'render', state: toRenderState(state, true), scale: s, phase }),
   };
 
