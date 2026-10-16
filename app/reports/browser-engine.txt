@@ -1,12 +1,12 @@
 Przeglądarka: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36
-Data: 2026-10-15T14:24:59.312Z
+Data: 2026-10-16T14:29:19.770Z
 
 == Testy ==
 OK   Worker (module) uruchomiony, OffscreenCanvas dostępny
 OK   FontFaceSet w Workerze (self.fonts)
-OK   Geist Mono w Workerze: 6/6 podzbiorów wczytanych od razu  [38 ms]
+OK   Geist Mono w Workerze: 6/6 podzbiorów wczytanych od razu  [32 ms]
 OK   Noto Sans Mono (greek) i Noto Sans JP zarejestrowane, pobierane na żądanie  [Noto Sans Mono: 1, Noto Sans JP: 124]
-OK   Render identyczny z Node: 71/71 przypadków (53 efektów, 16 post FX, Color, Dither)
+OK   Render identyczny z Node: 117/117 przypadków (90 efektów, 16 post FX, Color, Dither)
 OK   Metoda pokrycia: kontrola „A” = Geist Mono  [Geist Mono]
 OK   Metoda pokrycia: kontrola U+10FFFD = brak (tofu)  [missing]
 OK   Każdy znak 16 presetów rysuje kod albo czcionka z npm (bez czcionek urządzenia): 154/154
@@ -37,88 +37,125 @@ math          0    6      4       0        0       0
 katakana      0    0      0      21        0       0
 
 == Czas w obie strony (pixel, zlecenie → Worker → ImageData → kanwa) ==
-600×400    render    5.5 ms, razem    6.2 ms, narzut 0.7 ms
-1600×1067  render   27.4 ms, razem   29.9 ms, narzut 2.5 ms
+600×400    render    7.8 ms, razem    8.4 ms, narzut 0.6 ms
+1600×1067  render   29.0 ms, razem   31.2 ms, narzut 2.2 ms
 
 == Czasy: 1600×1067, mediana z 3 po rozgrzewce; Chromium (Worker) vs Node 22, ta sama maszyna ==
 efekt                    Chromium     Node   > 100 ms w przeglądarce
-characters                  31 ms     42 ms   
-block-chars                 33 ms     39 ms   
-braille                     83 ms    149 ms   
-dots                        66 ms    104 ms   
-cross                       80 ms    188 ms   
-diamond                     38 ms     55 ms   
-lines                       62 ms     92 ms   
-diagonal                    58 ms     91 ms   
-asciiStudio                117 ms    167 ms   tak
-pixel                       27 ms     35 ms   
-mosaic                      34 ms     46 ms   
-lego                       125 ms    235 ms   tak
-hexmosaic                  128 ms    148 ms   tak
-disco                       32 ms     32 ms   
-halftone                   299 ms    460 ms   tak
-posterize                   74 ms     45 ms   
-duotone                     38 ms     77 ms   
-gradientmap                 65 ms    158 ms   
-dither                      62 ms     62 ms   
-pinch                      120 ms    141 ms   tak
-spherize                   153 ms    182 ms   tak
-twirl                      137 ms    180 ms   tak
-zigzag                      98 ms    109 ms   
-ripple                     142 ms    215 ms   tak
-polar                      209 ms    328 ms   tak
-shear                      167 ms    232 ms   tak
-motionblur                 745 ms   1073 ms   tak
-tiltshift                  472 ms    575 ms   tak
-gaussianblur               235 ms    244 ms   tak
-radialblur                1185 ms   1514 ms   tak
-rgbsplit                    87 ms    116 ms   
-scanline                     7 ms     10 ms   
-crt                        400 ms    476 ms   tak
-thermal                    311 ms    366 ms   tak
-edgeglow                   348 ms    576 ms   tak
-lens                       368 ms    694 ms   tak
-risograph                 1034 ms   1509 ms   tak
-comic                      617 ms    989 ms   tak
-sketch                     657 ms    928 ms   tak
-crosshatch                 493 ms    479 ms   tak
-halftonecmyk               926 ms   1081 ms   tak
-stippling                  187 ms    286 ms   tak
-pointillize                334 ms    490 ms   tak
-ledmatrix                  334 ms    396 ms   tak
-lowpoly                    209 ms    231 ms   tak
-truchet                     88 ms    161 ms   
-smudge                     801 ms   1019 ms   tak
-3d                         363 ms    520 ms   tak
-anaglyph                   430 ms    454 ms   tak
-prism                      410 ms    447 ms   tak
-dreamdust                  322 ms    321 ms   tak
-lightwind                  421 ms    261 ms   tak
-starburst                  510 ms    306 ms   tak
-warpbloom                  401 ms    461 ms   tak
-pixel + advBlur            264 ms    369 ms   tak
-pixel + vignette           108 ms    175 ms   tak
-pixel + scanLines           29 ms     47 ms   
-pixel + bloom              288 ms    410 ms   tak
-pixel + charBloom           26 ms     48 ms   
-pixel + chromatic          140 ms    232 ms   tak
-pixel + charChroma          19 ms     23 ms   
-pixel + rgbSplit           113 ms    135 ms   tak
-pixel + crtCurve           142 ms    158 ms   tak
-pixel + glitch              29 ms     52 ms   
-pixel + filmGrain           49 ms     77 ms   
-pixel + pixelate            30 ms     42 ms   
-pixel + halftone            69 ms    170 ms   
-pixel + filmDust            20 ms     30 ms   
-pixel + sharpen            144 ms    173 ms   tak
-pixel + noise               72 ms     76 ms   
+characters                  34 ms     68 ms   
+block-chars                 40 ms     52 ms   
+braille                    118 ms    153 ms   tak
+dots                        81 ms    130 ms   
+cross                       99 ms    139 ms   
+diamond                     48 ms     56 ms   
+lines                       80 ms    119 ms   
+diagonal                    69 ms    108 ms   
+asciiStudio                133 ms    188 ms   tak
+pixel                       36 ms     46 ms   
+mosaic                      53 ms     50 ms   
+lego                       133 ms    214 ms   tak
+hexmosaic                  124 ms    170 ms   tak
+disco                       25 ms     49 ms   
+halftone                   266 ms    523 ms   tak
+posterize                   51 ms     79 ms   
+duotone                     44 ms     88 ms   
+gradientmap                 63 ms    259 ms   
+dither                      56 ms     72 ms   
+pinch                      143 ms    188 ms   tak
+spherize                   121 ms    176 ms   tak
+twirl                      132 ms    175 ms   tak
+zigzag                     146 ms    160 ms   tak
+ripple                     155 ms    231 ms   tak
+polar                      273 ms    279 ms   tak
+shear                      223 ms    252 ms   tak
+motionblur                 861 ms   1233 ms   tak
+tiltshift                  615 ms    779 ms   tak
+gaussianblur               265 ms    256 ms   tak
+radialblur                1340 ms   1863 ms   tak
+rgbsplit                   107 ms    123 ms   tak
+scanline                     8 ms      7 ms   
+crt                        327 ms    501 ms   tak
+thermal                    263 ms    351 ms   tak
+edgeglow                   342 ms    571 ms   tak
+lens                       309 ms    629 ms   tak
+risograph                 1331 ms   1671 ms   tak
+comic                      664 ms   1281 ms   tak
+sketch                     662 ms    890 ms   tak
+crosshatch                 407 ms    525 ms   tak
+halftonecmyk               867 ms   1195 ms   tak
+stippling                  196 ms    250 ms   tak
+pointillize                429 ms    570 ms   tak
+ledmatrix                  278 ms    427 ms   tak
+lowpoly                    209 ms    287 ms   tak
+truchet                    100 ms    171 ms   
+smudge                     912 ms   1203 ms   tak
+3d                         351 ms    493 ms   tak
+anaglyph                   439 ms    530 ms   tak
+prism                      491 ms    578 ms   tak
+dreamdust                  298 ms    363 ms   tak
+lightwind                  418 ms    358 ms   tak
+starburst                  334 ms    423 ms   tak
+warpbloom                  399 ms    619 ms   tak
+pixelsort                  187 ms    270 ms   tak
+forensics                  126 ms    148 ms   tak
+glitch                      25 ms     15 ms   
+datamosh                  1897 ms   2139 ms   tak
+lofi                        89 ms    109 ms   
+beacon                     239 ms    324 ms   tak
+engraving                  485 ms    575 ms   tak
+warhol                     295 ms    396 ms   tak
+blueprint                  495 ms    419 ms   tak
+ukiyoe                     474 ms    529 ms   tak
+mezzotint                  250 ms    336 ms   tak
+lattice                    246 ms    375 ms   tak
+topography                 364 ms    483 ms   tak
+neongrid                   710 ms    807 ms   tak
+schematic                  319 ms    532 ms   tak
+droste                     137 ms    167 ms   tak
+isoextrude                1465 ms   2208 ms   tak
+mixed                       43 ms     35 ms   
+specimen                    56 ms     56 ms   
+forms                      140 ms    145 ms   tak
+flowfield                  318 ms    382 ms   tak
+frostedglass               395 ms    490 ms   tak
+stainedglass              1353 ms   2199 ms   tak
+shatter                   3112 ms   4233 ms   tak
+vitrine                    552 ms    636 ms   tak
+glassorb                   288 ms    538 ms   tak
+flutedglass                213 ms    239 ms   tak
+liquidglass                379 ms    911 ms   tak
+waves                      130 ms    194 ms   tak
+oilpaint                   985 ms   1345 ms   tak
+watercolor                1736 ms   2800 ms   tak
+chrome                     369 ms    535 ms   tak
+thinfilm                   635 ms    759 ms   tak
+marble                    1011 ms   1207 ms   tak
+molten                    1016 ms   1382 ms   tak
+crystallize               1552 ms   2901 ms   tak
+emboss                     310 ms    621 ms   tak
+pixel + advBlur            208 ms    419 ms   tak
+pixel + vignette           139 ms    235 ms   tak
+pixel + scanLines           27 ms     62 ms   
+pixel + bloom              268 ms    629 ms   tak
+pixel + charBloom           29 ms     27 ms   
+pixel + chromatic          166 ms    234 ms   tak
+pixel + charChroma          23 ms     28 ms   
+pixel + rgbSplit           118 ms    147 ms   tak
+pixel + crtCurve           162 ms    204 ms   tak
+pixel + glitch              48 ms     53 ms   
+pixel + filmGrain           63 ms     97 ms   
+pixel + pixelate            56 ms     45 ms   
+pixel + halftone            87 ms    189 ms   
+pixel + filmDust            26 ms     48 ms   
+pixel + sharpen            137 ms    270 ms   tak
+pixel + noise               78 ms    112 ms   
 
 == Pamięć: partie po 2 × liczba efektów renderów (skala 1 i 2) na 1600×1067, pełna ścieżka do kanwy, GC po każdej partii ==
 renderów      RSS Chromium   sterta Workera   sterta strony
-       0     511.4 MB      —      —
-     108     664.4 MB      —        106.1 MB
-     216     688.7 MB      —        106.1 MB
-     324     664.9 MB      —        106.1 MB
-     432     689.1 MB      —        106.1 MB
-     540     665.2 MB      —        106.1 MB
-     648     717.3 MB      —        106.1 MB
+       0     588.5 MB      —      —
+     182     692.1 MB      —        106.3 MB
+     364     640.4 MB      —        132.4 MB
+     546     692.9 MB      —        106.4 MB
+     728     667.0 MB      —        132.4 MB
+     910     849.7 MB      —        106.4 MB
+    1092     693.7 MB      —        132.4 MB
