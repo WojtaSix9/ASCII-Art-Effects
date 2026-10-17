@@ -825,3 +825,13 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
 - Licencje zdjęć ma użytkownik; w stopce dopisane „zdjęcia przykładowe: Magnific”.
 - Karta Logo: osobna strona `/logo` (krok 8).
 - Deploy na Vercel: podgląd gałęzi `etap2-animacje` (poniżej).
+
+## Wdrożenie produkcyjne (prośba użytkownika, 17 X)
+
+- **Połączenie z Vercelem** odrzucało wywołania z jawnym `teamId` (403, „scope wojta-six9”); bez `teamId` działa, bo konto domyślnie wskazuje ten sam zespół.
+- **Wdrożenie produkcyjne** z gałęzi `etap2-animacje` (commit `ec0727f`): `dpl_4rwUeDNUZHr7SXwFnYXqqeRfFD7n`, stan READY, alias https://ascii-art-effects.vercel.app.
+- **Link gałęziowy** `ascii-art-effects-git-etap2-animacje-wojta-six9.vercel.app` (prośba: dezaktywować):
+  - przypisany jako przekierowanie na główną domenę; narzędzia do usunięcia aliasu nie mam;
+  - przy następnym wdrożeniu tej gałęzi Vercel może przypiąć go od nowa.
+- **`BRAK`:** strony nie da się otworzyć z tego środowiska (proxy blokuje domeny Vercela), więc zawartości po wdrożeniu nie sprawdziłem.
+- **Ryzyko:** gałąź produkcyjna projektu to prawdopodobnie `claude/happy-bell-5qulv1`. Jeśli automatyczne wdrożenia są włączone, wypchnięcie tam czegoś podmieniłoby produkcję na stan z etapu 1. Do tej gałęzi nic nie wypycham.
