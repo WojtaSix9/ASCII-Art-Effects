@@ -66,5 +66,5 @@ const ORDER = shuffled(SAMPLES.length, SAMPLE_SEED);
 /** Zdjęcie dla i-tego elementu listy: kolejne elementy przechodzą przez wszystkie zdjęcia w losowej kolejności, potem od nowa. */
 export const sampleAt = (i: number) => SAMPLES[ORDER[((i % SAMPLES.length) + SAMPLES.length) % SAMPLES.length]];
 
-/** Zdjęcie hero: szeroki kadr ok. 2:1. */
-export const HERO_SAMPLE = SAMPLES.find((s) => s.src.includes('-castle')) ?? SAMPLES[0];
+/** Zdjęcie hero (wybór użytkownika 17 X: photos-inbox/4124.jpg). Osobne od listy efektów, więc nie zmienia przypisania miniatur. */
+export const HERO_SAMPLE: Sample = { src: '/sample/hero-geranium.jpg', alt: 'Fioletowe i różowe kwiaty bodziszka na czarnym tle', focus: { x: 0.5, y: 0.45 } };

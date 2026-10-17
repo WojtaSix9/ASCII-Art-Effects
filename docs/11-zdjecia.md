@@ -53,3 +53,5 @@ Pominięte: `ascii-frame.png` (gotowa grafika ASCII, nie zdjęcie; decyzja użyt
 Licencje zdjęć ma użytkownik; w stopce strony informacja „zdjęcia przykładowe: Magnific” (prośba użytkownika).
 
 Usunięte z `app/public/sample/`: `photo-1.jpg`, `photo-2.jpg` (zdjęcia tymczasowe z etapu 1).
+
+Hero (17 X, wybór użytkownika): `photos-inbox/4124.jpg` → `app/public/sample/hero-geranium.jpg`, 1600×897, poza listą zdjęć efektów.
