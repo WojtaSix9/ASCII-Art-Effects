@@ -794,6 +794,7 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
 - **`test:editor` 90/90:** Dither ma flow i shimmer; uwaga pojawia się po wyborze Floyd–Steinberg.
 - **Przeglądarka = Node 127/127** (10 nowych ruchów). Najpierw wyszło 117/117, bo plik oczekiwanych skrótów z Node (`src/dev/fixtures/engine-hashes.json`) nie był odświeżony i nowych ruchów nie porównywano; po `gen-dev-fixtures` wszystkie 127 zgodne.
 - **hash-baseline** 516/516 identyczny.
+- **Aplikacja:** `test:editor` 90/90, `test:ui` 42/42, `smoke` 71/71, `test:a11y` 26/26, `test:logo` 22/22, przeglądarka = Node 129/129 (fixtures odświeżone o 2 nowe ruchy).
 
 ### Koszt klatki (`test`, Chromium, Worker, zdjęcie 1 przy dłuższym boku 1080 px, mediana z 3)
 
@@ -918,6 +919,7 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
   - rotate: kąt 0 daje linie poziome, φ 0,25 pionowe (kolumny stałe, 0 różnic);
   - swell: w ¼ pętli średnio o 45 poziomów ciemniej tam, gdzie fala dodatnia, i o 46 jaśniej, gdzie ujemna; w ½ pętli = statyczny.
 - **hash-baseline** 516/516 identyczny.
+- **Aplikacja:** `test:editor` 90/90, `test:ui` 42/42, `smoke` 71/71, `test:a11y` 26/26, `test:logo` 22/22, przeglądarka = Node 129/129 (fixtures odświeżone o 2 nowe ruchy).
 - **Na oko** (arkusz 2 ruchy × 4 fazy, `photo-23-ribbon`): obrót wokół środka i falowanie grubości zgodnie z opisem.
 
 ### Stan

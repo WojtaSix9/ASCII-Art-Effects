@@ -124,6 +124,8 @@
   "motion:ledmatrix.pulse@0.3": "b769f473a2792560f35200dd45bf29ad7f2e06b6",
   "motion:ledmatrix.sweep@0.3": "aac0328c65be52ef1af6d788e35f6bdaeba31b12",
   "motion:glitch.jitter@0.3": "7b60fe0cda06d679f58b4aedccca99761003059a",
+  "motion:engraving.rotate@0.3": "f3d445c403de8ecd35f6ee92ed7fceb57ffcfc58",
+  "motion:engraving.swell@0.3": "a1302130bc4ae7a4306b4832022b28aa79c63381",
   "motion:flutedglass.slide@0.3": "cb2053b0f831934a94fdfb4977338dfd788a4364",
   "motion:waves.flow@0.3": "bed01e85f72fc86e965a27926aa7d750b20d4d06"
 }
