@@ -925,3 +925,31 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
 ### Stan
 
 Animację ma 25 z 25 efektów z pliku 09. Został krok 10: test dymny wszystkich (GIF i MP4: rozmiary i czasy; Safari i Firefox).
+
+## Krok 10 (część automatyczna): pomiar eksportu wszystkich 25 efektów
+
+- **Skrypt:** `app/scripts/anim-measure.ts`; wynik w `app/reports/anim-measure.md`.
+- **Ustawienia:** headless Chromium, zbudowana wersja, zdjęcie robocze 1 (1000×729), pierwszy ruch efektu z ustawieniami domyślnymi, 4 s × 24 fps = 96 klatek, 720 px.
+- **MP4 na VP9**, bo ten Chromium nie ma H.264. Rozmiar H.264 przy tym samym bitrate będzie podobny.
+
+### Wyniki (`test`)
+
+- **25/25:** eksport GIF i MP4 bez błędów; w każdym efekcie klatka w fazie 0,25 różni się od fazy 0 (ruch był w stanie, nie mierzyłem klatek statycznych).
+- **GIF 720 px:** od 2,3 MB (Braille) do 41,1 MB (Risograph).
+  - **12 z 25 ponad 20 MB:** Risograph, Twirl, Waves, Ripple, ZigZag, RGB Split, Scanline, Fluted Glass, CRT, Engraving, Glitch; okno eksportu pokazuje wtedy ostrzeżenie.
+  - To efekty, w których zmienia się prawie cały obraz.
+- **MP4:** 0,6–4,6 MB, kilka do kilkunastu razy mniej niż GIF. Wyjątek: Dither flow, gdzie MP4 (4,6 MB) jest większy niż GIF (3,2 MB), bo szum wzoru źle się kompresuje w wideo, a dobrze w GIF z małą paletą.
+- **Czas:**
+  - GIF 2,6–25,9 s, MP4 1,8–22,8 s;
+  - najdłużej Risograph, bo to czas renderu (ok. 0,24 s na klatkę przy 720 px), nie kodowania.
+
+### Obserwacja (`kod`)
+
+- Koder GIF zapisuje każdą klatkę w całości (`gif.ts`: `writeFrame` całej klatki).
+- Przy ruchach, które zmieniają tylko część obrazu (glint, scan, sweep, refresh), zapis samych zmienionych pikseli (przezroczysty indeks, bez czyszczenia klatki) zmniejszyłby plik kilkukrotnie, bez zmiany wyglądu.
+- Efektom ponad 20 MB pomógłby niewiele, bo zmienia się w nich prawie każdy piksel.
+- Nie wdrożone: poza zakresem, do decyzji użytkownika.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- H.264, Safari, Firefox i telefony (krok 10, część ręczna, na wdrożonej stronie).
