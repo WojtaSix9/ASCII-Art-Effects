@@ -1,7 +1,7 @@
 // Druk i papier, Faza 3 (plik 02, sekcja 3; wszystko proj): Engraving, Warhol, Cyanotype, Woodblock, Mezzotint.
 // Długości w px × skala; szum i ziarno we współrzędnych źródła (x/skala), więc eksport @2x ma ten sam układ.
 import type { EffectDef, Img } from '../core/types.ts';
-import { color, common, range, seedParam, select } from '../core/params.ts';
+import { color, common, motionCommon, range, seedParam, select } from '../core/params.ts';
 import { blur, clamp, hash01, lerp, lum, parseColor, resize } from '../core/util.ts';
 import { dilate, valueNoise } from '../core/screen.ts';
 
@@ -16,14 +16,23 @@ const engraving: EffectDef = {
   description: 'Engraved lines that swell in the shadows, thin out in the light and bend along the forms.',
   params: [range('lineSpacing', 'Line spacing', 5, 2, 30, PX), range('angle', 'Angle', 30, 0, 180, { unit: '°' }), range('thicknessRange', 'Thickness', 85, 10, 100, { unit: '%' }),
     range('curvature', 'Curvature', 40, 0, 100, { unit: '%' }), color('inkColor', 'Ink', '#1b1a17'), color('paperColor', 'Paper', '#f3ecdc'), ...px1()],
+  // etap 2 (plik 09, Tier C: „wolny obrót kąta linii lub falowanie grubości”; proj; u = część ułamkowa speed·φ):
+  // rotate = kąt linii + 360°·u wokół środka obrazu (pełny obrót: przy 180° linie leżą tak samo, ale wygięcie curvature nie, więc pętla
+  // miałaby szew); układ przesunięty tak, że przy u = 0 jest dokładnie statyczny (obrót wokół rogu jak w obrazie statycznym + stała).
+  // swell = grubość × (1 + intensity·sin 2πu·sin(2π·v/λ)), v wzdłuż linii, λ = 1/3 dłuższego boku: fala stojąca, przy u = 0 i 0,5 bez zmian
+  motions: [{ id: 'rotate', name: 'Rotate', params: [range('speed', 'Speed (turns per loop)', 1, 1, 4)] }, { id: 'swell', name: 'Swell', params: motionCommon(60) }],
   // linie w obróconym układzie (u wzdłuż normalnej); u przesunięte o curvature·1,5 odstępu × (jasność mocno rozmyta − 0,5), więc linie
   // wyginają się wzdłuż plam światła; grubość = odstęp × thickness × ciemność (wygładzona 1 px × skala)
   render(ctx) {
     const s = ctx.prep; const { w, h } = s; const sp = Math.max(1.5, ctx.p.lineSpacing * ctx.scale); const L = lumArr(blur(s, Math.max(1, Math.round(ctx.scale)))); const F = lumArr(blur(s, Math.max(2, Math.round(Math.min(w, h) * 0.04))));
-    const ca = Math.cos(ctx.p.angle * DEG), sa = Math.sin(ctx.p.angle * DEG); const cv = (ctx.p.curvature / 100) * 1.5 * sp; const th = ctx.p.thicknessRange / 100; const ink = parseColor(ctx.p.inkColor), paper = parseColor(ctx.p.paperColor);
+    const mo = ctx.motion; const mu = mo ? mo.p.speed * mo.phase - Math.floor(mo.p.speed * mo.phase) : 0;
+    const ang = (ctx.p.angle + (mo?.id === 'rotate' ? 360 * mu : 0)) * DEG; const ca = Math.cos(ang), sa = Math.sin(ang);
+    /* obrót wokół środka: przesunięcie u o różnicę między układem obróconym a statycznym w środku obrazu (0 przy u = 0) */
+    const c0 = mo?.id === 'rotate' && mu ? (-(w / 2) * Math.sin(ctx.p.angle * DEG) + (h / 2) * Math.cos(ctx.p.angle * DEG)) - (-(w / 2) * sa + (h / 2) * ca) : 0;
+    const sw = mo?.id === 'swell' && mu ? (mo.p.intensity / 100) * Math.sin(2 * Math.PI * mu) : 0; const lam = Math.max(w, h) / 3; const cv = (ctx.p.curvature / 100) * 1.5 * sp; const th = ctx.p.thicknessRange / 100; const ink = parseColor(ctx.p.inkColor), paper = parseColor(ctx.p.paperColor);
     const out = new Uint8ClampedArray(s.data.length);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const p = y * w + x; const u = -(x + 0.5) * sa + (y + 0.5) * ca + (F[p] - 0.5) * cv * 2; const dist = Math.abs(u - (Math.floor(u / sp) + 0.5) * sp); const lw = sp * th * (1 - L[p]);
+      const p = y * w + x; const u = -(x + 0.5) * sa + (y + 0.5) * ca + (F[p] - 0.5) * cv * 2 + c0; const dist = Math.abs(u - (Math.floor(u / sp) + 0.5) * sp); let lw = sp * th * (1 - L[p]); if (sw) lw *= 1 + sw * Math.sin((2 * Math.PI * ((x + 0.5) * ca + (y + 0.5) * sa)) / lam);
       const k = clamp(0.5 - (dist - lw / 2), 0, 1) * Math.min(1, lw); /* linia cieńsza niż 1 px: krycie × grubość (inaczej biel miała ślad 0,5 px) */ const i = p * 4; for (let c = 0; c < 3; c++) out[i + c] = lerp(paper[c], ink[c], k); out[i + 3] = s.data[i + 3];
     }
     return { w, h, data: out };

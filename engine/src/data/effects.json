@@ -339,8 +339,17 @@
     "phase": 3,
     "phaseAssigned": true,
     "status": "ready",
-    "animated": false,
-    "motions": []
+    "animated": true,
+    "motions": [
+      {
+        "id": "rotate",
+        "name": "Rotate"
+      },
+      {
+        "id": "swell",
+        "name": "Swell"
+      }
+    ]
   },
   {
     "id": "warhol",

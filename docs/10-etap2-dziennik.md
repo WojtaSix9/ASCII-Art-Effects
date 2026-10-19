@@ -893,3 +893,33 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
 - Porównania obrazu z ascii.rest/make (strony nie da się otworzyć z tego środowiska); zgodność sprawdzona na kodzie.
 - MP4 z H.264 (Chromium z Playwrighta go nie ma), Safari i Firefox.
 - Długich pętli (60 s × 24 fps = 1440 klatek GIF): czas i rozmiar nie były mierzone.
+
+## Krok 9: Tier C, Engraving
+
+### Pomiar przed decyzją (`test`, Chromium, Worker, zdjęcie 1 przy dłuższym boku 1080 px, mediana z 3)
+
+- **Engraving:** 215 ms na klatkę, ok. 52 s na 240 klatek.
+- **Dla porównania Risograph:** 502 ms na klatkę, ok. 2 min.
+- **Wniosek:** efekt mieści się w budżecie (plik 09: Engraving wypada, gdy koszt klatki jest za duży), więc zostaje.
+- Etykieta GEOM w katalogu jest myląca: kod liczy dla każdego piksela odległość od najbliższej linii, bez geometrii.
+
+### Ruchy (`proj`; plik 09: „wolny obrót kąta linii lub falowanie grubości”)
+
+- **`rotate`:** kąt linii + 360°·u wokół środka obrazu (u = część ułamkowa speed·φ).
+  - Pełny obrót, bo przy 180° linie leżą tak samo, ale wygięcie (curvature) nie, i pętla miałaby szew.
+  - Obraz statyczny obraca linie wokół rogu, więc ruch przesuwa układ o stałą, która przy u = 0 wynosi dokładnie 0.
+  - Przy pętli 4 s to 90°/s. Wolniejszy obrót daje dłuższa pętla; mniej niż jednego obrotu na pętlę zrobić się nie da.
+- **`swell`:** grubość × (1 + intensity·sin 2πu·sin(2π·v/λ)), v wzdłuż linii, λ = ⅓ dłuższego boku: fala stojąca.
+
+### Testy (`test`)
+
+- **Silnik 364/364:**
+  - wspólne własności dla 38 ruchów, w tym 2 nowe: φ 0 = statyczny, okresowość, speed 2, @2x;
+  - rotate: kąt 0 daje linie poziome, φ 0,25 pionowe (kolumny stałe, 0 różnic);
+  - swell: w ¼ pętli średnio o 45 poziomów ciemniej tam, gdzie fala dodatnia, i o 46 jaśniej, gdzie ujemna; w ½ pętli = statyczny.
+- **hash-baseline** 516/516 identyczny.
+- **Na oko** (arkusz 2 ruchy × 4 fazy, `photo-23-ribbon`): obrót wokół środka i falowanie grubości zgodnie z opisem.
+
+### Stan
+
+Animację ma 25 z 25 efektów z pliku 09. Został krok 10: test dymny wszystkich (GIF i MP4: rozmiary i czasy; Safari i Firefox).

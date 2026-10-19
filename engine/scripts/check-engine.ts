@@ -856,5 +856,20 @@ const SRC = testImage(300, 200);
   ok('Risograph drift: bez przesunięcia i ziarna (0, 0) nic się nie rusza: każda klatka = statyczna', rz.every((x) => x === rz0));
   const rg = [0.1, 0.4].map((f) => sha(R(S, 'risograph', 'drift', f, {}, { misregistration: 0 }))); ok('Risograph drift: przy misregistration 0 zmienia się tylko ziarno (kroki 0 i 1 różne)', rg[0] !== rg[1]);
 }
+// 38. Etap 2, Tier C: Engraving (rotate, swell); wartości ze wzorów ruchu
+{
+  const W = 160, H = 120; const flat = newImg(W, H, [128, 128, 128, 255]); const sp = { angle: 0, curvature: 0 };
+  const E = (mid: string | null, phase?: number, p: any = sp) => render(flat, { style: { id: 'engraving', params: p }, ...(mid ? { motion: { id: mid } } : {}) }, { phase }).img.data;
+  /* kąt 0: linie poziome (wiersz stały w x); rotate φ 0,25 = +90°: linie pionowe (kolumna stała w y). cos(π/2) ≠ 0 w liczbach zmiennoprzecinkowych
+     (ok. 6e-17), więc dopuszczalna różnica 1 poziomu na granicach pikseli (zaokrąglenie), nie więcej */
+  const st = E(null), r = E('rotate', 0.25); let rowVar = 0, colVar = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { rowVar = Math.max(rowVar, Math.abs(st[(y * W + x) * 4] - st[y * W * 4])); colVar = Math.max(colVar, Math.abs(r[(y * W + x) * 4] - r[x * 4])); }
+  let rv = 0; for (let x = 0; x < W; x++) rv = Math.max(rv, Math.abs(r[x * 4] - r[(W >> 1) * 4]));
+  ok('Engraving rotate: kąt 0 → linie poziome; φ 0,25 (¼ obrotu) → linie pionowe (kolumny stałe, ≤ 1 poziom: zaokrąglenie cos π/2), a w poziomie wzór się zmienia', rowVar === 0 && colVar <= 1 && rv > 100, `wiersze ${rowVar}, kolumny ${colVar}, zmiana w poziomie ${rv}`);
+  /* swell: grubość × (1 + 0,6·sin 2πu·sin(2πv/λ)), v = x przy kącie 0, λ = 160/3. φ 0,25: tam gdzie sin(2πv/λ) > 0,5 linie grubsze (ciemniej), gdzie < −0,5 cieńsze */
+  const s0 = E(null), s1 = E('swell', 0.25), s2 = E('swell', 0.5); const lam = W / 3; let up = 0, down = 0, nUp = 0, nDown = 0, half = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; const sn = Math.sin((2 * Math.PI * (x + 0.5)) / lam); const dd = s0[i] - s1[i]; if (sn > 0.5) { up += dd; nUp++; } else if (sn < -0.5) { down += dd; nDown++; } half = Math.max(half, Math.abs(s2[i] - s0[i])); }
+  ok('Engraving swell (60%): φ 0,25 → gdzie fala dodatnia, średnio ciemniej niż statyczny, gdzie ujemna jaśniej; φ 0,5 ≈ statyczny (sin π ≈ 1e-16: ≤ 1 poziom)', up / nUp > 5 && down / nDown < -5 && half <= 1, `ciemniej ${(up / nUp).toFixed(1)}, jaśniej ${(down / nDown).toFixed(1)}, φ0,5 ${half}`);
+}
 const out = res.map(([n, c, d]) => `${c ? 'OK  ' : 'FAIL'} ${n}${d ? '  [' + d + ']' : ''}`).join('\n') + '\n';
 writeFileSync('reports/engine-check.txt', out); console.log(out); console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`);
