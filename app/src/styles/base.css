@@ -433,3 +433,21 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
 .ed-btn[data-play] [data-play-icon], .ed-btn[data-play] svg { display: block; }
 .ed-anim__bar { height: 3px; background: var(--ed-track); margin: 8px 0; }
 .ed-anim__bar > span { display: block; height: 100%; width: 0; background: var(--ed-fill); }
+
+/* Strona /logo (etap 2, krok 8): pole wczytywania z podglądem i panel ustawień obok (wąsko: pod spodem) */
+.page-logo { max-width: 1400px; }
+.logo { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; margin: 24px 0; align-items: start; }
+.logo__drop { min-height: 320px; display: grid; place-items: center; border: 1px dashed var(--line); background: #000; padding: 16px; cursor: pointer; }
+.logo__drop--full { cursor: default; border-style: solid; }
+.logo__drop--over { border-color: var(--text); }
+.logo__drop:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.logo__prompt { text-align: center; color: var(--text-2); }
+.logo__canvas { max-width: 100%; height: auto; image-rendering: auto; }
+.logo__panel { display: grid; gap: 12px; color: var(--text-2); }
+.logo__panel label, .logo__panel legend { display: grid; gap: 4px; }
+.logo__panel fieldset { border: 1px solid var(--line); padding: 8px 12px; display: grid; gap: 4px; }
+.logo__panel fieldset label { display: block; }
+.logo__panel input[type="text"], .logo__panel input[type="number"] { background: var(--chip); color: var(--text); border: 1px solid var(--line); padding: 6px 8px; font: inherit; }
+.logo__panel input[type="number"] { width: 6ch; }
+.logo__out { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 900px) { .logo { grid-template-columns: 1fr; } }

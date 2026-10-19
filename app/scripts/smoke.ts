@@ -24,6 +24,7 @@ try {
   const ROUTES = [
     { path: '/', h1: 'Zdjęcie jako ASCII, piksele i druk', title: 'ASCII Art Effects', layout: 'site', current: null },
     { path: '/effects', h1: 'Efekty', title: 'Efekty · ASCII Art Effects', layout: 'site', current: 'Efekty' },
+    { path: '/logo', h1: 'Logo w ASCII', title: 'Logo · ASCII Art Effects', layout: 'site', current: 'Logo' },
     { path: '/how-to', h1: 'Jak używać', title: 'Jak używać · ASCII Art Effects', layout: 'site', current: 'Jak używać' },
     { path: '/licenses', h1: 'Licencje', title: 'Licencje · ASCII Art Effects', layout: 'site', current: null },
     { path: '/editor', h1: 'Edytor', title: 'Edytor · ASCII Art Effects', layout: 'editor', current: null },
@@ -50,7 +51,7 @@ try {
   const lic = await page.locator('details.lic').count(); await page.click('details.lic >> nth=4 >> summary');
   await page.waitForFunction(() => document.querySelectorAll('details.lic')[4].querySelector('pre')!.textContent!.length > 1000);
   const ltxt = await page.locator('details.lic >> nth=4 >> pre').textContent();
-  t('/licenses: link w stopce, 6 czcionek, pełny tekst OFL ładowany po otwarciu (Playfair Display)', lic === 6 && !!ltxt?.includes('SIL OPEN FONT LICENSE') && !!ltxt?.includes('Playfair Display'), String(lic));
+  t('/licenses: link w stopce, 6 czcionek i 3 biblioteki kodu (ascii.rest, gifenc, Mediabunny), pełny tekst OFL ładowany po otwarciu (Playfair Display)', lic === 9 && !!ltxt?.includes('SIL OPEN FONT LICENSE') && !!ltxt?.includes('Playfair Display'), String(lic));
   const ext = await page.evaluate(() => [...document.querySelectorAll('footer a[href^="http"]')].map((a) => a.getAttribute('href')));
   t('stopka: link do ascii.rest (brief 00, sekcja 7)', ext.includes('https://ascii.rest'), ext.join(','));
 
@@ -118,7 +119,7 @@ try {
   // Wąski ekran: bez poziomego przewijania
   for (const w of [375, 320]) {
     await page.setViewportSize({ width: w, height: 800 });
-    for (const p of ['/', '/effects', '/how-to', '/licenses', '/editor']) {
+    for (const p of ['/', '/effects', '/logo', '/how-to', '/licenses', '/editor']) {
       await page.goto(BASE + p, { waitUntil: 'networkidle' });
       const sw = await page.evaluate(() => document.documentElement.scrollWidth);
       t(`${w}px ${p}: brak poziomego przewijania`, sw <= w, `scrollWidth ${sw}`);
@@ -138,7 +139,7 @@ try {
         const inside = [...document.querySelectorAll('header.nav a')].map((a) => { const r = a.getBoundingClientRect(); return r.width > 0 && r.top >= h.top && r.bottom <= h.bottom && r.left >= 0 && r.right <= innerWidth; });
         return inside;
       });
-      t(`${w}px ${p}: logo, linki i przycisk mieszczą się w nagłówku`, hdr.length === 4 && hdr.every(Boolean), JSON.stringify(hdr));
+      t(`${w}px ${p}: logo, linki i przycisk mieszczą się w nagłówku`, hdr.length === 5 && hdr.every(Boolean), JSON.stringify(hdr));
     }
   }
 

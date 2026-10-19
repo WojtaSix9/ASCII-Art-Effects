@@ -835,3 +835,61 @@ Wszędzie u = część ułamkowa speed·φ, więc φ 1 = φ 0 i speed 2 przy φ 
   - przy następnym wdrożeniu tej gałęzi Vercel może przypiąć go od nowa.
 - **`BRAK`:** strony nie da się otworzyć z tego środowiska (proxy blokuje domeny Vercela), więc zawartości po wdrożeniu nie sprawdziłem.
 - **Ryzyko:** gałąź produkcyjna projektu to prawdopodobnie `claude/happy-bell-5qulv1`. Jeśli automatyczne wdrożenia są włączone, wypchnięcie tam czegoś podmieniłoby produkcję na stan z etapu 1. Do tej gałęzi nic nie wypycham.
+
+## Hero (prośba użytkownika, 19 X)
+
+- `photos-inbox/4124.jpg` (kwiaty bodziszka) → `app/public/sample/hero-geranium.jpg` (1600×897, 147 kB).
+- Hero ma osobne zdjęcie spoza listy 43 zdjęć efektów, więc przypisanie zdjęć i miniatury się nie zmieniły.
+
+## Krok 8: strona /logo (decyzja użytkownika: osobna strona)
+
+### Źródło (`kod`, zgoda z promptu startowego, plik 09 sekcja 7.5)
+
+- **`github.com/bas3line/ascii` @ `8fd792e`, MIT, Copyright (c) 2026 bas3line:**
+  - `site/src/lib/logo.ts` (rysunek), `logo-file.ts` (plik .ts), `glyphs.ts` (metoda tabeli kształtów), `svg.ts` (pętla), `src/types.ts` (kontrakt).
+- **Przeniesione 1:1 z nagłówkiem źródła i licencji:**
+  - `engine/src/logo/logo.ts`: część bez DOM; `draw()` podzielone na `layout()` i `drawCells()`, reszta bez zmian;
+  - `engine/src/logo/logo-file.ts`: typy z lokalnej kopii kontraktu;
+  - `engine/src/logo/piece-types.ts`: kopia `types.ts`;
+  - `app/src/logo/source.ts`: `render()` dla SVG i `raster()` dla PNG/JPG/WebP/GIF, komunikaty po polsku.
+- **Licencja:** `LICENSES/ascii.rest-MIT.txt`, wpis w `THIRD_PARTY_NOTICES.md` i sekcja „Kod” na `/licenses`.
+  - Przy okazji uzupełniona brakująca od kroku 4 informacja o gifenc i Mediabunny na `/licenses`.
+- **Tabela kształtów** (`engine/src/logo/glyphs.json`): metoda z `glyphs.ts`, IBM Plex Mono przez opentype.js.
+  - Rasteryzuje @napi-rs/canvas zamiast sharp, więc liczby mogą się różnić w dalszych miejscach po przecinku.
+  - Czcionka i opentype.js to tylko zależności deweloperskie silnika; nie trafiają na stronę.
+
+### Strona (`kod`)
+
+- **Wejście:** SVG, PNG, JPG, WebP, GIF, AVIF, BMP przez przeciągnięcie, wybór pliku lub wklejenie (Ctrl+V, także tekst SVG).
+- **Tło:** gładkie tło usuwane jak w oryginale; przycisk „Zostaw tło / Usuń tło”.
+- **Ustawienia:** nazwa (z pliku), szerokość 16–80 kolumn, styl logo/shade (zdjęcie startuje w shade), kategoria companies/logos (glint) lub distros (scan), co ile sekund (3–60).
+- **Podgląd** odtwarza w pętli plik piece (24 fps, ciemne tło).
+- **Wyjścia:**
+  - `.ts`: plik biblioteki, identyczny z tym, co daje ascii.rest/make;
+  - SVG na ciemne tło (`.dark.svg`) i jasne (`.svg`): pętla jak w ascii.rest (okres `every` od chwili 0,5 + every − 1), technika SVG z kroku 6B, 15 fps;
+  - GIF i MP4 (480/720/1080 px szerokości, 24 fps; kodery z kroku 4, w wątku strony).
+- **Wszystkie wyjścia** biorą klatki z tego samego pliku piece, więc ruch jest wszędzie ten sam.
+- **Nawigacja:** link „Logo” między „Efekty” i „Jak używać”.
+
+### Testy (`test`)
+
+- **Zgodność z oryginałem** (poza repozytorium, kopia ascii.rest w scratchpadzie):
+  - `source()` z portu = `source()` oryginału, 12/12 kombinacji (3 kategorie × 2 style × TS/skrypt);
+  - kod rysowania po `getImageData` i `clearGround` tekstowo identyczny, poza słowami `export`.
+- **`test:logo` 22/22** (`app/scripts/logo-check.ts`):
+  - **Node:** siatka zawsze ≤ 80×32; prostokąt → wnętrze „8”, puste poza nim, znaki kształtu na krawędziach; jeden kolor obrazu; rampa shade; tabela kształtów; usuwanie tła i `trim()`; plik `.ts` importuje się i spełnia reguły checkera (glint zmienia tylko na „/”, scan tylko na szum); `piece()` = plik `.ts`.
+  - **Chromium:** link w nawigacji; PNG z białym tłem (tło usunięte, 2 kolory, nazwa z pliku); „Zostaw tło” (biel jako trzeci kolor, styl zostaje logo jak w oryginale); szerokość 40; distros → scan; pobranie `.ts` i obu SVG; SVG z animacją; GIF 120 klatek; MP4 bez H.264 → komunikat; favicon strony przez pole pliku; zły plik → komunikat; brak błędów w konsoli.
+- **Moje błędy w testach (poprawione, kod bez zmian):**
+  1. założyłem, że „8” ma > 0,3 tuszu w każdym bloku, a w górnym i dolnym pasie komórki 1:2 ma ok. 0,23;
+  2. założyłem, że „Zostaw tło” przełącza na shade, a oryginał robi to tylko przy pierwszym wczytaniu;
+  3. test GIF czytał plik przez `file://` (błąd w konsoli);
+  4. test MP4 łapał komunikat po GIF.
+- **Checker biblioteki na plikach ze strony:** obrazy testowe (koło i prostokąt; gradient) w 3 kategoriach × 2 stylach, 0,08–0,11 ms na klatkę, ok.
+  - Wyjątek: styl shade z glintem na płaskim obrazie w 2 kolorach dał tylko 2 różne klatki, więc checker odrzucił plik. To zachowanie oryginału (ten sam kod). Na gradiencie wszystko przechodzi.
+- **Bez zmian:** `smoke` 71/71 (`/logo` dodane do listy stron, nagłówek ma teraz 5 linków, `/licenses` ma 9 pozycji), `test:a11y` 26/26 (`/logo` w audycie), `test:ui` 42/42.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Porównania obrazu z ascii.rest/make (strony nie da się otworzyć z tego środowiska); zgodność sprawdzona na kodzie.
+- MP4 z H.264 (Chromium z Playwrighta go nie ma), Safari i Firefox.
+- Długich pętli (60 s × 24 fps = 1440 klatek GIF): czas i rozmiar nie były mierzone.

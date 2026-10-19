@@ -5,6 +5,7 @@ import { effectListHtml } from '../home/effect-list.ts';
 import { effectsHtml, mountEffects } from '../effects/effects-page.ts';
 import { editorHtml, mountEditor } from '../editor/editor.ts';
 import { howToHtml, licensesHtml, mountLicenses } from './info.ts';
+import { logoHtml, mountLogo } from '../logo/logo-page.ts';
 
 // Szkielet (krok 1). Treści BRAK: do napisania i zatwierdzenia w kolejnych krokach (05, sekcje 5–8).
 const stub = (label: string, heading: string, note: string) => () =>
@@ -33,4 +34,8 @@ export const editor: Page = {
 export const notFound: Page = {
   title: 'Nie znaleziono · ASCII Art Effects', layout: 'site',
   render: stub('/404', 'Nie znaleziono strony', '<a href="/">Wróć na stronę główną</a>'),
+};
+export const logo: Page = {
+  title: 'Logo · ASCII Art Effects', layout: 'site', mainClass: 'page page-logo',
+  render: logoHtml, mount: (main) => mountLogo(main),
 };

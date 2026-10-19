@@ -38,6 +38,11 @@ export const howToHtml = () => `
   </div>`;
 
 // ---------- licencje ----------
+const CODE: [string, string, string][] = [
+  ['ascii.rest (bas3line), MIT', 'strona Logo: usuwanie tła, styl logo i shade, plik .ts z błyskiem i skanem', 'ascii.rest-MIT.txt'],
+  ['gifenc (Matt DesLauriers), MIT', 'eksport GIF', 'MIT-gifenc.txt'],
+  ['Mediabunny (Vanilagy), MPL-2.0', 'eksport MP4 (biblioteka bez zmian, kod źródłowy: github.com/Vanilagy/mediabunny)', 'MPL-2.0-mediabunny.txt'],
+];
 const FONTS: [string, string, string][] = [
   ['Geist', 'interfejs, warstwa tekstu', 'OFL-1.1-Geist.txt'],
   ['Geist Mono', 'nagłówki, znaki stylu Characters, warstwa tekstu', 'OFL-1.1-Geist-Mono.txt'],
@@ -53,12 +58,14 @@ export const licensesHtml = () => `
   <p class="label">/licencje</p>
   <h1 tabindex="-1">Licencje</h1>
   <div class="prose">
-    <p>Silnik efektów i aplikacja to kod własny projektu; nie zawierają kodu ascii-magic.com.</p>
+    <p>Silnik efektów i aplikacja to kod własny projektu (poza bibliotekami z sekcji „Kod”); nie zawierają kodu ascii-magic.com.</p>
     <h2>Czcionki</h2>
     <p>Wszystkie czcionki są na licencji SIL Open Font License 1.1 i pochodzą z pakietów npm <code>@fontsource/*</code>.</p>
     ${FONTS.map(([name, use, file]) => `<details class="lic" data-lic="${file}"><summary><b>${name}</b> · ${use}</summary><pre class="lic__text">Ładowanie…</pre></details>`).join('')}
+    <h2>Kod</h2>
+    ${CODE.map(([name, use, file]) => `<details class="lic" data-lic="${file}"><summary><b>${name}</b> · ${use}</summary><pre class="lic__text">Ładowanie…</pre></details>`).join('')}
     <h2>Podziękowania</h2>
-    <p>Animowane sceny ASCII planowane w wersji 2 opierają się na projekcie <a href="https://ascii.rest" rel="noopener">ascii.rest</a> (bas3line, licencja MIT).</p>
+    <p>Strona <a href="/logo">Logo</a> i plik .ts korzystają z kodu projektu <a href="https://ascii.rest" rel="noopener">ascii.rest</a> (bas3line, licencja MIT); błysk i skan efektów ASCII w edytorze to kod własny wzorowany na nim. Zdjęcia przykładowe: Magnific.</p>
   </div>`;
 export function mountLicenses(main: HTMLElement) {
   main.addEventListener('toggle', async (e) => {
