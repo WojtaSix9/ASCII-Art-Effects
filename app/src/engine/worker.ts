@@ -10,8 +10,12 @@ import { LIMIT_ERROR } from './protocol.ts';
 import type { Msg, Reply, Req, WireImg, InitRes, CoverageRes, BenchRes, HeapRes, GlyphSource, EffectMeta, PostDefs, ExportRes, Progress, WebCodecsRow, PieceRes } from './protocol.ts';
 import { CANCELLED, NO_CODEC } from './protocol.ts';
 import { encodeGif } from './gif.ts';
+import type { VideoInfo } from './video.ts';
 /* MP4 (Mediabunny, ok. 190 kB) ładowany dopiero przy eksporcie lub sprawdzeniu kodeka */
 const mp4 = () => import('./mp4.ts');
+/* dekodowanie filmu (strona /video) też na żądanie */
+const videoMod = () => import('./video.ts');
+let video: { info: VideoInfo; frames: Img[] } | null = null;
 
 const scope = self as unknown as DedicatedWorkerGlobalScope & { fonts?: FontFaceSet; gc?: () => void };
 let glyphs: GlyphProvider | null = null;
@@ -146,6 +150,43 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
       const every = +(req.loop / p.speed).toFixed(2);
       const r = pieceSource(g.base, { name: `${def.name} ${m.id}`, note: `a picture in ${def.name.toLowerCase()}, ${glint ? 'a glint crossing it' : 'a scan line running down it'} every ${every} s`.slice(0, 72), motion: { id: m.id as 'glint' | 'scan', p }, loop: req.loop, fps: req.fps, category: g.category });
       return { data: { ...res, code: r.code, slug: r.slug, colors: r.colors } satisfies PieceRes };
+    }
+    case 'videoLoad': {
+      video = null;   // poprzedni film zwalniamy przed dekodowaniem następnego
+      const prog = (done: number, total: number) => scope.postMessage({ id, progress: { done, total } } satisfies Progress);
+      try { video = await (await videoMod()).decodeVideo(req.file, req.fps, prog, () => cancelled.has(id)); } finally { cancelled.delete(id); }
+      return { data: video.info };
+    }
+    case 'videoPreview': {
+      if (!video) throw new Error('no video'); const v = video;
+      await ensure(rampText(req.state)); const out: ImageBitmap[] = []; const t = performance.now();
+      try {
+        for (let i = 0; i < v.frames.length; i++) {
+          await new Promise((r) => setTimeout(r, 0)); if (cancelled.has(id)) throw new Error(CANCELLED);
+          const r = render(v.frames[i], req.state, { scale: 1, glyphs, text: textR });
+          out.push(await createImageBitmap(new ImageData(new Uint8ClampedArray(r.img.data), r.img.w, r.img.h)));
+          scope.postMessage({ id, progress: { done: i + 1, total: v.frames.length } } satisfies Progress);
+        }
+      } catch (e) { out.forEach((b) => b.close()); throw e; } finally { cancelled.delete(id); }
+      return { data: { frames: out, ms: performance.now() - t }, transfer: out };
+    }
+    case 'videoExport': {
+      if (!video) throw new Error('no video'); const v = video; const n = v.frames.length, fps = v.info.fps;
+      const w = Math.round(v.info.w * req.scale), h = Math.round(v.info.h * req.scale);
+      if (!canvasFits(w, h)) throw new Error(`${LIMIT_ERROR}:${w}x${h}`);
+      await ensure(rampText(req.state)); const t = performance.now();
+      const frame = async (i: number) => { await new Promise((r) => setTimeout(r, 0)); if (cancelled.has(id)) throw new Error(CANCELLED); return new Uint8ClampedArray(render(v.frames[i], req.state, { scale: req.scale, glyphs, text: textR }).img.data); };
+      const prog = (done: number, total: number) => scope.postMessage({ id, progress: { done, total } } satisfies Progress);
+      try {
+        if (req.format === 'mp4') {
+          const { encodeMp4, evenDims, mp4Supported } = await mp4(); const e = evenDims(w, h); const codec = req.codec ?? 'avc';
+          if (!(await mp4Supported(codec, e.w, e.h))) throw new Error(`${NO_CODEC}:${codec}`);
+          const bytes = await encodeMp4(frame, n, w, e.w, e.h, fps, codec, prog, () => cancelled.has(id));
+          return { data: { blob: new Blob([bytes as BlobPart], { type: 'video/mp4' }), w: e.w, h: e.h, ms: performance.now() - t } satisfies ExportRes };
+        }
+        const bytes = await encodeGif(frame, n, w, h, fps, prog, () => cancelled.has(id));
+        return { data: { blob: new Blob([bytes as BlobPart], { type: 'image/gif' }), w, h, ms: performance.now() - t } satisfies ExportRes };
+      } finally { cancelled.delete(id); }
     }
     case 'cancel': cancelled.add(req.target); return { data: true };
     case 'mp4Support': { const { evenDims, mp4Supported } = await mp4(); const e = evenDims(req.w, req.h); return { data: { avc: await mp4Supported('avc', e.w, e.h), vp9: await mp4Supported('vp9', e.w, e.h), w: e.w, h: e.h } }; }

@@ -39,9 +39,9 @@ export const howToHtml = () => `
 
 // ---------- licencje ----------
 const CODE: [string, string, string][] = [
-  ['ascii.rest (bas3line), MIT', 'strona Logo: usuwanie tła, styl logo i shade, plik .ts z błyskiem i skanem', 'ascii.rest-MIT.txt'],
+  ['ascii.rest (bas3line), MIT', 'strona Logo: usuwanie tła, styl logo i shade, plik .ts z błyskiem i skanem; strona Wideo: trzy sceny przykładowe (alpine dawn, ocean sunset, misty forest)', 'ascii.rest-MIT.txt'],
   ['gifenc (Matt DesLauriers), MIT', 'eksport GIF', 'MIT-gifenc.txt'],
-  ['Mediabunny (Vanilagy), MPL-2.0', 'eksport MP4 (biblioteka bez zmian, kod źródłowy: github.com/Vanilagy/mediabunny)', 'MPL-2.0-mediabunny.txt'],
+  ['Mediabunny (Vanilagy), MPL-2.0', 'eksport MP4 i odczyt filmów na stronie Wideo (biblioteka bez zmian, kod źródłowy: github.com/Vanilagy/mediabunny)', 'MPL-2.0-mediabunny.txt'],
 ];
 const FONTS: [string, string, string][] = [
   ['Geist', 'interfejs, warstwa tekstu', 'OFL-1.1-Geist.txt'],
@@ -65,7 +65,7 @@ export const licensesHtml = () => `
     <h2>Kod</h2>
     ${CODE.map(([name, use, file]) => `<details class="lic" data-lic="${file}"><summary><b>${name}</b> · ${use}</summary><pre class="lic__text">Ładowanie…</pre></details>`).join('')}
     <h2>Podziękowania</h2>
-    <p>Strona <a href="/logo">Logo</a> i plik .ts korzystają z kodu projektu <a href="https://ascii.rest" rel="noopener">ascii.rest</a> (bas3line, licencja MIT); błysk i skan efektów ASCII w edytorze to kod własny wzorowany na nim. Zdjęcia przykładowe: Magnific.</p>
+    <p>Strona <a href="/logo">Logo</a> i plik .ts korzystają z kodu projektu <a href="https://ascii.rest" rel="noopener">ascii.rest</a> (bas3line, licencja MIT), a przykłady na stronie <a href="/video">Wideo</a> to trzy sceny z tej biblioteki; błysk i skan efektów ASCII w edytorze to kod własny wzorowany na nim. Zdjęcia przykładowe: Magnific.</p>
   </div>`;
 export function mountLicenses(main: HTMLElement) {
   main.addEventListener('toggle', async (e) => {

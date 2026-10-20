@@ -17,6 +17,12 @@ export type Req =
   | { type: 'webcodecs' }                                              // dev: tabela VideoEncoder.isConfigSupported
   | { type: 'cancel'; target: number }                                  // przerywa zlecenie `target` (exportAnim) przy najbliższej klatce
   | { type: 'setSource'; img: WireImg }
+  /** Strona /video: dekoduje film (pierwsze 8 s, fps klatek na s) do pamięci Workera; postęp jak exportAnim. */
+  | { type: 'videoLoad'; file: Blob; fps: number }
+  /** Podgląd: wszystkie klatki filmu w efekcie, skala 1 (dłuższy bok 480 px), jako ImageBitmap. */
+  | { type: 'videoPreview'; state: RenderState }
+  /** Eksport filmu w efekcie: skala względem klatek źródłowych, GIF albo MP4 (bez dźwięku). */
+  | { type: 'videoExport'; state: RenderState; scale: number; format: 'gif' | 'mp4'; codec?: 'avc' | 'vp9' }
   | { type: 'render'; state: RenderState; scale?: number; phase?: number }   // phase: faza pętli animacji (etap 2)
   | { type: 'testImage'; w: number; h: number }                       // dev: syntetyczny obraz testowy jako źródło
   | { type: 'coverage' }                                              // dev: pokrycie znaków presetów

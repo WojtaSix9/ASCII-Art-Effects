@@ -953,3 +953,56 @@ Animację ma 25 z 25 efektów z pliku 09. Został krok 10: test dymny wszystkich
 ### Czego nie sprawdzono (`BRAK`)
 
 - H.264, Safari, Firefox i telefony (krok 10, część ręczna, na wdrożonej stronie).
+
+## Po kroku 10: pobieranie na stronie Logo i strona /video
+
+### Logo: format z listy, potem „Pobierz” (`proj`, prośba użytkownika)
+
+- Commit 7dd976c. Wybór formatu nic nie pobiera; plik zapisuje dopiero przycisk. `test:logo` 23/23.
+
+### Strona /video (`proj`, prośba użytkownika, „opcja 3”)
+
+Decyzje użytkownika:
+- osobna zakładka jak Logo;
+- film do 8 s; z dłuższego pierwsze 8 s i komunikat;
+- bez dźwięku;
+- efekty tylko z rodziny ASCII;
+- pod narzędziem przykłady: sceny z ascii.rest jako ilustracja stylu, z podpisem, że to nie wynik narzędzia.
+
+Jak działa (`kod`):
+- **Odczyt filmu:** `app/src/engine/video.ts`, w Workerze. Mediabunny dekoduje film przez WebCodecs. Klatki są pobierane co 1/fps od pierwszej klatki filmu, dłuższy bok 480 px, i trzymane jako RGBA (najwyżej 120 klatek, ok. 62 MB).
+- **Podgląd:** wszystkie klatki w efekcie w skali 1 (ImageBitmap), potem pętla. Zmiana parametru przerywa poprzedni render.
+- **Eksport:** te same kodery co edytor (`encodeGif`, `encodeMp4` H.264, bez fallbacku). Skala = dłuższy bok / 480, więc siatka znaków jest ta sama we wszystkich rozmiarach.
+- **Efekty (10):** kategoria ASCII & Text (Characters, Block, Braille, Dots, Mixed, ASCII Studio) oraz Cross, Diamond, Lines, Diagonal. Wybór „i pokrewne” to moja interpretacja (`proj`).
+- **Klatki na sekundę:** 12 albo 15 (`proj`). 24 fps podwoiłoby pamięć klatek.
+- **Sceny:** `app/src/video/scenes/` (alpine-dawn, ocean-sunset, misty-forest) z ascii.rest @ 8fd792e. Skopiowane bez zmian poza ścieżką importu typów; nagłówek MIT w każdym pliku.
+  - Odtwarza je `scenes.ts`, tylko gdy są widoczne; przy prefers-reduced-motion pokazuje stałą klatkę.
+  - Wpisy: THIRD_PARTY_NOTICES.md i /licenses.
+
+### Testy (`test`)
+
+- **`test:video` 19/19.** Filmy generowane w teście przez ffmpeg (lavfi):
+  - 10 s: 4 s czerni + 6 s bieli, VP9 z dźwiękiem Opus;
+  - 3 s pionowy;
+  - H.264;
+  - plik, który nie jest filmem.
+- **Sprawdzone:**
+  - przycięcie do 8 s z komunikatem: 120 klatek, 480×270;
+  - podgląd idzie za filmem: klatki z czarnej części ciemniejsze niż z białej. Próg to sama kolejność, wynika z budowy filmu;
+  - zmiana efektu przelicza podgląd;
+  - GIF 720×405, 120 klatek (ffprobe);
+  - MP4 bez ścieżki dźwięku (VP9, tylko test);
+  - komunikat o braku H.264;
+  - przerwanie zapisu;
+  - film 12 fps;
+  - komunikaty dla H.264 na wejściu (ten Chromium go nie dekoduje) i dla złego pliku;
+  - 3 sceny z obrazem i podpisem;
+  - brak błędów w konsoli.
+- **Błąd znaleziony testem:** nowy plik w trakcie wczytywania był ignorowany. Teraz przerywa wczytywanie.
+- **Pozostałe testy:** smoke 79/79 i a11y 28/28 (dodane /video); `test:logo` 23/23 (oczekiwana kolejność linków w nawigacji z „Wideo”); silnik 364/364.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Dekodowanie i kodowanie H.264, Safari, Firefox, telefony: pamięć przy 120 klatkach i limit kanwy przy 1080 px.
+- Filmy z obrotem w metadanych (telefon w pionie). Mediabunny obraca według metadanych, ale nie testowałem tego.
+- Filmy o zmiennej liczbie klatek na sekundę.

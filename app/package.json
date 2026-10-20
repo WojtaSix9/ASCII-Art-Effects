@@ -19,7 +19,8 @@
     "test:gif": "node scripts/gif-check.ts",
     "test:mp4": "node scripts/mp4-check.ts",
     "test:svg": "node scripts/svg-check.ts",
-    "test:logo": "node scripts/logo-check.ts"
+    "test:logo": "node scripts/logo-check.ts",
+    "test:video": "node scripts/video-check.ts"
   },
   "devDependencies": {
     "axe-core": "^4.10.3",

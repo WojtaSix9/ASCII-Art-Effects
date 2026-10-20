@@ -69,7 +69,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, acceptDownloads: true }); page.on('pageerror', (e) => errors.push(String(e))); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(BASE + '/'); const nav = await page.$$eval('.nav__links a', (a) => a.map((x) => x.textContent));
   await page.click('.nav__links a[href="/logo"]'); await page.waitForSelector('[data-drop]');
-  t('nawigacja: link „Logo” między „Efekty” i „Jak używać”; /logo otwiera stronę z polem wczytywania', JSON.stringify(nav) === '["Efekty","Logo","Jak używać"]' && (await page.title()).startsWith('Logo'), nav);
+  t('nawigacja: link „Logo” po „Efekty” (dalej „Wideo”, „Jak używać”); /logo otwiera stronę z polem wczytywania', JSON.stringify(nav) === '["Efekty","Logo","Wideo","Jak używać"]' && (await page.title()).startsWith('Logo'), nav);
   /* PNG z białym tłem rysowany w teście: koło i prostokąt */
   await page.evaluate(async () => {
     const c = new OffscreenCanvas(800, 400); const g = c.getContext('2d')!; g.fillStyle = '#fff'; g.fillRect(0, 0, 800, 400); g.fillStyle = '#e6285a'; g.beginPath(); g.arc(200, 200, 160, 0, 7); g.fill(); g.fillStyle = '#145ac8'; g.fillRect(420, 60, 340, 280);

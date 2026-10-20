@@ -452,3 +452,12 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
 .logo__out { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
 .logo__panel [hidden] { display: none; }   /* reguły display wyżej nadpisywały atrybut hidden */
 @media (max-width: 900px) { .logo { grid-template-columns: 1fr; } }
+/* Strona /video: panel parametrów efektu w panelu ustawień; przykłady (sceny ascii.rest) w trzech kolumnach (wąsko: jedna) */
+.logo__panel .pp-sec label { display: block; }
+.page-video .logo__canvas { width: 100%; }   /* klatki podglądu mają 480 px; pole jest szersze */
+.vscenes { margin: 48px 0 24px; }
+.vscenes__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.vscenes__item { margin: 0; }
+.vscenes__item canvas { display: block; width: 100%; height: auto; background: #000; }
+.vscenes__item figcaption { margin-top: 6px; font-size: 13px; color: var(--text-2); }
+@media (max-width: 900px) { .vscenes__grid { grid-template-columns: 1fr; } }

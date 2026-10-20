@@ -28,7 +28,7 @@ const browser = await chromium.launch();
 try {
   for (const [w, h] of [[1440, 900], [375, 800]] as const) {
     const page = await browser.newPage({ viewport: { width: w, height: h } });
-    for (const p of ['/', '/effects', '/logo', '/how-to', '/licenses', '/nie-ma']) { await page.goto(BASE + p, { waitUntil: 'networkidle' }); await audit(page, `${w}px ${p}`); }
+    for (const p of ['/', '/effects', '/logo', '/video', '/how-to', '/licenses', '/nie-ma']) { await page.goto(BASE + p, { waitUntil: 'networkidle' }); await audit(page, `${w}px ${p}`); }
     await page.goto(BASE + '/editor', { waitUntil: 'networkidle' }); await idle(page);
     for (const tab of ['style', 'lights', 'color', 'postfx', 'text', 'crop']) {
       await page.evaluate((n) => document.querySelector<HTMLButtonElement>(`[data-tab="${n}"]`)!.click(), tab);

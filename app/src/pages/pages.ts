@@ -6,6 +6,7 @@ import { effectsHtml, mountEffects } from '../effects/effects-page.ts';
 import { editorHtml, mountEditor } from '../editor/editor.ts';
 import { howToHtml, licensesHtml, mountLicenses } from './info.ts';
 import { logoHtml, mountLogo } from '../logo/logo-page.ts';
+import { videoHtml, mountVideo } from '../video/video-page.ts';
 
 // Szkielet (krok 1). Treści BRAK: do napisania i zatwierdzenia w kolejnych krokach (05, sekcje 5–8).
 const stub = (label: string, heading: string, note: string) => () =>
@@ -38,4 +39,8 @@ export const notFound: Page = {
 export const logo: Page = {
   title: 'Logo · ASCII Art Effects', layout: 'site', mainClass: 'page page-logo',
   render: logoHtml, mount: (main) => mountLogo(main),
+};
+export const video: Page = {
+  title: 'Wideo · ASCII Art Effects', layout: 'site', mainClass: 'page page-logo page-video',
+  render: videoHtml, mount: (main) => mountVideo(main),
 };

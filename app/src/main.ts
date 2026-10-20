@@ -9,7 +9,7 @@ import '@fontsource/geist/600.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import { startRouter, type Page } from './router.ts';
-import { home, effects, howTo, licenses, editor, logo, notFound } from './pages/pages.ts';
+import { home, effects, howTo, licenses, editor, logo, video, notFound } from './pages/pages.ts';
 import { footerHtml } from './pages/info.ts';
 
 // Strona deweloperska ładowana na żądanie, żeby silnik i dane testowe nie trafiały do głównego pakietu.
@@ -36,7 +36,7 @@ const devThumbs: Page = {
   },
 };
 
-const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/logo': logo, '/licenses': licenses, '/editor': editor, '/dev/engine': devEngine, '/dev/thumbs': devThumbs };
+const routes: Record<string, Page> = { '/': home, '/effects': effects, '/how-to': howTo, '/logo': logo, '/video': video, '/licenses': licenses, '/editor': editor, '/dev/engine': devEngine, '/dev/thumbs': devThumbs };
 
 const brand = `<a class="nav__brand" href="/"><span class="nav__logo" aria-hidden="true">▚▞</span>ASCII Art Effects</a>`;
 
@@ -44,14 +44,14 @@ const siteNav = (path: string) => {
   const link = (href: string, text: string) =>
     `<li><a href="${href}"${path === href ? ' aria-current="page"' : ''}>${text}</a></li>`;
   return `<header class="nav">${brand}
-    <nav aria-label="Główna"><ul class="nav__links">${link('/effects', 'Efekty')}${link('/logo', 'Logo')}${link('/how-to', 'Jak używać')}</ul></nav>
+    <nav aria-label="Główna"><ul class="nav__links">${link('/effects', 'Efekty')}${link('/logo', 'Logo')}${link('/video', 'Wideo')}${link('/how-to', 'Jak używać')}</ul></nav>
     <a class="btn-outline" href="/editor">Otwórz edytor</a></header>`;
 };
 
 // Pasek górny edytora (05, sekcja 8.1): narzędzia wstawia edytor do [data-ed-tools].
 const editorTop = () => `<header class="ed-top">${brand}<div class="ed-top__tools" data-ed-tools></div>
   <div class="ed-top__right"><a href="/how-to">Pomoc</a>
-    <details class="ed-menu"><summary aria-label="Menu">☰</summary><nav aria-label="Menu"><a href="/">Strona główna</a><a href="/effects">Efekty</a><a href="/logo">Logo</a><a href="/how-to">Jak używać</a></nav></details>
+    <details class="ed-menu"><summary aria-label="Menu">☰</summary><nav aria-label="Menu"><a href="/">Strona główna</a><a href="/effects">Efekty</a><a href="/logo">Logo</a><a href="/video">Wideo</a><a href="/how-to">Jak używać</a></nav></details>
   </div></header>`;
 
 const app = document.getElementById('app')!;
