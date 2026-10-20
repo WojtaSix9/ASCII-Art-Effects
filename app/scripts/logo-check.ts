@@ -87,16 +87,19 @@ try {
   const b = await page.evaluate(() => ({ d: (window as any).__logoTest.drawing(), facts: document.querySelector('[data-facts]')!.textContent }));
   t('szerokość 40 → siatka ≤ 40 kolumn; kategoria distros → scan', b.d.cols <= 40 && !!b.facts?.includes('scan co 5 s'), { cols: b.d.cols, facts: b.facts });
   /* pobieranie: .ts, SVG ciemne i jasne, GIF; MP4 bez kodera H.264 → komunikat */
-  const dl = async (sel: string) => { const [d] = await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.click(sel)]); return { name: d.suggestedFilename(), path: await d.path() }; };
-  const ts = await dl('[data-dl="ts"]'); const svg = await dl('[data-dl="svg"]'); const svgL = await dl('[data-dl="svg-light"]');
+  const dl = async (fmt: string) => { await page.selectOption('[data-format]', fmt); const [d] = await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), page.click('[data-download]')]); return { name: d.suggestedFilename(), path: await d.path() }; };
+  const noAuto = await page.evaluate(() => { let n = 0; const a = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () { n++; }; return new Promise<number>((res) => { (document.querySelector('[data-format]') as HTMLSelectElement).value = 'gif'; document.querySelector('[data-format]')!.dispatchEvent(new Event('change', { bubbles: true })); setTimeout(() => { HTMLAnchorElement.prototype.click = a; res(n); }, 500); }); });
+  const sideVis = !(await page.isHidden('[data-side]')); await page.selectOption('[data-format]', 'ts'); const sideTs = await page.isHidden('[data-side]');
+  t('pobieranie: wybór formatu z listy niczego nie pobiera; szerokość widoczna tylko dla GIF/MP4; plik dopiero po „Pobierz”', noAuto === 0 && sideVis && sideTs, { noAuto, sideVis, sideTs });
+  const ts = await dl('ts'); const svg = await dl('svg'); const svgL = await dl('svg-light');
   t('pobieranie: test-shapes.ts, test-shapes.dark.svg, test-shapes.svg', ts.name === 'test-shapes.ts' && svg.name === 'test-shapes.dark.svg' && svgL.name === 'test-shapes.svg', [ts.name, svg.name, svgL.name]);
   const sv = await page.evaluate(async () => { const s = (window as any).__logoTest.svg(true) as string; const h = document.createElement('div'); h.innerHTML = s; document.body.append(h); const n = document.getAnimations().length; h.remove(); const im = new Image(); im.src = URL.createObjectURL(new Blob([s], { type: 'image/svg+xml' })); await im.decode(); return { n, w: im.naturalWidth, len: s.length }; });
   t('SVG: otwiera się jako obraz, ma animacje CSS (pętla 5 s)', sv.n > 0 && sv.w > 0, sv);
-  const gif = await dl('[data-dl="gif"]');
+  const gif = await dl('gif');
   const gb = readFileSync(gif.path); const g = { head: gb.subarray(0, 6).toString(), bytes: gb.length };
   const gmsg = await page.textContent('[data-msg]');
   t('GIF: plik test-shapes.gif, 120 klatek (5 s × 24 fps), komunikat z rozmiarem', gif.name === 'test-shapes.gif' && g.head === 'GIF89a' && !!gmsg?.includes('120 klatek'), { name: gif.name, gmsg, g });
-  await page.click('[data-dl="mp4"]'); await page.waitForFunction(() => document.querySelector('[data-msg]')!.textContent?.includes('H.264') || document.querySelector('[data-msg]')!.textContent?.includes('.mp4') || document.querySelector('[data-msg]')!.textContent?.startsWith('Błąd'), null, { timeout: 60_000 });
+  await page.selectOption('[data-format]', 'mp4'); await page.click('[data-download]'); await page.waitForFunction(() => document.querySelector('[data-msg]')!.textContent?.includes('H.264') || document.querySelector('[data-msg]')!.textContent?.includes('.mp4') || document.querySelector('[data-msg]')!.textContent?.startsWith('Błąd'), null, { timeout: 60_000 });
   const mmsg = await page.textContent('[data-msg]'); t('MP4 w Chromium z Playwrighta (bez kodera H.264): komunikat zamiast pliku', !!mmsg?.includes('nie koduje wideo H.264'), mmsg);
   /* SVG strony (favicon) przez pole pliku */
   await page.setInputFiles('[data-file]', new URL('../public/favicon.svg', import.meta.url).pathname); await page.waitForTimeout(1500);

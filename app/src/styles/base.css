@@ -449,5 +449,6 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
 .logo__panel fieldset label { display: block; }
 .logo__panel input[type="text"], .logo__panel input[type="number"] { background: var(--chip); color: var(--text); border: 1px solid var(--line); padding: 6px 8px; font: inherit; }
 .logo__panel input[type="number"] { width: 6ch; }
-.logo__out { display: flex; flex-wrap: wrap; gap: 8px; }
+.logo__out { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.logo__panel [hidden] { display: none; }   /* reguły display wyżej nadpisywały atrybut hidden */
 @media (max-width: 900px) { .logo { grid-template-columns: 1fr; } }

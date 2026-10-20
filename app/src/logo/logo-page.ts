@@ -30,13 +30,15 @@ export const logoHtml = () => `
     <button type="button" class="ed-btn" data-ground hidden></button>
     <p class="ed-hint" data-facts role="status"></p>
     <div class="logo__out">
-      <button type="button" class="ed-btn ed-btn--primary" data-dl="ts">Pobierz .ts</button>
-      <button type="button" class="ed-btn" data-dl="svg">SVG (ciemne tło)</button>
-      <button type="button" class="ed-btn" data-dl="svg-light">SVG (jasne tło)</button>
-      <label class="sr-only" for="logo-side">Szerokość GIF i MP4</label>
-      <select id="logo-side" class="ed-btn" name="side"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select>
-      <button type="button" class="ed-btn" data-dl="gif">GIF</button>
-      <button type="button" class="ed-btn" data-dl="mp4">MP4</button>
+      <label>Format <select class="ed-btn" name="format" data-format>
+        <option value="ts">.ts (plik biblioteki ascii.rest)</option>
+        <option value="svg">SVG, ciemne tło</option>
+        <option value="svg-light">SVG, jasne tło</option>
+        <option value="gif">GIF</option>
+        <option value="mp4">MP4 (wideo H.264)</option>
+      </select></label>
+      <label data-side hidden>Szerokość <select class="ed-btn" name="side"><option value="480">480 px</option><option value="720" selected>720 px</option><option value="1080">1080 px</option></select></label>
+      <button type="button" class="ed-btn ed-btn--primary" data-download>Pobierz</button>
     </div>
     <div class="ed-anim__bar" data-bar hidden><span></span></div>
     <p class="ed-note" data-msg role="status"></p>
@@ -123,8 +125,12 @@ export function mountLogo(main: HTMLElement): () => void {
   document.addEventListener('paste', onPaste);
   groundBtn.addEventListener('click', () => { if (!image) return; keepGround = !keepGround; load(image, file); });
   let tm: number | undefined;
-  form.addEventListener('input', (e) => { const n = (e.target as HTMLInputElement).name; if (n === 'side') return; clearTimeout(tm); tm = window.setTimeout(redraw, n === 'width' || n === 'name' || n === 'every' ? 250 : 0); });
-  form.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLButtonElement>('[data-dl]'); if (b) download(b.dataset.dl!); if ((e.target as Element).closest('[data-another]')) fileIn.click(); });
+  form.addEventListener('input', (e) => { const n = (e.target as HTMLInputElement).name; if (n === 'side' || n === 'format') return; clearTimeout(tm); tm = window.setTimeout(redraw, n === 'width' || n === 'name' || n === 'every' ? 250 : 0); });
+  /* najpierw wybór formatu z listy, pobranie dopiero przyciskiem (prośba użytkownika); szerokość tylko dla GIF i MP4 */
+  const syncFormat = () => { const f = val('format'); $('[data-side]').hidden = f !== 'gif' && f !== 'mp4'; };
+  form.addEventListener('change', (e) => { if ((e.target as HTMLElement).matches('[data-format]')) syncFormat(); });
+  form.addEventListener('click', (e) => { if ((e.target as Element).closest('[data-download]')) download(val('format')); if ((e.target as Element).closest('[data-another]')) fileIn.click(); });
+  syncFormat();
 
   (window as any).__logoTest = { load: (b: Blob, n: string) => load(b, n), drawing: () => drawing, settings, ts: () => (drawing ? source(drawing, settings()) : null), svg: (dark: boolean) => (drawing ? logoSvg(drawing, settings(), dark) : null), START };
   return () => { alive = false; cancelAnimationFrame(raf); clearTimeout(tm); document.removeEventListener('paste', onPaste); delete (window as any).__logoTest; };
