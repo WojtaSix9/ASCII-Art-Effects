@@ -4,6 +4,10 @@ import { gifDelays, paletteFrames, flattenOnBlack, encodeGif, orderedDither } fr
 import * as gifenc from 'gifenc';
 const G = ((gifenc as any).GIFEncoder ? gifenc : (gifenc as any).default) as typeof gifenc;
 import { render } from '../../engine/src/index.ts';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { testImage } from '../../engine/scripts/make-test-image.ts';
 
 const res: [string, boolean, string?][] = []; const t = (n: string, ok: boolean, info?: unknown) => res.push([n, ok, info === undefined ? undefined : JSON.stringify(info)]);
@@ -59,6 +63,21 @@ const e0 = blockErr(false), e1 = blockErr(true);
 t('dithering zmniejsza pasma: na gradiencie przy palecie 8 szarości błąd średniej w blokach 8×8 mniejszy niż bez ditheringu', e1 < e0, { bez: e0, z: e1 });
 const plain = await encodeGif(frame, 6, W, H, FPS), dith = await encodeGif(frame, 6, W, H, FPS, () => {}, () => false, true); const gp = parseGif(plain), gd = parseGif(dith);
 t('GIF z ditheringiem: ta sama struktura (6 ramek, paleta globalna, pętla); rozmiar zapisany do raportu', gd.images === 6 && gd.gct === 256 && gd.loop === 0 && gd.localTables === 0, { bez: plain.length, z: dith.length });
+
+// 4. zapis różnicowy: po złożeniu klatek (dekoder GIF ffmpeg, z disposal i przezroczystością) obraz identyczny z pełnymi klatkami
+//    tej samej palety; rozmiary obu do raportu. Przypadki: ruch na całym obrazie (RGB Split pulse) i ruch lokalny (CRT refresh).
+const dir = mkdtempSync(join(tmpdir(), 'gifdelta-'));
+const decode = (b: Uint8Array, name: string) => { const f = join(dir, name); writeFileSync(f, b); return execFileSync('ffmpeg', ['-v', 'error', '-i', f, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1 << 28 }); };
+for (const [label, st] of [['RGB Split pulse', { style: { id: 'rgbsplit' }, motion: { id: 'pulse' } }], ['CRT refresh', { style: { id: 'crt' }, motion: { id: 'refresh' } }]] as const) {
+  const fr = (i: number) => new Uint8ClampedArray(render(src, st as any, { phase: i / N }).img.data);
+  const full = await encodeGif(fr, N, W, H, FPS, () => {}, () => false, false, false), del = await encodeGif(fr, N, W, H, FPS);
+  const a = decode(full, 'full.gif'), b = decode(del, 'delta.gif'); const pd = parseGif(del);
+  /* ile pikseli zmienia się między klatkami (po palecie): odczyt z pełnej wersji */
+  const px = W * H * 3; let changed = 0; for (let k = 1; k < N; k++) for (let p = 0; p < W * H; p++) { const o = k * px + p * 3, q = (k - 1) * px + p * 3; if (a[o] !== a[q] || a[o + 1] !== a[q + 1] || a[o + 2] !== a[q + 2]) changed++; }
+  t(`zapis różnicowy (${label}): ${N} klatek po złożeniu identyczne z pełnymi (ffmpeg), plik nie większy niż z pełnymi klatkami, struktura bez zmian (paleta globalna 256, ${N} ramek, pętla, opóźnienia)`,
+    a.length === N * px && a.equals(b) && del.length <= full.length && pd.gct === 256 && pd.images === N && pd.loop === 0 && pd.localTables === 0 && pd.delays.join() === gifDelays(FPS, N).join(),
+    { pełne: full.length, różnicowe: del.length, stosunek: +(del.length / full.length).toFixed(3), zmienionePiksele: +(changed / ((N - 1) * W * H)).toFixed(3) });
+}
 
 for (const [n, ok, info] of res) console.log(`${ok ? 'OK  ' : 'FAIL'} ${n}${info ? `  [${info}]` : ''}`);
 console.log(`${res.filter((r) => r[1]).length}/${res.length} OK`); process.exit(res.every((r) => r[1]) ? 0 : 1);

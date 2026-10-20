@@ -1006,3 +1006,33 @@ Jak działa (`kod`):
 - Dekodowanie i kodowanie H.264, Safari, Firefox, telefony: pamięć przy 120 klatkach i limit kanwy przy 1080 px.
 - Filmy z obrotem w metadanych (telefon w pionie). Mediabunny obraca według metadanych, ale nie testowałem tego.
 - Filmy o zmiennej liczbie klatek na sekundę.
+
+## GIF: zapis różnicowy (decyzja użytkownika po kroku 10)
+
+### Co zmieniono (`kod`, `app/src/engine/gif.ts`)
+
+- **Klatki od drugiej:** piksele, których indeks palety nie zmienił się od poprzedniej klatki, dostają indeks przezroczysty. Klatki mają disposal 1 (bez czyszczenia), więc w tych miejscach widać poprzednią klatkę.
+- **Paleta:** 255 kolorów z próbki zamiast 256; ostatni wpis to przezroczystość.
+- **Wybór pliku na klatkę:** każda klatka jest kodowana dwa razy (różnicowo i w całości) i do pliku idzie krótsza wersja. Obie po złożeniu dają ten sam obraz, więc decyduje tylko rozmiar, bez progu.
+  - Powód: w pierwszym pomiarze, z samym zapisem różnicowym, Engraving i Halftone wyszły większe (108% i 112%). Gdy prawie każdy piksel się zmienia, przezroczyste wtrącenia psują ciągi LZW.
+- **Ograniczenie gifenc 1.0.3:** klatka zawsze ma pełny rozmiar i pozycję 0,0. Zysk pochodzi więc z kompresji ciągów indeksu przezroczystego, nie z wycinania prostokąta zmian.
+- Kodery i biblioteka bez innych zmian; w `src/types/gifenc.d.ts` dopisana istniejąca metoda `reset()`.
+
+### Testy (`test`)
+
+- **`gif-check` 12/12.** Nowe: RGB Split pulse (ruch na całym obrazie) i CRT refresh (ruch lokalny) zapisane pełnymi klatkami i różnicowo, z tą samą paletą, zdekodowane przez ffmpeg.
+  - Wszystkie 24 klatki identyczne piksel w piksel.
+  - Plik nie większy niż z pełnymi klatkami: stosunek 0,69 i 0,33.
+- **`anim-measure` (25 efektów, 720 px, 96 klatek):** `app/reports/anim-measure.md`. Poprzedni pomiar z pełnymi klatkami jest w `app/reports/anim-measure-pelne-klatki.md`.
+  - Klatki 0, 1, 47 i 95 po złożeniu są identyczne w dekoderze Chromium (ImageDecoder) i w ffmpeg: 25/25.
+  - **Glint (efekty ASCII, Cross, Diamond, Lines, Diagonal):** 5–10% poprzedniego rozmiaru, np. Characters 16,2 → 1,3 MB.
+  - **CRT, Digital Distortion:** 5–6%.
+  - **Ruch na prawie całym obrazie:** 43–86% (RGB Split, Ripple, Twirl, Scanline, ZigZag, Fluted Glass, Waves); Risograph 68%.
+  - **Engraving i Halftone:** 100% (pełne klatki wygrywają).
+  - **Ponad 20 MB:** 5 efektów zamiast 12 (Risograph, Engraving, ZigZag, Fluted Glass, Waves).
+  - Czas eksportu GIF podobny jak przed zmianą (do ok. 2 s dłużej): drugie kodowanie LZW jest tanie wobec renderu.
+- **Pozostałe testy:** editor 90/90, logo 23/23, video 19/19, smoke 79/79.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Wyświetlanie w Safari, Firefoksie, na telefonach i w komunikatorach (np. przy ponownej kompresji GIF przez serwis). Disposal 1 i przezroczystość to standard GIF89a, ale sprawdziłem tylko Chromium i ffmpeg.
