@@ -149,6 +149,18 @@ try {
   t('film H.264: w Chromium bez dekodera H.264 komunikat o kodeku (avc); w przeglądarce z dekoderem wczytany', !!m3?.includes('nie dekoduje tego filmu (kodek avc)') || i3?.codec === 'avc', { m3, codec: i3?.codec });
   await page.setInputFiles('[data-file]', junk); await page.waitForFunction(() => (window as any).__videoTest.idle() && /odczytać|ścieżki/.test(document.querySelector('[data-msg]')!.textContent ?? ''), null, { timeout: 30_000 }).catch(() => {});
   const m4 = await page.textContent('[data-msg]'); t('plik, który nie jest filmem: komunikat', !!m4 && /odczytać|ścieżki wideo/.test(m4), m4);
+
+  /* mikrointerakcje (wzór devault-ascii): wypełnienie toru suwaka = wartość; przełącznik po zaznaczeniu ma uchwyt przesunięty o 14 px;
+     przy prefers-reduced-motion przejścia i animacje wyłączone */
+  await page.setInputFiles('[data-file]', short); await page.waitForFunction(() => (window as any).__videoTest.frames() > 0 && (window as any).__videoTest.idle(), null, { timeout: 60_000 });
+  const rng = page.locator('[data-params] .pp-range input').first(); await rng.focus(); await page.keyboard.press('End');
+  const fill = await rng.evaluate((el: HTMLInputElement) => ({ p: el.style.getPropertyValue('--p'), v: el.value, max: el.max }));
+  await page.evaluate(() => { (document.querySelector('[data-postfx]')!.closest('details') as HTMLDetailsElement).open = true; }); const sw = page.locator('[data-fx-on]').first(); await sw.check(); await page.waitForTimeout(400);
+  const knob = await sw.evaluate((el) => getComputedStyle(el, '::after').transform);
+  t('suwak: po End wypełnienie toru 100% (--p), wartość = max; przełącznik zaznaczony: uchwyt przesunięty o 14 px', fill.p === '100%' && fill.v === fill.max && knob === 'matrix(1, 0, 0, 1, 14, 0)', { fill, knob });
+  const rm = await browser.newPage({ reducedMotion: 'reduce' }); await rm.goto(BASE + '/video'); await rm.waitForFunction(() => document.querySelectorAll('[data-effect] option').length > 0);
+  const motion = await rm.evaluate(() => ['.ed-btn', '.logo__drop'].map((s) => getComputedStyle(document.querySelector(s)!).transitionDuration));
+  t('prefers-reduced-motion: przejścia wyłączone (0s)', motion.every((d) => d.split(',').every((x) => parseFloat(x) === 0)), motion); await rm.close();
 } finally { await browser.close(); server.kill(); }
 t('brak błędów w konsoli', errors.length === 0, errors);
 for (const [n, ok, info] of res) console.log(`${ok ? "OK  " : "FAIL"} ${n}${(!ok || process.env.VERBOSE) && info ? `  [${info}]` : ""}`);

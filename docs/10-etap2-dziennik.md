@@ -1079,3 +1079,39 @@ Pomysły z devault-ascii.pages.dev (bez ich kodu; licencji nie widać).
 
 - Przeciąganie uchwytu palcem na prawdziwym telefonie (test: tylko mysz w Chromium).
 - Pamięć przy porównaniu na telefonach.
+
+## UI: mikrointerakcje i detale (prośba użytkownika, wzór: devault-ascii.pages.dev)
+
+Ich CSS przejrzany jako wzór (przejścia, stany, suwaki); kod napisany od nowa w naszym stylu (kwadratowe krawędzie, mono, tokeny z `tokens.css`).
+
+### Co zmieniono (`kod`, `app/src/styles/base.css`, `app/src/ui/param-panel.ts`)
+
+- **Przyciski** (`.ed-btn`, `.btn-outline`, pasek narzędzi edytora, szyna zakładek, Losuj, Więcej):
+  - przejście 150 ms;
+  - hover odwraca kolory (biały przycisk główny: przezroczysty z białą ramką);
+  - wciśnięcie o 0,5 px;
+  - wyłączony: 40% krycia i kursor not-allowed.
+- **Suwaki:** tor 2 px wypełniony do wartości (zmienna `--p` ustawiana w panelu parametrów; Firefox: `::-moz-range-progress`), prostokątny uchwyt 8 × 16 px, poświata 3 px przy hover i focus.
+- **Przełączniki** zamiast pól wyboru w panelach (parametry typu toggle, włączniki Post FX):
+  - to nadal zwykłe checkboxy, więc rola, klawiatura i etykiety bez zmian;
+  - obramowanie #858585 na tle panelu (kontrast ≥ 3:1);
+  - uchwyt przesuwa się w 180 ms.
+- **Sekcje rozwijane** /video (Color, Post FX): strzałka obracająca się przy otwarciu.
+- **Komunikaty** (`.ed-note`): krótkie wjechanie (180 ms), gdy pojawiają się po pustym; pasek postępu z płynną szerokością.
+- **Podgląd** /logo i /video: cienka obwódka i cień, pojawianie się 250 ms.
+- **Pole wczytywania:** hover i stan przeciągania z tłem.
+- **Ruch przy prefers-reduced-motion:** istniejąca reguła globalna wyłącza wszystkie przejścia i animacje.
+
+### Testy (`test`)
+
+- **`test:video` 30/30.** Nowe:
+  - po End wypełnienie toru suwaka 100% i wartość = max;
+  - zaznaczony przełącznik ma uchwyt przesunięty o 14 px;
+  - przy prefers-reduced-motion czas przejść 0 s.
+- **Pozostałe:** editor 90/90, ui 42/42, smoke 79/79, a11y 30/30, logo 23/23.
+- **Zrzuty /video i edytora (1280 i 1440 px)** obejrzane: przełączniki i suwaki czytelne.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Wygląd suwaków i przełączników w Safari i Firefoksie (pseudo-elementy `::-webkit-slider-*`, `::-moz-range-*` i `::after` na checkboxie).
+- Ekrany dotykowe.

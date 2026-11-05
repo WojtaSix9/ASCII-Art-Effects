@@ -18,6 +18,8 @@ export function groupParams(defs: ParamDef[]) {
   };
 }
 
+/** Wypełnienie toru suwaka do wartości (zmienna --p dla stylu w base.css; Firefox ma ::-moz-range-progress). */
+export const rangeFill = (el: HTMLInputElement) => { const min = +el.min || 0, max = +el.max || 100; el.style.setProperty('--p', `${(100 * (+el.value - min)) / (max - min || 1)}%`); };
 let mountN = 0, pfx = 'p';   // id pól unikalne między panelami (np. „color” jest w Lights, Post FX i Tekście)
 const fmt = (d: ParamDef, v: unknown) => `${v}${d.unit ? (d.unit === '%' ? '%' : ' ' + d.unit) : ''}`;
 
@@ -65,6 +67,7 @@ export function mountParamPanel(root: HTMLElement, styleName: string, defs: Para
   root.innerHTML = opts.sections === false ? section(styleName, defs, values)
     : section('Backdrop', g.backdrop, values) + section(styleName, g.style, values) + section('Intensity', g.intensity, values) + section('Seed', g.seed, values, true);   // seed to osobny poziom (plik 02), zawsze widoczny
   const byId = new Map(defs.map((d) => [d.id, d]));
+  root.querySelectorAll<HTMLInputElement>('input[type="range"]').forEach(rangeFill);
 
   // 'input' (w trakcie) i 'change' (zakończenie) przychodzą osobno; wartość aktualizuje 'input', a dla kontrolek bez
   // 'input' (np. niektóre listy) także 'change'. onCommit raz po zakończonej zmianie.
@@ -78,6 +81,7 @@ export function mountParamPanel(root: HTMLElement, styleName: string, defs: Para
       values[grad.dataset.gradient!] = stops; onChange({ ...values }); return;
     }
     const d = byId.get(el.dataset.p ?? ''); if (!d) return;
+    if (el.type === 'range') rangeFill(el);
     const v = d.kind === 'toggle' ? el.checked : d.kind === 'range' || d.kind === 'seed' ? Number(el.value) : el.value;
     if (d.kind === 'seed' && !Number.isFinite(v as number)) return;
     if (values[d.id] === v) return;
