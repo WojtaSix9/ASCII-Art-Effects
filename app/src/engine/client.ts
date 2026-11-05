@@ -45,7 +45,7 @@ export class EngineClient {
   /** Definicje 18 gotowych efektów z silnika (jedno zapytanie na Worker). */
   defs() { return (this.defsP ??= this.call<EffectMeta[]>({ type: 'defs' })); }
   private postP: Promise<PostDefs> | null = null;
-  /** Definicje Post FX (13, stała kolejność silnika) i parametrów Color. */
+  /** Definicje Post FX (stała kolejność silnika) i parametrów Color. */
   postDefs() { return (this.postP ??= this.call<PostDefs>({ type: 'postDefs' })); }
 
   /** Ustawia obraz źródłowy (bufor jest przekazywany Workerowi, więc ImageData po wywołaniu jest puste). */

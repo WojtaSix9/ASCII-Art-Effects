@@ -450,11 +450,25 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
 .logo__panel input[type="text"], .logo__panel input[type="number"] { background: var(--chip); color: var(--text); border: 1px solid var(--line); padding: 6px 8px; font: inherit; }
 .logo__panel input[type="number"] { width: 6ch; }
 .logo__out { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
-.logo__panel [hidden] { display: none; }   /* reguły display wyżej nadpisywały atrybut hidden */
+.logo__panel[hidden], .logo__panel [hidden] { display: none; }   /* reguły display wyżej nadpisywały atrybut hidden (panel też: przed wczytaniem pliku był widoczny) */
 @media (max-width: 900px) { .logo { grid-template-columns: 1fr; } }
 /* Strona /video: panel parametrów efektu w panelu ustawień; przykłady (sceny ascii.rest) w trzech kolumnach (wąsko: jedna) */
 .logo__panel .pp-sec label { display: block; }
 .page-video .logo__canvas { width: 100%; }   /* klatki podglądu mają 480 px; pole jest szersze */
+/* /video: porównanie przed/po (wynik z lewej, oryginał z prawej, uchwyt przeciągany albo strzałkami) */
+.vcmp { position: relative; width: 100%; line-height: 0; touch-action: pan-y; }
+.vcmp__handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 32px; height: 32px; display: grid; place-items: center;
+  background: #000; color: #fff; border: 1px solid #fff; cursor: ew-resize; font: 12px/1 var(--font-mono); }
+.vcmp__handle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.vcmp__tag { position: absolute; top: 8px; left: 8px; padding: 3px 6px; font: 11px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text); background: rgba(0, 0, 0, 0.7); border: 1px solid var(--line); pointer-events: none; }
+.vcmp__tag--r { left: auto; right: 8px; }
+.vcmp [hidden] { display: none; }
+.vbar { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.vbar[hidden] { display: none; }
+.vpanel { border-top: 1px solid var(--line); padding-top: 8px; }
+.vpanel > summary { cursor: pointer; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text); padding: 4px 0; }
+.logo__panel .ed-fx label { display: flex; gap: 8px; align-items: center; }
 .vscenes { margin: 48px 0 24px; }
 .vscenes__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .vscenes__item { margin: 0; }

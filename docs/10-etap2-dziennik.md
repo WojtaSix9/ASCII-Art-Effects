@@ -1036,3 +1036,46 @@ Jak działa (`kod`):
 ### Czego nie sprawdzono (`BRAK`)
 
 - Wyświetlanie w Safari, Firefoksie, na telefonach i w komunikatorach (np. przy ponownej kompresji GIF przez serwis). Disposal 1 i przezroczystość to standard GIF89a, ale sprawdziłem tylko Chromium i ffmpeg.
+
+## /video: Color, Post FX i porównanie przed/po (prośba użytkownika: punkty 1 i 2 z porównania z devault-ascii)
+
+Pomysły z devault-ascii.pages.dev (bez ich kodu; licencji nie widać).
+
+### Co zmieniono (`kod`)
+
+- **Wspólne panele:** Color (Color, Levels, Curves) i Post FX przeniesione z edytora do `app/src/ui/post-panels.ts`. Edytor i /video używają tego samego kodu; działanie edytora bez zmian (`test:editor` 90/90).
+- **/video:**
+  - Pod parametrami efektu dwie rozwijane sekcje, Color i Post FX.
+  - Stan trafia do silnika tak jak w edytorze, więc podgląd i zapis GIF/MP4 je uwzględniają.
+  - Character Bloom i Chromatic są wyszarzone w efektach bez glifów.
+- **Porównanie przed/po:**
+  - Przycisk „Porównaj z oryginałem”: wynik po lewej, klatka źródłowa po prawej, etykiety Wynik i Oryginał.
+  - Uchwyt przeciąga się myszą lub palcem i obsługuje strzałki (Shift: większy krok), Home i End; ma role="slider" i aria-valuenow.
+  - Klatki źródłowe Worker oddaje nowym zapytaniem `videoOriginals` (ImageBitmap). Strona trzyma je tylko przy włączonym porównaniu (ok. 60 MB przy 120 klatkach); wyłączenie albo nowy film je zwalnia.
+- **Panel ustawień /video:** `div` zamiast `form`, bo panele Color i Post FX składają się z elementów `<form>`, a zagnieżdżony `<form>` przeglądarka usuwa.
+
+### Błędy znalezione przy tym i poprawione
+
+- **Panel ustawień widoczny przed wczytaniem pliku** (/video i /logo): `display: grid` nadpisywał atrybut `hidden`. Stary błąd, poprawiony jedną regułą CSS.
+- **a11y nested-interactive:** pole wczytywania ma rolę przycisku, a po wczytaniu zawiera uchwyt i przycisk porównania. Teraz pole jest przyciskiem tylko bez filmu.
+- **Komentarz w `client.ts`** mówił o 13 Post FX; silnik ma 16.
+
+### Testy (`test`)
+
+- **`test:video` 28/28.** Nowe:
+  - panele obecne (Post FX: tyle, ile ma silnik);
+  - Invert rozjaśnia klatkę z czarnej części i przyciemnia z białej;
+  - Vignette przyciemnia białą klatkę;
+  - wyszarzenie efektów glifowych w Lines;
+  - GIF z winietą ciemniejszy niż bez niej (ffmpeg);
+  - porównanie: prawa część kanwy równa klatce źródłowej, lewa wynikowi, piksel w piksel;
+  - uchwyt: klawiatura i mysz;
+  - zwalnianie klatek źródłowych.
+  - Progi to sama kolejność jasności, wynikająca z działania efektów.
+- **a11y 30/30:** nowy audyt /video z wczytanym filmem, otwartymi panelami i porównaniem.
+- **Pozostałe:** editor 90/90, smoke 79/79, logo 23/23, ui 42/42.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Przeciąganie uchwytu palcem na prawdziwym telefonie (test: tylko mysz w Chromium).
+- Pamięć przy porównaniu na telefonach.

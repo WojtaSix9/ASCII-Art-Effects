@@ -7,6 +7,7 @@ import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
+import { POSTFX } from '../../engine/src/index.ts';
 
 const res: [string, boolean, string?][] = []; const t = (n: string, ok: boolean, info?: unknown) => res.push([n, ok, info === undefined ? undefined : JSON.stringify(info)]);
 
@@ -92,6 +93,48 @@ try {
   await page.waitForSelector('[data-cancel]:not([hidden])'); await page.waitForTimeout(500); await page.click('[data-cancel]');
   await page.waitForFunction(() => (window as any).__videoTest.idle(), null, { timeout: 60_000 });
   t('Przerwij: eksport przerwany, komunikat „Przerwano.”', (await page.textContent('[data-msg]')) === 'Przerwano.');
+
+  /* Color i Post FX (wspólne panele z edytorem): Invert odwraca czarne klatki (0–4 s), Vignette przyciemnia białe (4–8 s);
+     progi to sama kolejność jasności, wynika z działania efektów */
+  await page.selectOption('select[name="side"]', '480');
+  await page.evaluate(() => (window as any).__videoTest.setEffect('characters'));
+  await page.waitForFunction(() => (window as any).__videoTest.idle(), null, { timeout: 60_000 });
+  const base = await page.evaluate(() => [15, 105].map((k) => (window as any).__videoTest.luma(k).mean));
+  const panels = await page.evaluate(() => ({ color: !!document.querySelector('[data-color-box] [data-color] input, [data-color-box] [data-color] select'), levels: !!document.querySelector('[data-color-box] [data-levels] input'), curves: !!document.querySelector('[data-color-box] [data-curves] *'),
+    fx: [...document.querySelectorAll('[data-postfx] [data-fx-on]')].length }));
+  t(`panele: Color (z Levels i Curves) i Post FX (wszystkie ${POSTFX.length} z silnika) na stronie /video`, panels.color && panels.levels && panels.curves && panels.fx === POSTFX.length, panels);
+  const waitPreview = async () => { await page.waitForTimeout(400); await page.waitForFunction(() => (window as any).__videoTest.idle() && document.querySelector('[data-bar]')!.hasAttribute('hidden'), null, { timeout: 60_000 }); await page.waitForTimeout(300); };
+  await page.click('[data-color-box] > summary'); await page.check('[data-color-box] [data-p="invertImage"]'); await waitPreview();
+  const inv = await page.evaluate(() => [15, 105].map((k) => (window as any).__videoTest.luma(k).mean));
+  t('Color: Invert image → klatka z czarnej części jaśniejsza, z białej ciemniejsza niż bez niego', inv[0] > base[0] && inv[1] < base[1], { base, inv });
+  await page.uncheck('[data-color-box] [data-p="invertImage"]'); await waitPreview();
+  await page.click('.vpanel:has([data-postfx]) > summary'); await page.check('[data-fx-on="vignette"]'); await waitPreview();
+  const vig = await page.evaluate(() => (window as any).__videoTest.luma(105).mean);
+  t('Post FX: Vignette → biała klatka (7 s) ciemniejsza niż bez niej', vig < base[1], { base: base[1], vig });
+  const glyph = async () => page.evaluate(() => ['charBloom', 'charChroma'].map((id) => (document.querySelector(`[data-fx-on="${id}"]`) as HTMLInputElement).disabled));
+  const gOn = await glyph(); await page.evaluate(() => (window as any).__videoTest.setEffect('lines')); await page.waitForFunction(() => (window as any).__videoTest.idle(), null, { timeout: 60_000 }); const gOff = await glyph();
+  await page.evaluate(() => (window as any).__videoTest.setEffect('characters')); await waitPreview();
+  t('Post FX: Character Bloom i Chromatic dostępne w Characters, wyszarzone w Lines (styl bez glifów)', gOn.every((d) => !d) && gOff.every((d) => d), { gOn, gOff });
+  /* zapis zawiera Post FX: GIF 480 px z winietą vs ten sam stan bez niej (klatka 105, dekoder ffmpeg) */
+  const gifMean = async () => { const g = await dl('gif', '480'); const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', g.path, '-vf', 'select=eq(n\\,105)', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', '-']); return raw.reduce((a, v) => a + v, 0) / raw.length; };
+  const withVig = await gifMean(); await page.uncheck('[data-fx-on="vignette"]'); await waitPreview(); const noVig = await gifMean();
+  t('zapis GIF uwzględnia Post FX: klatka 7 s z winietą ciemniejsza niż bez niej', withVig < noVig, { withVig, noVig });
+
+  /* porównanie przed/po: kanwa w pasie po prawej = klatka źródłowa, po lewej = wynik (piksel w piksel); uchwyt: klawiatura i mysz */
+  const o0 = await page.evaluate(() => (window as any).__videoTest.originals());
+  await page.click('[data-compare]'); await page.waitForFunction(() => (window as any).__videoTest.originals() > 0, null, { timeout: 30_000 });
+  const cmpState = await page.evaluate(() => ({ n: (window as any).__videoTest.originals(), pressed: document.querySelector('[data-compare]')!.getAttribute('aria-pressed'), handle: !(document.querySelector('[data-handle]') as HTMLElement).hidden, tags: !(document.querySelector('[data-tag-src]') as HTMLElement).hidden }));
+  const px = await page.evaluate(() => { const T = (window as any).__videoTest; return { right: T.still(105, 0.52, 1), left: T.still(105, 0, 0.48), rightBlack: T.still(15, 0.52, 1) }; });
+  t('Porównaj: bez włączenia brak klatek źródłowych w stronie; po włączeniu 120, uchwyt i etykiety widoczne, aria-pressed', o0 === 0 && cmpState.n === 120 && cmpState.pressed === 'true' && cmpState.handle && cmpState.tags, { o0, cmpState });
+  t('Porównaj (podział 50%): prawa część kanwy = klatka źródłowa, lewa = wynik efektu (klatki 7 s i 1 s, piksel w piksel)', px.right.sameAsSrc && !px.right.sameAsOut && px.left.sameAsOut && px.rightBlack.sameAsSrc, px);
+  await page.evaluate(() => (window as any).__videoTest.resume());
+  await page.focus('[data-handle]'); await page.keyboard.press('ArrowRight'); const k1 = await page.getAttribute('[data-handle]', 'aria-valuenow');
+  await page.keyboard.press('Home'); const k2 = await page.getAttribute('[data-handle]', 'aria-valuenow'); await page.keyboard.press('End'); const k3 = await page.getAttribute('[data-handle]', 'aria-valuenow');
+  const box = (await page.locator('[data-canvas]').boundingBox())!; await page.mouse.move(box.x + box.width * 0.25, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width * 0.75, box.y + box.height / 2, { steps: 5 }); await page.mouse.up();
+  const drag = Number(await page.getAttribute('[data-handle]', 'aria-valuenow'));
+  t('uchwyt: strzałka w prawo 50 → 52, Home → 0, End → 100; przeciągnięcie myszą do 75% szerokości → 75', k1 === '52' && k2 === '0' && k3 === '100' && Math.abs(drag - 75) <= 1, { k1, k2, k3, drag });
+  await page.click('[data-compare]'); const o1 = await page.evaluate(() => (window as any).__videoTest.originals());
+  t('wyłączenie porównania zwalnia klatki źródłowe', o1 === 0, o1);
 
   /* krótki pionowy film, 12 fps: 3 s → 36 klatek, 270 × 480, bez komunikatu o przycięciu */
   await page.selectOption('select[name="fps"]', '12'); await page.waitForTimeout(100);

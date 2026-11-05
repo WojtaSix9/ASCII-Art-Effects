@@ -9,8 +9,7 @@ import { CANCELLED, NO_CODEC, LIMIT_ERROR, type EffectMeta, type ExportRes, type
 import { cropPixels, loadImage, paint, previewScale } from '../engine/preview.ts';
 import { CATEGORIES, matches, passesAnim } from '../effects/catalog.ts';
 import { mountParamPanel, type Values } from '../ui/param-panel.ts';
-import { mountCurves } from '../ui/curves-editor.ts';
-import type { Curves } from '../../../engine/src/post/grade.ts';
+import { colorHtml, mountColorPanel, mountPostFxPanel } from '../ui/post-panels.ts';
 import { ICON } from './icons.ts';
 import { lightsHtml, mountLights } from './lights-ui.ts';
 import { cropHtml, mountCrop } from './crop-ui.ts';
@@ -67,12 +66,7 @@ export const editorHtml = () => `
       <div class="pp-sec"><label class="pp-title" for="ed-style">/ Styl</label><select id="ed-style" data-style></select></div>
       <form class="pp" data-panel onsubmit="return false"></form>
     </div>
-    <div data-tabpanel="color" hidden>
-      <form class="pp" data-color onsubmit="return false"></form>
-      <form class="pp" data-levels onsubmit="return false"></form>
-      <div class="pp-sec"><h3 class="pp-title">/ Curves</h3><div data-curves></div></div>
-      <p><button type="button" class="ed-btn" data-color-reset>Resetuj Color, Levels i Curves</button></p>
-    </div>
+    <div data-tabpanel="color" hidden>${colorHtml()}</div>
     <div data-tabpanel="postfx" hidden><div data-postfx></div></div>
     <div data-tabpanel="lights" hidden>${lightsHtml()}</div>
     <div data-tabpanel="crop" hidden>${cropHtml()}</div>
@@ -271,51 +265,11 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
   };
   styleSel.addEventListener('change', () => selectStyle(styleSel.value));
 
-  // Zakładka Color: sekcje Color (kolejność jak w oryginale, plik 01 sekcja 7), Levels, Curves; wszystkie piszą do state.color.
-  const COLOR_ORDER = ['preset', 'photoFilter', 'photoDensity', 'photoPreserve', 'tint', 'tintOpacity', 'blend', 'saturation', 'vibrance', 'hue', 'gradientMap', 'gradientAmount', 'grayscale', 'invertImage'];
-  const buildColor = () => {
-    const by = (ids: string[]) => ids.map((id) => post.color.find((d) => d.id === id)).filter((d): d is NonNullable<typeof d> => !!d);
-    const levelIds = post.color.filter((d) => d.id.startsWith('levels')).map((d) => d.id);
-    const merge = (v: Values) => { state.color = { ...state.color, ...v }; };
-    mountParamPanel($('[data-color]'), 'Color', by(COLOR_ORDER), state.color, (v) => { merge(v); render(); }, (v) => { merge(v); commit(); }, { sections: false });
-    mountParamPanel($('[data-levels]'), 'Levels', by(levelIds), state.color, (v) => { merge(v); render(); }, (v) => { merge(v); commit(); }, { sections: false });
-    const def = post.color.find((d) => d.id === 'curves')!.default as Curves;
-    mountCurves($('[data-curves]'), (state.color.curves as Curves | undefined) ?? def, (c) => { state.color = { ...state.color, curves: c }; render(); }, (c) => { state.color = { ...state.color, curves: c }; commit(); });
-  };
-  $('[data-color-reset]').addEventListener('click', () => { state.color = {}; buildColor(); commit(); render(); });
-
-  const fxBox = $('[data-postfx]');
-  const buildPostFx = () => {
-    fxBox.innerHTML = `<p class="pp-title">/ Post FX</p><p class="ed-hint">Kolejność stała: od góry do dołu.</p>${post.postFx.map((f) => `
-      <div class="ed-fx" data-fx="${f.id}"><label class="ed-fx__on"><input type="checkbox" data-fx-on="${f.id}"${state.postFx[f.id] ? ' checked' : ''}> ${esc(f.name)}</label>
-      ${f.glyphOnly ? `<p class="ed-hint" data-fx-note hidden>Tylko style znakowe: Characters, Block, Braille.</p>` : ''}
-      <form class="pp ed-fx__params" data-fx-params="${f.id}" onsubmit="return false"${state.postFx[f.id] ? '' : ' hidden'}></form></div>`).join('')}`;
-    for (const f of post.postFx) if (state.postFx[f.id]) mountFx(f.id);
-    syncGlyphFx();
-  };
-  /** Character Bloom i Chromatic działają tylko w stylach glifowych (plik 01, sekcja 8). W innych są wyszarzone; ustawienia zostają
-   *  w stanie, więc po powrocie do stylu glifowego wracają (silnik i tak je pomija). */
-  const syncGlyphFx = () => {
-    const on = post.glyphStyles.includes(state.style);
-    for (const f of post.postFx) if (f.glyphOnly) {
-      const row = fxBox.querySelector<HTMLElement>(`[data-fx="${f.id}"]`); if (!row) continue;
-      row.classList.toggle('is-off', !on); row.querySelector<HTMLInputElement>('[data-fx-on]')!.disabled = !on;
-      row.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-fx-params] input, [data-fx-params] select').forEach((el) => { el.disabled = !on; });
-      row.querySelector<HTMLElement>('[data-fx-note]')!.hidden = on;
-    }
-  };
-  const mountFx = (id: string) => {
-    const f = post.postFx.find((x) => x.id === id)!; const box = fxBox.querySelector<HTMLFormElement>(`[data-fx-params="${id}"]`)!;
-    box.hidden = false;
-    state.postFx[id] = mountParamPanel(box, '', f.params, state.postFx[id] ?? {}, (v) => { state.postFx[id] = v; render(); }, (v) => { state.postFx[id] = v; commit(); }, { sections: false })();
-    if (f.glyphOnly) syncGlyphFx();
-  };
-  fxBox.addEventListener('change', (e) => {
-    const c = (e.target as HTMLElement).closest<HTMLInputElement>('[data-fx-on]'); if (!c) return;
-    const id = c.dataset.fxOn!;
-    if (c.checked) mountFx(id); else { delete state.postFx[id]; const box = fxBox.querySelector<HTMLElement>(`[data-fx-params="${id}"]`)!; box.hidden = true; box.innerHTML = ''; }
-    commit(); render();
-  });
+  // Zakładki Color i Post FX: wspólne panele (ui/post-panels.ts), też na stronie /video.
+  let colorUi: { build: () => void } | null = null, fxUi: { build: () => void; syncGlyph: () => void } | null = null;
+  const buildColor = () => colorUi?.build();
+  const buildPostFx = () => fxUi?.build();
+  const syncGlyphFx = () => fxUi?.syncGlyph();
 
   const rail = $('[data-rail]');
   const showTab = (name: string) => {
@@ -499,6 +453,8 @@ export function mountEditor(root: HTMLElement, url: URL): () => void {
     styleSel.innerHTML = defs.map((e) => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
     const want = url.searchParams.get('style'); const ok = !!want && defs.some((e) => e.id === want);
     state = initialState(ok ? want! : 'characters');
+    colorUi = mountColorPanel($('[data-tabpanel="color"]'), post.color, { get: () => state.color, set: (v) => { state.color = v; }, change: () => render(), commit });
+    fxUi = mountPostFxPanel($('[data-postfx]'), post, () => state.style, { get: () => state.postFx, change: () => render(), commit });
     lights = mountLights($('[data-tabpanel="lights"]'), post.lights, { get: () => state, source: cropped, change: () => render(), commit, say });
     textUi = mountText($('[data-tabpanel="text"]'), tlayer, post.text, { get: () => state, change: () => render(), commit, say, open: () => showTab('text') });
     cropUi = mountCrop($('[data-tabpanel="crop"]'), { get: () => state, source: () => img, change: () => { lights?.drawBg(); layout(true); }, commit });

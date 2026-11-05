@@ -170,6 +170,11 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
       } catch (e) { out.forEach((b) => b.close()); throw e; } finally { cancelled.delete(id); }
       return { data: { frames: out, ms: performance.now() - t }, transfer: out };
     }
+    case 'videoOriginals': {
+      if (!video) throw new Error('no video');
+      const out = await Promise.all(video.frames.map((f) => createImageBitmap(new ImageData(new Uint8ClampedArray(f.data), f.w, f.h))));
+      return { data: out, transfer: out };
+    }
     case 'videoExport': {
       if (!video) throw new Error('no video'); const v = video; const n = v.frames.length, fps = v.info.fps;
       const w = Math.round(v.info.w * req.scale), h = Math.round(v.info.h * req.scale);

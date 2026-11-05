@@ -1,8 +1,10 @@
 // Audyt dostępności (krok 8): axe-core, reguły WCAG 2.0/2.1 A i AA, na zbudowanej wersji (vite preview).
 // Strony serwisu oraz edytor z każdą zakładką panelu, oknem eksportu, światłem i napisem. Także wąski ekran 375 px.
 // Uruchomienie: npm run build && node scripts/a11y-check.ts
-import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { chromium, type Page } from 'playwright';
 
 const BASE = 'http://localhost:4173';
@@ -24,11 +26,20 @@ async function audit(page: Page, name: string) {
 }
 const idle = (p: Page) => p.waitForFunction(() => (window as any).__editorTest?.isIdle(), null, { timeout: 30000 });
 
+/* krótki film testowy dla /video (ffmpeg, VP9: Chromium z Playwrighta nie dekoduje H.264) */
+const VIDEO = join(mkdtempSync(join(tmpdir(), 'a11y-')), 'krotki.webm');
+execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=320x180:r=30:d=2', '-c:v', 'libvpx-vp9', '-b:v', '200k', VIDEO]);
 const browser = await chromium.launch();
 try {
   for (const [w, h] of [[1440, 900], [375, 800]] as const) {
     const page = await browser.newPage({ viewport: { width: w, height: h } });
     for (const p of ['/', '/effects', '/logo', '/video', '/how-to', '/licenses', '/nie-ma']) { await page.goto(BASE + p, { waitUntil: 'networkidle' }); await audit(page, `${w}px ${p}`); }
+    /* /video z wczytanym filmem, otwartymi panelami Color i Post FX i włączonym porównaniem przed/po */
+    await page.goto(BASE + '/video', { waitUntil: 'networkidle' }); await page.waitForFunction(() => document.querySelectorAll('[data-effect] option').length > 0);
+    await page.setInputFiles('[data-file]', VIDEO); await page.waitForFunction(() => (window as any).__videoTest.frames() > 0 && (window as any).__videoTest.idle(), null, { timeout: 60000 });
+    await page.click('[data-compare]'); await page.waitForFunction(() => (window as any).__videoTest.originals() > 0);
+    for (const d of await page.$$('.vpanel > summary')) await d.click();
+    await page.check('[data-fx-on="vignette"]'); await audit(page, `${w}px /video z filmem, Color, Post FX i porównaniem`);
     await page.goto(BASE + '/editor', { waitUntil: 'networkidle' }); await idle(page);
     for (const tab of ['style', 'lights', 'color', 'postfx', 'text', 'crop']) {
       await page.evaluate((n) => document.querySelector<HTMLButtonElement>(`[data-tab="${n}"]`)!.click(), tab);
