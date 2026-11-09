@@ -16,4 +16,5 @@ export const ICON = {
   crop: svg('<path d="M6 2v16h16"/><path d="M2 6h16v16"/>'),
   text: svg('<path d="M5 6V4h14v2M12 4v16M9 20h6"/>'),
   panel: svg('<rect x="3" y="4" width="18" height="16"/><path d="M9 4v16"/>'),
+  expand: svg('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
 };

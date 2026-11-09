@@ -228,14 +228,15 @@ a { color: inherit; }
 .pp-row label, .pp-row legend { color: var(--ed-label); }
 .pp-row output { color: var(--ed-value); font-family: var(--font-mono); font-size: 12px; }
 /* Suwak: tor 2 px wypełniony do wartości (--p z param-panel.ts), prostokątny uchwyt 8 × 16 px, poświata przy hover i focus */
-.pp-range input { grid-column: 1 / -1; width: 100%; height: 18px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; --p: 50%; }
-.pp-range input::-webkit-slider-runnable-track { height: 2px; background: linear-gradient(90deg, var(--ed-fill) var(--p), #3a3a3a var(--p)); }
-.pp-range input::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 16px; margin-top: -7px; background: var(--ed-fill); border: 0; transition: box-shadow 150ms; }
-.pp-range input::-moz-range-track { height: 2px; background: #3a3a3a; }
-.pp-range input::-moz-range-progress { height: 2px; background: var(--ed-fill); }
-.pp-range input::-moz-range-thumb { width: 8px; height: 16px; background: var(--ed-fill); border: 0; border-radius: 0; transition: box-shadow 150ms; }
-.pp-range input:hover::-webkit-slider-thumb, .pp-range input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22); }
-.pp-range input:hover::-moz-range-thumb, .pp-range input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22); }
+.pp-range input { grid-column: 1 / -1; width: 100%; }
+:is(.pp-range input, .vdock__seek) { height: 18px; margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; --p: 50%; }
+:is(.pp-range input, .vdock__seek)::-webkit-slider-runnable-track { height: 2px; background: linear-gradient(90deg, var(--ed-fill) var(--p), #3a3a3a var(--p)); }
+:is(.pp-range input, .vdock__seek)::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 16px; margin-top: -7px; background: var(--ed-fill); border: 0; transition: box-shadow 150ms; }
+:is(.pp-range input, .vdock__seek)::-moz-range-track { height: 2px; background: #3a3a3a; }
+:is(.pp-range input, .vdock__seek)::-moz-range-progress { height: 2px; background: var(--ed-fill); }
+:is(.pp-range input, .vdock__seek)::-moz-range-thumb { width: 8px; height: 16px; background: var(--ed-fill); border: 0; border-radius: 0; transition: box-shadow 150ms; }
+:is(.pp-range input, .vdock__seek):hover::-webkit-slider-thumb, :is(.pp-range input, .vdock__seek):focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22); }
+:is(.pp-range input, .vdock__seek):hover::-moz-range-thumb, :is(.pp-range input, .vdock__seek):focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22); }
 .pp-range input:focus-visible { outline-offset: 4px; }
 .pp-range input:disabled { cursor: not-allowed; }
 .pp-row select, .pp-row input[type="text"], .pp-row input[type="number"], .ed-panel select {
@@ -489,16 +490,64 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
 .logo__out { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
 .logo__panel[hidden], .logo__panel [hidden] { display: none; }   /* reguły display wyżej nadpisywały atrybut hidden (panel też: przed wczytaniem pliku był widoczny) */
 @media (max-width: 900px) { .logo { grid-template-columns: 1fr; } }
-/* Strona /video: panel parametrów efektu w panelu ustawień; przykłady (sceny ascii.rest) w trzech kolumnach (wąsko: jedna) */
-.logo__panel .pp-sec label { display: block; }
-/* /video: podgląd mieści się w oknie. Szerokość = mniejsza z szerokości kolumny i (wysokość okna − marginesy) × proporcje filmu
-   (--ar ustawia video-page.ts), więc pionowy i poziomy film widać w całości; pole podglądu przykleja się u góry przy przewijaniu panelu. */
+/* Strona /video: przykłady (sceny ascii.rest) w trzech kolumnach (wąsko: jedna) */
+/* /video: układ edytora (wzór devault-ascii, kod własny). Narzędzie na wysokość okna: scena z podglądem (container query: podgląd
+   mieści się w scenie z zachowaniem proporcji filmu, --ar z video-page.ts), panel 340 px po prawej z przewijaną treścią i zapisem na dole.
+   Wąsko (≤ 900 px): scena 62% wysokości okna, panel pod nią bez własnego przewijania. */
+.page-video { max-width: 1600px; }
+.vapp { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: calc(100svh - 32px); min-height: 520px; margin: 24px 0; border: 1px solid var(--line); }
+.vapp:has(> [data-form][hidden]) { grid-template-columns: minmax(0, 1fr); height: 60svh; min-height: 320px; }   /* przed wczytaniem: samo pole wyboru */
+.vstage { position: relative; display: grid; place-items: center; min-height: 0; overflow: hidden; background: #000; container-type: size; transition: background 150ms; }
+.vstage--over { background: #101014; outline: 1px solid var(--text); outline-offset: -1px; }
+.vstage__empty { display: grid; justify-items: center; gap: 12px; text-align: center; color: var(--text-2); }
+.vstage__empty p { margin: 0; }
+.vstage__empty[hidden] { display: none; }
 .page-video .logo__canvas { width: 100%; }
-.page-video .logo__drop { position: sticky; top: 16px; }
-.page-video .vcmp { width: min(100%, calc((100svh - var(--vchrome, 140px)) * var(--ar, 1.7778))); margin: 0 auto; }
-@media (max-width: 900px) {   /* jedna kolumna: bez przyklejania (zasłaniałoby panel), podgląd do 60% wysokości okna */
-  .page-video .logo__drop { position: static; }
-  .page-video .vcmp { width: min(100%, calc(60svh * var(--ar, 1.7778))); }
+.page-video .vcmp { width: min(calc(100cqw - 48px), calc((100cqh - 140px) * var(--ar, 1.7778))); }
+.vchip { position: absolute; top: 12px; left: 12px; z-index: 2; margin: 0; max-width: calc(100% - 24px); padding: 5px 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font: 11.5px/1.3 var(--font-mono); color: var(--text-3); background: rgba(16, 16, 22, 0.72); border: 1px solid var(--line); backdrop-filter: blur(10px); }
+.vchip[hidden] { display: none; }
+.vdock { position: absolute; bottom: 16px; left: 50%; z-index: 3; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px); padding: 6px;
+  background: rgba(16, 16, 22, 0.82); border: 1px solid var(--ed-sep-strong); backdrop-filter: blur(14px); }
+.vdock[hidden] { display: none; }
+.vdock__btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: none; min-width: 30px; height: 30px; padding: 0 8px; border: 0; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--text); background: rgba(255, 255, 255, 0.08); transition: background 150ms, color 150ms, transform 100ms; }
+.vdock__btn:hover:not(:disabled), .vdock__btn[aria-pressed="true"] { background: var(--text); color: #000; }
+.vdock__btn:active:not(:disabled) { transform: translateY(0.5px); }
+.vdock__btn[hidden] { display: none; }
+.vdock__seek { width: clamp(80px, 22cqw, 220px); }
+.vdock__time { flex: none; font: 12px var(--font-mono); color: var(--text-3); white-space: nowrap; }
+.vside { display: flex; flex-direction: column; min-height: 0; background: var(--ed-panel); border-left: 1px solid var(--line); color: var(--ed-label); font-size: 13px; }
+.vside[hidden] { display: none; }
+.vside__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 12px; }
+.vside__top { padding: 10px 0; }
+.vside__foot { display: grid; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ed-sep-strong); }
+.vside__out { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vside__go { display: flex; gap: 8px; }
+.vside__go [data-download] { flex: 1; }
+.vside__go [hidden] { display: none; }
+.vside .ed-note { margin: 0; }
+.vfield { display: grid; gap: 4px; font-size: 12px; color: var(--ed-label); }
+.vfield select { width: 100%; }
+.vbtn-ico { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.vpanel__body { padding: 4px 0 10px; }
+.vstyles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.vstyle { display: grid; justify-items: center; gap: 3px; padding: 9px 2px 7px; font: inherit; color: var(--text-2); background: var(--ed-field); border: 1px solid var(--ed-sep-strong); cursor: pointer;
+  transition: border-color 150ms, background 150ms, color 150ms; }
+.vstyle:hover { border-color: var(--ed-label); color: var(--text); }
+.vstyle[aria-checked="true"] { color: #000; background: var(--text); border-color: var(--text); }
+.vstyle__glyph { font: 15px/1.2 var(--font-mono); letter-spacing: 0.05em; }
+.vstyle__name { font-size: 11px; }
+@media (max-width: 900px) {
+  .vapp { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
+  .vstage { height: 62svh; min-height: 280px; }
+  .vside { border-left: 0; border-top: 1px solid var(--line); }
+  .vside__scroll { overflow: visible; }
+  /* pasek sterowania na całą szerokość sceny; „Porównaj” tylko dla czytnika (ikona zostaje) */
+  .vdock { left: 8px; right: 8px; bottom: 8px; transform: none; max-width: none; gap: 6px; }
+  .vdock__seek { flex: 1; min-width: 0; width: auto; }
+  .vdock__time { font-size: 11px; }
+  .vdock__btn--text span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 /* /video: porównanie przed/po (wynik z lewej, oryginał z prawej, uchwyt przeciągany albo strzałkami) */
 .vcmp { position: relative; line-height: 0; touch-action: pan-y; }
@@ -509,8 +558,6 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
   color: var(--text); background: rgba(0, 0, 0, 0.7); border: 1px solid var(--line); pointer-events: none; }
 .vcmp__tag--r { left: auto; right: 8px; }
 .vcmp [hidden] { display: none; }
-.vbar { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
-.vbar[hidden] { display: none; }
 .vpanel { border-top: 1px solid var(--line); padding-top: 8px; }
 .vpanel > summary { cursor: pointer; font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text); padding: 6px 0;
   list-style: none; display: flex; justify-content: space-between; align-items: center; user-select: none; }
@@ -520,7 +567,6 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
   transform: rotate(45deg) translateY(-2px); transition: transform 180ms; }
 .vpanel[open] > summary::after { transform: rotate(-135deg) translate(-2px); }
 .vpanel > summary:hover::after { border-color: var(--text); }
-.logo__panel .ed-fx label { display: flex; gap: 8px; align-items: center; }
 .vscenes { margin: 48px 0 24px; }
 .vscenes__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .vscenes__item { margin: 0; }

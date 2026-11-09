@@ -35,7 +35,7 @@ try {
     const page = await browser.newPage({ viewport: { width: w, height: h } });
     for (const p of ['/', '/effects', '/logo', '/video', '/how-to', '/licenses', '/nie-ma']) { await page.goto(BASE + p, { waitUntil: 'networkidle' }); await audit(page, `${w}px ${p}`); }
     /* /video z wczytanym filmem, otwartymi panelami Color i Post FX i włączonym porównaniem przed/po */
-    await page.goto(BASE + '/video', { waitUntil: 'networkidle' }); await page.waitForFunction(() => document.querySelectorAll('[data-effect] option').length > 0);
+    await page.goto(BASE + '/video', { waitUntil: 'networkidle' }); await page.waitForFunction(() => document.querySelectorAll('[data-effect-id]').length > 0);
     await page.setInputFiles('[data-file]', VIDEO); await page.waitForFunction(() => (window as any).__videoTest.frames() > 0 && (window as any).__videoTest.idle(), null, { timeout: 60000 });
     await page.click('[data-compare]'); await page.waitForFunction(() => (window as any).__videoTest.originals() > 0);
     for (const d of await page.$$('.vpanel > summary')) await d.click();

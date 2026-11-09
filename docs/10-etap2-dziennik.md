@@ -1129,3 +1129,45 @@ Ich CSS przejrzany jako wzór (przejścia, stany, suwaki); kod napisany od nowa 
   - `test:video` 34/34. Nowe: okno 1280 × 720 z filmem poziomym i pionowym, czyli kanwa i przycisk porównania w całości w oknie po wczytaniu i po przewinięciu panelu; telefon 375 × 740: kanwa w oknie, ≤ 60% wysokości.
   - Pozostałe: smoke 79/79, a11y 30/30, logo 23/23, ui 42/42.
 - **BRAK:** Safari na iOS (pasek adresu zmienia wysokość okna; użyte `svh`).
+
+## /video krok A: układ edytora (prośba użytkownika: „wygląd edytora razem z funkcjonalnościami”, wzór devault-ascii)
+
+Decyzje użytkownika: tylko /video; funkcje: odtwarzanie i przewijanie, pasek presetów (krok B), siatka stylów i sekcje; limit 8 s bez zmian. Kod własny (ich kod bez licencji), bez ich nazwy i logo.
+
+### Co zmieniono (`kod`)
+
+- **Narzędzie na wysokość okna** (`.vapp`):
+  - scena z podglądem po lewej, panel 340 px po prawej;
+  - przed wczytaniem: samo pole wyboru (60% wysokości okna), przycisk „Wybierz film”, przeciąganie na scenę.
+- **Scena:**
+  - podgląd mieści się w niej z zachowaniem proporcji (container query `cqw`/`cqh`);
+  - u góry etykieta pliku (nazwa, wymiary, długość, klatki);
+  - na dole pasek sterowania: odtwórz/pauza, pasek przewijania (klatka), czas, Porównaj, pełny ekran (ukryty, gdy przeglądarka nie ma Fullscreen API).
+  - Spacja na scenie odtwarza/pauzuje (poza polami i przyciskami).
+- **Panel:**
+  - „Inny film”;
+  - zwijane sekcje: Styl (kafelki 10 efektów z próbką znaków; grupa radio: strzałki zmieniają wybór, w kolejności Tab jeden kafelek), Parametry, Color, Post FX, Film (klatki na sekundę);
+  - format, rozmiar, Pobierz i postęp przypięte na dole panelu.
+- **Wąsko (≤ 900 px):**
+  - scena 62% wysokości okna, panel pod nią;
+  - pasek sterowania na całą szerokość sceny, „Porównaj” jako ikona (napis dla czytnika).
+- **Poprawka przy okazji:** start zapisu od razu pokazuje „Koduję …”. Wcześniej został stary komunikat „Gotowe” z poprzedniego zapisu; wykrył to test MP4.
+- **Suwak przewijania** ma ten sam wygląd co suwaki parametrów (wspólne reguły CSS).
+
+### Testy (`test`)
+
+- **`test:video` 37/37.** Nowe:
+  - zmiana efektu kliknięciem kafelka;
+  - kafelki z klawiatury;
+  - odtwarzanie: pauza trzyma klatkę, przewinięcie do klatki 30 daje 0:02 / 0:08 i wypełnienie paska 25,2%, odtwórz rusza dalej;
+  - pełny ekran sceny włącza się i wyłącza;
+  - w oknie 1280 × 720 kanwa, Porównaj i Pobierz w całości widoczne.
+  - Test fps otwiera sekcję Film.
+- **Pozostałe:** a11y 30/30, smoke 79/79, logo 23/23, editor 90/90, ui 42/42.
+- **Zrzuty** 1440 × 900, 1280 × 720 (film pionowy) i 375 × 800 obejrzane.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Safari i Firefox: container queries, `:has()`, `backdrop-filter`.
+- Pełny ekran na iPadzie.
+- Ekrany dotykowe.

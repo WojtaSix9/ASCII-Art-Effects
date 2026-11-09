@@ -45,10 +45,10 @@ for (let i = 0; ; i++) { try { if ((await fetch(BASE)).ok) break; } catch { /* c
 const browser = await chromium.launch(); const errors: string[] = [];
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, acceptDownloads: true }); page.on('pageerror', (e) => errors.push(String(e))); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(BASE + '/'); await page.click('.nav__links a[href="/video"]'); await page.waitForSelector('[data-drop]');
+  await page.goto(BASE + '/'); await page.click('.nav__links a[href="/video"]'); await page.waitForSelector('[data-stage]');
   t('nawigacja: link „Wideo” prowadzi do /video', page.url().endsWith('/video') && (await page.textContent('h1')) === 'Wideo w ASCII');
-  await page.waitForFunction(() => document.querySelectorAll('[data-effect] option').length > 0);
-  const effs = await page.$$eval('[data-effect] option', (o) => o.map((x) => (x as HTMLOptionElement).value));
+  await page.waitForFunction(() => document.querySelectorAll('[data-effect-id]').length > 0);
+  const effs = await page.$$eval('[data-effect-id]', (o) => o.map((x) => (x as HTMLElement).dataset.effectId));
   t('efekty: tylko rodzina ASCII (10: ASCII & Text + Cross, Diamond, Lines, Diagonal)', effs.join() === 'characters,block-chars,braille,dots,mixed,asciiStudio,cross,diamond,lines,diagonal', effs);
 
   /* sceny: trzy kanwy 800 × 400 z obrazem (nie samo tło), podpis z nazwą i notką, uwaga, że to nie wynik narzędzia */
@@ -70,10 +70,28 @@ try {
   t('podgląd: kanwa widoczna, 480 × 270', !cv.hidden && cv.w === 480 && cv.h === 270, cv);
 
   /* zmiana efektu → nowy podgląd */
-  const before = l[3].mean; await page.evaluate(() => (window as any).__videoTest.setEffect('braille'));
-  await page.waitForFunction(() => (window as any).__videoTest.idle(), null, { timeout: 60_000 }); await page.waitForTimeout(300);
+  const before = l[3].mean; await page.click('[data-effect-id="braille"]');
+  await page.waitForTimeout(400); await page.waitForFunction(() => (window as any).__videoTest.idle() && document.querySelector('[data-bar]')!.hasAttribute('hidden'), null, { timeout: 60_000 }); await page.waitForTimeout(300);
   const after = await page.evaluate(() => (window as any).__videoTest.luma(105));
-  t('zmiana efektu (Characters → Braille): podgląd przeliczony (inna jasność klatki 7 s)', Math.abs(after.mean - before) > 0.5, { before, after: after.mean });
+  const checked = await page.$$eval('[data-effect-id][aria-checked="true"]', (b) => b.map((x) => (x as HTMLElement).dataset.effectId));
+  t('zmiana efektu kafelkiem (Characters → Braille): jeden zaznaczony kafelek, podgląd przeliczony (inna jasność klatki 7 s)', checked.join() === 'braille' && Math.abs(after.mean - before) > 0.5, { checked, before, after: after.mean });
+  /* kafelki z klawiatury (grupa radio): strzałka w prawo → następny efekt, fokus na nim; Tab trafia tylko na zaznaczony */
+  await page.focus('[data-effect-id="braille"]'); await page.keyboard.press('ArrowRight');
+  const kb = await page.evaluate(() => ({ checked: (document.querySelector('[data-effect-id][aria-checked="true"]') as HTMLElement).dataset.effectId, focused: (document.activeElement as HTMLElement).dataset.effectId, tabbable: [...document.querySelectorAll('[data-effect-id]')].filter((b) => (b as HTMLElement).tabIndex === 0).length }));
+  t('kafelki: strzałka w prawo z Braille → Dots (zaznaczony i z fokusem), w kolejności Tab jeden kafelek', kb.checked === 'dots' && kb.focused === 'dots' && kb.tabbable === 1, kb);
+  await page.click('[data-effect-id="braille"]'); await page.waitForTimeout(400); await page.waitForFunction(() => (window as any).__videoTest.idle() && document.querySelector('[data-bar]')!.hasAttribute('hidden'), null, { timeout: 60_000 });
+
+  /* odtwarzanie: pauza zatrzymuje klatkę; przewinięcie do klatki 30 (15 kl./s) → czas 0:02 / 0:08; odtwórz → klatka znów się zmienia */
+  await page.click('[data-play]'); const p1 = await page.evaluate(() => (window as any).__videoTest.frame()); await page.waitForTimeout(500); const p2 = await page.evaluate(() => (window as any).__videoTest.frame());
+  const paused = await page.evaluate(() => ({ playing: (window as any).__videoTest.playing(), label: document.querySelector('[data-play]')!.getAttribute('aria-label') }));
+  await page.locator('[data-seek]').fill('30'); const sk = await page.evaluate(() => ({ k: (window as any).__videoTest.frame(), time: document.querySelector('[data-time]')!.textContent, fill: (document.querySelector('[data-seek]') as HTMLElement).style.getPropertyValue('--p') }));
+  await page.click('[data-play]'); await page.waitForTimeout(500); const p3 = await page.evaluate(() => (window as any).__videoTest.frame());
+  t('odtwarzanie: pauza trzyma klatkę (przycisk „Odtwórz”), przewinięcie do 30 → 0:02 / 0:08 i wypełnienie paska, odtwórz → klatka dalej', p1 === p2 && !paused.playing && paused.label === 'Odtwórz' && sk.k === 30 && sk.time === '0:02 / 0:08' && sk.fill.startsWith('25.2') && p3 !== 30, { p1, p2, paused, sk, p3 });
+  /* pełny ekran sceny (jeśli przeglądarka go ma; inaczej przycisk ukryty) */
+  const fs = await page.evaluate(() => document.fullscreenEnabled);
+  if (fs) { await page.click('[data-full]'); await page.waitForTimeout(300); const on = await page.evaluate(() => document.fullscreenElement?.matches('[data-stage]') ?? false); await page.click('[data-full]'); await page.waitForTimeout(300); const off = await page.evaluate(() => !document.fullscreenElement);
+    t('pełny ekran: przycisk włącza go dla sceny i wyłącza', on && off, { on, off }); }
+  else t('pełny ekran: przeglądarka bez Fullscreen API → przycisk ukryty', await page.isHidden('[data-full]'));
 
   /* eksport GIF 720 px: 720 × 405, 120 klatek, bez dźwięku (GIF go nie ma) */
   const dl = async (fmt: string, side: string) => { await page.selectOption('[data-format]', fmt); await page.selectOption('select[name="side"]', side); const [d] = await Promise.all([page.waitForEvent('download', { timeout: 300_000 }), page.click('[data-download]')]); return { name: d.suggestedFilename(), path: (await d.path())! }; };
@@ -137,7 +155,7 @@ try {
   t('wyłączenie porównania zwalnia klatki źródłowe', o1 === 0, o1);
 
   /* krótki pionowy film, 12 fps: 3 s → 36 klatek, 270 × 480, bez komunikatu o przycięciu */
-  await page.selectOption('select[name="fps"]', '12'); await page.waitForTimeout(100);
+  await page.click('.vpanel:has(select[name="fps"]) > summary'); await page.selectOption('select[name="fps"]', '12'); await page.waitForTimeout(100);
   await page.setInputFiles('[data-file]', short);
   await page.waitForFunction(() => (window as any).__videoTest.info()?.n === 36 && (window as any).__videoTest.frames() === 36 && (window as any).__videoTest.idle(), null, { timeout: 60_000 });
   const i2 = await page.evaluate(() => (window as any).__videoTest.info()); const m2 = await page.textContent('[data-msg]');
@@ -154,13 +172,13 @@ try {
      i pionowy; po wczytaniu kanwa i przycisk porównania w całości w oknie, także po przewinięciu na koniec panelu (pole przyklejone).
      Telefon 375 × 740: kanwa najwyżej 60% wysokości okna (+1 px na zaokrąglenie). */
   for (const [vw, vh, f, label] of [[1280, 720, long, 'poziomy'], [1280, 720, short, 'pionowy'], [375, 740, long, 'poziomy, telefon'], [375, 740, short, 'pionowy, telefon']] as const) {
-    const v = await browser.newPage({ viewport: { width: vw, height: vh } }); await v.goto(BASE + '/video'); await v.waitForFunction(() => document.querySelectorAll('[data-effect] option').length > 0);
+    const v = await browser.newPage({ viewport: { width: vw, height: vh } }); await v.goto(BASE + '/video'); await v.waitForFunction(() => document.querySelectorAll('[data-effect-id]').length > 0);
     await v.setInputFiles('[data-file]', f); await v.waitForFunction(() => (window as any).__videoTest.frames() > 0 && (window as any).__videoTest.idle(), null, { timeout: 120_000 }); await v.waitForTimeout(900);
-    const fit = () => v.evaluate(() => { const c = document.querySelector('[data-canvas]')!.getBoundingClientRect(), b = document.querySelector('[data-compare]')!.getBoundingClientRect(); return { top: Math.round(c.top), bottom: Math.round(c.bottom), w: Math.round(c.width), h: Math.round(c.height), btn: Math.round(b.bottom), ih: innerHeight }; });
+    const fit = () => v.evaluate(() => { const c = document.querySelector('[data-canvas]')!.getBoundingClientRect(), b = document.querySelector('[data-compare]')!.getBoundingClientRect(), d = document.querySelector('[data-download]')!.getBoundingClientRect(); return { top: Math.round(c.top), bottom: Math.round(c.bottom), w: Math.round(c.width), h: Math.round(c.height), btn: Math.round(b.bottom), dl: Math.round(d.bottom), ih: innerHeight }; });
     const a = await fit(); await v.evaluate(() => { const p = document.querySelector('[data-form]')!; p.scrollIntoView({ block: 'end' }); }); await v.waitForTimeout(300); const z = await fit();
     const inView = (r: typeof a) => r.top >= 0 && r.bottom <= r.ih && r.btn <= r.ih;
-    const ok = vw > 900 ? inView(a) && inView(z) : inView(a) && a.h <= 0.6 * vh + 1;
-    t(`podgląd w oknie ${vw}×${vh}, film ${label}: kanwa${vw > 900 ? ' i przycisk porównania w całości w oknie po wczytaniu i po przewinięciu panelu' : ' w oknie po wczytaniu, wysokość ≤ 60% okna'}`, ok, { po: a, przewinięte: z });
+    const ok = vw > 900 ? inView(a) && inView(z) && a.dl <= a.ih : inView(a) && a.h <= 0.6 * vh + 1;
+    t(`podgląd w oknie ${vw}×${vh}, film ${label}: kanwa${vw > 900 ? ', przycisk porównania i Pobierz w całości w oknie po wczytaniu i po przewinięciu panelu' : ' w oknie po wczytaniu, wysokość ≤ 60% okna'}`, ok, { po: a, przewinięte: z });
     await v.close();
   }
 
@@ -172,8 +190,8 @@ try {
   await page.evaluate(() => { (document.querySelector('[data-postfx]')!.closest('details') as HTMLDetailsElement).open = true; }); const sw = page.locator('[data-fx-on]').first(); await sw.check(); await page.waitForTimeout(400);
   const knob = await sw.evaluate((el) => getComputedStyle(el, '::after').transform);
   t('suwak: po End wypełnienie toru 100% (--p), wartość = max; przełącznik zaznaczony: uchwyt przesunięty o 14 px', fill.p === '100%' && fill.v === fill.max && knob === 'matrix(1, 0, 0, 1, 14, 0)', { fill, knob });
-  const rm = await browser.newPage({ reducedMotion: 'reduce' }); await rm.goto(BASE + '/video'); await rm.waitForFunction(() => document.querySelectorAll('[data-effect] option').length > 0);
-  const motion = await rm.evaluate(() => ['.ed-btn', '.logo__drop'].map((s) => getComputedStyle(document.querySelector(s)!).transitionDuration));
+  const rm = await browser.newPage({ reducedMotion: 'reduce' }); await rm.goto(BASE + '/video'); await rm.waitForFunction(() => document.querySelectorAll('[data-effect-id]').length > 0);
+  const motion = await rm.evaluate(() => ['.ed-btn', '.vstage'].map((s) => getComputedStyle(document.querySelector(s)!).transitionDuration));
   t('prefers-reduced-motion: przejścia wyłączone (0s)', motion.every((d) => d.split(',').every((x) => parseFloat(x) === 0)), motion); await rm.close();
 } finally { await browser.close(); server.kill(); }
 t('brak błędów w konsoli', errors.length === 0, errors);
