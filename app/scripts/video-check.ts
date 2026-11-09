@@ -150,6 +150,20 @@ try {
   await page.setInputFiles('[data-file]', junk); await page.waitForFunction(() => (window as any).__videoTest.idle() && /odczytać|ścieżki/.test(document.querySelector('[data-msg]')!.textContent ?? ''), null, { timeout: 30_000 }).catch(() => {});
   const m4 = await page.textContent('[data-msg]'); t('plik, który nie jest filmem: komunikat', !!m4 && /odczytać|ścieżki wideo/.test(m4), m4);
 
+  /* podgląd mieści się w oknie (zgłoszenie użytkownika: trzeba było przewijać, by zobaczyć dół filmu): okno 1280 × 720, film poziomy
+     i pionowy; po wczytaniu kanwa i przycisk porównania w całości w oknie, także po przewinięciu na koniec panelu (pole przyklejone).
+     Telefon 375 × 740: kanwa najwyżej 60% wysokości okna (+1 px na zaokrąglenie). */
+  for (const [vw, vh, f, label] of [[1280, 720, long, 'poziomy'], [1280, 720, short, 'pionowy'], [375, 740, long, 'poziomy, telefon'], [375, 740, short, 'pionowy, telefon']] as const) {
+    const v = await browser.newPage({ viewport: { width: vw, height: vh } }); await v.goto(BASE + '/video'); await v.waitForFunction(() => document.querySelectorAll('[data-effect] option').length > 0);
+    await v.setInputFiles('[data-file]', f); await v.waitForFunction(() => (window as any).__videoTest.frames() > 0 && (window as any).__videoTest.idle(), null, { timeout: 120_000 }); await v.waitForTimeout(900);
+    const fit = () => v.evaluate(() => { const c = document.querySelector('[data-canvas]')!.getBoundingClientRect(), b = document.querySelector('[data-compare]')!.getBoundingClientRect(); return { top: Math.round(c.top), bottom: Math.round(c.bottom), w: Math.round(c.width), h: Math.round(c.height), btn: Math.round(b.bottom), ih: innerHeight }; });
+    const a = await fit(); await v.evaluate(() => { const p = document.querySelector('[data-form]')!; p.scrollIntoView({ block: 'end' }); }); await v.waitForTimeout(300); const z = await fit();
+    const inView = (r: typeof a) => r.top >= 0 && r.bottom <= r.ih && r.btn <= r.ih;
+    const ok = vw > 900 ? inView(a) && inView(z) : inView(a) && a.h <= 0.6 * vh + 1;
+    t(`podgląd w oknie ${vw}×${vh}, film ${label}: kanwa${vw > 900 ? ' i przycisk porównania w całości w oknie po wczytaniu i po przewinięciu panelu' : ' w oknie po wczytaniu, wysokość ≤ 60% okna'}`, ok, { po: a, przewinięte: z });
+    await v.close();
+  }
+
   /* mikrointerakcje (wzór devault-ascii): wypełnienie toru suwaka = wartość; przełącznik po zaznaczeniu ma uchwyt przesunięty o 14 px;
      przy prefers-reduced-motion przejścia i animacje wyłączone */
   await page.setInputFiles('[data-file]', short); await page.waitForFunction(() => (window as any).__videoTest.frames() > 0 && (window as any).__videoTest.idle(), null, { timeout: 60_000 });

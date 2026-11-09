@@ -491,9 +491,17 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
 @media (max-width: 900px) { .logo { grid-template-columns: 1fr; } }
 /* Strona /video: panel parametrów efektu w panelu ustawień; przykłady (sceny ascii.rest) w trzech kolumnach (wąsko: jedna) */
 .logo__panel .pp-sec label { display: block; }
-.page-video .logo__canvas { width: 100%; }   /* klatki podglądu mają 480 px; pole jest szersze */
+/* /video: podgląd mieści się w oknie. Szerokość = mniejsza z szerokości kolumny i (wysokość okna − marginesy) × proporcje filmu
+   (--ar ustawia video-page.ts), więc pionowy i poziomy film widać w całości; pole podglądu przykleja się u góry przy przewijaniu panelu. */
+.page-video .logo__canvas { width: 100%; }
+.page-video .logo__drop { position: sticky; top: 16px; }
+.page-video .vcmp { width: min(100%, calc((100svh - var(--vchrome, 140px)) * var(--ar, 1.7778))); margin: 0 auto; }
+@media (max-width: 900px) {   /* jedna kolumna: bez przyklejania (zasłaniałoby panel), podgląd do 60% wysokości okna */
+  .page-video .logo__drop { position: static; }
+  .page-video .vcmp { width: min(100%, calc(60svh * var(--ar, 1.7778))); }
+}
 /* /video: porównanie przed/po (wynik z lewej, oryginał z prawej, uchwyt przeciągany albo strzałkami) */
-.vcmp { position: relative; width: 100%; line-height: 0; touch-action: pan-y; }
+.vcmp { position: relative; line-height: 0; touch-action: pan-y; }
 .vcmp__handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 32px; height: 32px; display: grid; place-items: center;
   background: #000; color: #fff; border: 1px solid #fff; cursor: ew-resize; font: 12px/1 var(--font-mono); }
 .vcmp__handle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }

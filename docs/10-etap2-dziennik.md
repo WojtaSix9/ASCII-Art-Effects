@@ -1115,3 +1115,17 @@ Ich CSS przejrzany jako wzór (przejścia, stany, suwaki); kod napisany od nowa 
 
 - Wygląd suwaków i przełączników w Safari i Firefoksie (pseudo-elementy `::-webkit-slider-*`, `::-moz-range-*` i `::after` na checkboxie).
 - Ekrany dotykowe.
+
+## /video: podgląd mieści się w oknie (zgłoszenie użytkownika)
+
+- **Problem (`test`, zgłoszenie):** podgląd zajmował całą szerokość kolumny bez względu na wysokość okna (film 16:9 w kolumnie ok. 870 px miał ponad 490 px wysokości, pionowy ok. 1500 px), więc dół filmu był poza oknem.
+- **Zmiana (`kod`):**
+  - szerokość podglądu = mniejsza z szerokości kolumny i (wysokość okna − 140 px) × proporcje filmu (`--ar` z `video-page.ts`);
+  - pole podglądu przyklejone u góry przy przewijaniu panelu ustawień;
+  - po wczytaniu filmu strona przewija się do podglądu, jeśli nie jest w całości widoczny;
+  - wąsko (jedna kolumna): bez przyklejania, podgląd do 60% wysokości okna.
+  - Marginesy 140 px i 60% to wartości projektowe (`proj`), nie dobierane pod test.
+- **Testy (`test`):**
+  - `test:video` 34/34. Nowe: okno 1280 × 720 z filmem poziomym i pionowym, czyli kanwa i przycisk porównania w całości w oknie po wczytaniu i po przewinięciu panelu; telefon 375 × 740: kanwa w oknie, ≤ 60% wysokości.
+  - Pozostałe: smoke 79/79, a11y 30/30, logo 23/23, ui 42/42.
+- **BRAK:** Safari na iOS (pasek adresu zmienia wysokość okna; użyte `svh`).

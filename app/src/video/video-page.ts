@@ -103,6 +103,8 @@ export function mountVideo(main: HTMLElement): () => void {
       loadNote = r.truncated ? `Film ma ${r.duration.toFixed(1)} s; używam pierwszych ${r.used.toFixed(0)} s.` : '';
       facts.textContent = `${f.name}: ${r.srcW}×${r.srcH} px, ${r.used.toFixed(1)} s, ${r.n} klatek po ${r.fps} na s.`;
       setMsg(loadNote, r.truncated ? 'warn' : ''); bar.hidden = true; await preview();
+      /* podgląd w całości w oknie: jeśli wystaje, przewijamy do pola (bez animacji przy prefers-reduced-motion) */
+      const rr = drop.getBoundingClientRect(); if (alive && mine === loadN && (rr.top < 0 || rr.bottom > innerHeight)) drop.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     } catch (e) {
       if (mine !== loadN) return; loadJob = null; bar.hidden = true;
       const m = (e as Error).message; if (m !== CANCELLED) setMsg(explain(m), 'error');
@@ -133,6 +135,7 @@ export function mountVideo(main: HTMLElement): () => void {
   const play = () => {
     cancelAnimationFrame(raf); if (!frames.length || !info) return;
     canvas.width = frames[0].width; canvas.height = frames[0].height; cmp.hidden = false; $('[data-vbar]').hidden = false;
+    cmp.style.setProperty('--ar', String(frames[0].width / frames[0].height));   // proporcje dla CSS: podgląd mieści się w oknie
     const g = canvas.getContext('2d')!; const fps = info.fps, n = frames.length, w = canvas.width, h = canvas.height; const t0 = performance.now(); let last = -1;
     redraw = () => { last = -1; };
     draw = (k: number) => {
