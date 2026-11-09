@@ -1171,3 +1171,30 @@ Decyzje użytkownika: tylko /video; funkcje: odtwarzanie i przewijanie, pasek pr
 - Safari i Firefox: container queries, `:has()`, `backdrop-filter`.
 - Pełny ekran na iPadzie.
 - Ekrany dotykowe.
+
+## /video krok B: pasek presetów (prośba użytkownika, wzór devault-ascii, zestawy własne)
+
+### Co zmieniono (`kod`)
+
+- **`app/src/video/presets.ts`:** 12 presetów z rodziny ASCII (`proj`, wartości dobrane okiem): Klasyczny, Mono, Terminal, Bursztyn, Stary monitor, Papier, Braille, Bloki, Raster, Mieszany, Glitch, Film. Każdy to efekt z parametrami, opcjonalnie Color i Post FX.
+- **Worker, `videoThumbs`:** środkowa klatka filmu w każdym presecie, kwadratowa miniatura ze środka kadru, 192 px (96 px na ekranie × 2).
+- **Pasek pod sceną:** tytuł, podpowiedź, przyciski ‹ › (wyłączone na końcach), przewijanie w poziomie.
+  - Kliknięcie ustawia efekt, parametry, Color i Post FX (panele przebudowane) i od razu przelicza podgląd.
+  - Ręczna zmiana zdejmuje zaznaczenie presetu.
+  - Miniatury liczą się po wczytaniu filmu (nowy film: od nowa; nieudane wczytanie: pasek ukryty).
+
+### Testy (`test`)
+
+- **`test:video` 42/42.** Nowe:
+  - w Node: presety tylko z efektów rodziny ASCII, unikalne id, każdy parametr efektu, Color i Post FX istnieje w definicji silnika i ma dozwoloną wartość;
+  - 12 miniatur narysowanych i niepustych;
+  - „Terminal” zaznaczony; Characters z tuszem #3dff7a w stanie i w panelu; Bloom i Scan Lines w stanie i na przełącznikach; podgląd przeliczony;
+  - zapis GIF po presecie: w klatce 7 s zielony kanał > 2 × czerwony (`proj`: próg z koloru tuszu, g/r ≈ 4,2, nie dobierany pod wynik);
+  - ręczna zmiana zdejmuje zaznaczenie.
+- **Pozostałe:** a11y 30/30, smoke 79/79, logo 23/23, editor 90/90, ui 42/42.
+- **Zrzuty** 1440 × 900 i 375 × 800 obejrzane.
+
+### Czego nie sprawdzono (`BRAK`)
+
+- Wygląd presetów na prawdziwych filmach (tylko filmy testowe z ffmpeg), więc wartości mogą wymagać korekty po obejrzeniu.
+- Safari, Firefox, ekrany dotykowe.

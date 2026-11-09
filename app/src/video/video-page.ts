@@ -13,6 +13,7 @@ import { ICON } from '../editor/icons.ts';
 import { mountParamPanel, rangeFill, type Values } from '../ui/param-panel.ts';
 import { colorHtml, mountColorPanel, mountPostFxPanel } from '../ui/post-panels.ts';
 import { mountScenes, scenesHtml } from './scenes.ts';
+import { VIDEO_PRESETS, type VideoPreset } from './presets.ts';
 
 /** Rodzina ASCII (decyzja użytkownika: „Characters, Block, Braille, Dots, Mixed i pokrewne”): kategoria ASCII & Text silnika
  *  i cztery efekty siatki znaków z kategorii Geometric (Cross, Diamond, Lines, Diagonal), które rysują glif w komórce. */
@@ -22,6 +23,8 @@ const SAMPLE: Record<string, string> = { characters: '@%#*', 'block-chars': '█
 /** Klatki na sekundę (proj): 15 jak sceny ascii.rest; więcej podwaja pamięć klatek (8 s × 24 fps = 192 klatki). */
 export const VIDEO_FPS = [12, 15];
 
+/** Miniatura presetu: 96 px na ekranie, liczona 2× dla ekranów o dużej gęstości (proj). */
+const THUMB = 192;
 const sec = (title: string, body: string, open = false, attrs = '') => `<details class="vpanel"${open ? ' open' : ''}${attrs}><summary>${title}</summary><div class="vpanel__body">${body}</div></details>`;
 
 export const videoHtml = () => `
@@ -29,6 +32,7 @@ export const videoHtml = () => `
 <h1 tabindex="-1">Wideo w ASCII</h1>
 <p>Zamienia krótki film (do 8 s) na animację ze znaków w jednym z efektów ASCII i zapisuje ją jako GIF albo MP4. Plik nie opuszcza przeglądarki. Dźwięk nie jest zapisywany.</p>
 <div class="vapp" data-app>
+  <div class="vleft">
   <section class="vstage" data-stage aria-label="Podgląd">
     <div class="vstage__empty" data-prompt>
       <p>Przeciągnij tu film albo</p>
@@ -50,6 +54,12 @@ export const videoHtml = () => `
     </div>
     <input type="file" data-file accept="video/*,.mp4,.webm,.mov,.mkv,.m4v" hidden>
   </section>
+  <section class="vpresets" data-presets aria-labelledby="vpresets-h" hidden>
+    <div class="vpresets__head"><h2 id="vpresets-h" class="vpresets__title">Presety</h2><p class="ed-hint">Twój film w każdym zestawie. Kliknij, by zastosować.</p>
+      <span class="vpresets__nav"><button type="button" class="vdock__btn" data-preset-prev aria-label="Przewiń presety w lewo">‹</button><button type="button" class="vdock__btn" data-preset-next aria-label="Przewiń presety w prawo">›</button></span></div>
+    <div class="vpresets__row" data-preset-row>${VIDEO_PRESETS.map((p) => `<button type="button" class="vpreset" data-preset="${p.id}" aria-pressed="false"><canvas width="${THUMB}" height="${THUMB}" aria-hidden="true"></canvas><span>${p.name}</span></button>`).join('')}</div>
+  </section>
+  </div>
   <aside class="vside" data-form aria-label="Ustawienia" hidden>
     <div class="vside__scroll">
       <div class="vside__top"><button type="button" class="ed-btn vbtn-ico" data-another>${ICON.upload} Inny film</button></div>
@@ -106,25 +116,51 @@ export function mountVideo(main: HTMLElement): () => void {
   };
   const buildParams = () => {
     const e = defs.find((d) => d.id === effect)!;
-    params[e.id] = mountParamPanel($('[data-params]'), e.name, e.params, params[e.id] ?? {}, (v) => { params[e.id] = v; schedule(); })();
+    params[e.id] = mountParamPanel($('[data-params]'), e.name, e.params, params[e.id] ?? {}, (v) => { params[e.id] = v; changed(); })();
   };
   const selectEffect = (id: string, focus = false) => {
     if (!defs.some((d) => d.id === id)) return; effect = id;
     styles.querySelectorAll<HTMLButtonElement>('[data-effect-id]').forEach((b) => { const on = b.dataset.effectId === id; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); });
     buildParams(); fxUi?.syncGlyph();
   };
-  styles.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLButtonElement>('[data-effect-id]'); if (b && b.dataset.effectId !== effect) { selectEffect(b.dataset.effectId!); schedule(); } });
+  styles.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLButtonElement>('[data-effect-id]'); if (b && b.dataset.effectId !== effect) { selectEffect(b.dataset.effectId!); changed(); } });
   styles.addEventListener('keydown', (e) => {
     const i = defs.findIndex((d) => d.id === effect); const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-    if (!step) return; e.preventDefault(); selectEffect(defs[(i + step + defs.length) % defs.length].id, true); schedule();
+    if (!step) return; e.preventDefault(); selectEffect(defs[(i + step + defs.length) % defs.length].id, true); changed();
   });
-  let fxUi: { syncGlyph: () => void } | null = null;
+  let fxUi: { build: () => void; syncGlyph: () => void } | null = null, colorUi: { build: () => void } | null = null;
   Promise.all([engine.defs(), engine.postDefs()]).then(([d, post]) => {
     if (!alive) return; defs = VIDEO_EFFECTS.map((id) => d.find((x) => x.id === id)).filter((x): x is EffectMeta => !!x);
     drawStyles(); buildParams();
-    mountColorPanel($('[data-color-box]'), post.color, { get: () => color, set: (v) => { color = v; }, change: schedule, commit: () => {} }).build();
-    const fx = mountPostFxPanel($('[data-postfx]'), post, () => effect, { get: () => postFx, change: schedule, commit: () => {} }); fx.build(); fxUi = fx;
+    colorUi = mountColorPanel($('[data-color-box]'), post.color, { get: () => color, set: (v) => { color = v; }, change: changed, commit: () => {} }); colorUi.build();
+    const fx = mountPostFxPanel($('[data-postfx]'), post, () => effect, { get: () => postFx, change: changed, commit: () => {} }); fx.build(); fxUi = fx;
   });
+
+  /* Presety (krok B): kliknięcie ustawia efekt, jego parametry, Color i Post FX; ręczna zmiana zdejmuje zaznaczenie presetu.
+     Miniatury: środkowa klatka filmu w każdym presecie, liczone w Workerze po wczytaniu filmu. */
+  const presetsEl = $('[data-presets]'), row = $('[data-preset-row]');
+  let activePreset: string | null = null, thumbN = 0, thumbsDrawn = 0;
+  const markPreset = (id: string | null) => { activePreset = id; row.querySelectorAll<HTMLButtonElement>('[data-preset]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preset === id))); };
+  const changed = () => { if (activePreset) markPreset(null); schedule(); };
+  const applyPreset = (p: VideoPreset) => {
+    const st = structuredClone(p.state); params[st.style.id] = { ...(st.style.params ?? {}) };
+    color = { ...(st.color ?? {}) }; postFx = (st.postFx ?? {}) as Record<string, Values>;
+    selectEffect(st.style.id); colorUi?.build(); fxUi?.build(); markPreset(p.id); clearTimeout(tm); preview();
+  };
+  row.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLButtonElement>('[data-preset]'); const p = b && VIDEO_PRESETS.find((x) => x.id === b.dataset.preset); if (p) applyPreset(p); });
+  const navSync = () => { $<HTMLButtonElement>('[data-preset-prev]').disabled = row.scrollLeft <= 0; $<HTMLButtonElement>('[data-preset-next]').disabled = row.scrollLeft + row.clientWidth >= row.scrollWidth - 1; };
+  $('[data-preset-prev]').addEventListener('click', () => row.scrollBy({ left: -row.clientWidth * 0.8, behavior: 'smooth' }));
+  $('[data-preset-next]').addEventListener('click', () => row.scrollBy({ left: row.clientWidth * 0.8, behavior: 'smooth' }));
+  row.addEventListener('scroll', navSync, { passive: true });
+  const renderThumbs = async () => {
+    if (!info) return; const mine = ++thumbN; thumbsDrawn = 0; presetsEl.hidden = false; navSync();
+    try {
+      const bms = await engine.callLong<ImageBitmap[]>({ type: 'videoThumbs', states: VIDEO_PRESETS.map((p) => p.state), index: Math.floor(info.n / 2), size: THUMB }, () => {}).promise;
+      if (mine !== thumbN || !alive) { bms.forEach((b) => b.close()); return; }
+      bms.forEach((b, i) => { const c = row.querySelector<HTMLCanvasElement>(`[data-preset="${VIDEO_PRESETS[i].id}"] canvas`)!; c.getContext('2d')!.drawImage(b, 0, 0); b.close(); c.classList.add('is-ready'); });
+      thumbsDrawn = bms.length; navSync();
+    } catch { /* bez miniatur pasek nadal działa (same nazwy) */ }
+  };
 
   /** Wczytanie: Worker dekoduje pierwsze 8 s w fps klatek na sekundę (dłuższy bok 480 px). */
   /* nowy plik (albo inne fps) przerywa trwające wczytywanie; w czasie eksportu wczytywanie czeka na jego koniec */
@@ -134,12 +170,14 @@ export function mountVideo(main: HTMLElement): () => void {
     if (busy) { setMsg('Poczekaj na koniec zapisu albo go przerwij.'); return; }
     loadJob?.cancel(); previewJob?.cancel(); const mine = ++loadN; file = f; info = null; if (cmpOn) setCompare(false); else dropOriginals();
     form.hidden = false; showEmpty(false);
+    row.querySelectorAll('canvas').forEach((c) => c.classList.remove('is-ready'));
     const l = engine.callLong<VideoInfo>({ type: 'videoLoad', file: f, fps: Number(val('fps')) }, (d, t) => { if (mine === loadN) progress('Czytam klatki')(d, t); }); loadJob = l;
     try {
       const r = await l.promise; if (!alive || mine !== loadN) return; info = r; loadJob = null;
       loadNote = r.truncated ? `Film ma ${r.duration.toFixed(1)} s; używam pierwszych ${r.used.toFixed(0)} s.` : '';
       facts.textContent = `${f.name} · ${r.srcW}×${r.srcH} · ${r.used.toFixed(1)} s · ${r.n} klatek po ${r.fps}/s`; facts.hidden = false;
       seek.max = String(r.n - 1); setMsg(loadNote, r.truncated ? 'warn' : ''); bar.hidden = true; await preview();
+      renderThumbs();
       /* narzędzie w całości w oknie: jeśli wystaje, przewijamy do niego (bez animacji przy prefers-reduced-motion) */
       const rr = app.getBoundingClientRect(); if (alive && mine === loadN && (rr.top < 0 || rr.bottom > innerHeight)) app.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     } catch (e) {
@@ -147,7 +185,7 @@ export function mountVideo(main: HTMLElement): () => void {
       const m = (e as Error).message; if (m !== CANCELLED) setMsg(explain(m), 'error');
       /* nieudane wczytanie: bez filmu, scena znów do wyboru pliku (komunikat zostaje w panelu) */
       cancelAnimationFrame(raf); frames.forEach((b) => b.close()); frames = []; file = null; facts.hidden = true;
-      cmp.hidden = true; dock.hidden = true; showEmpty(true);
+      cmp.hidden = true; dock.hidden = true; presetsEl.hidden = true; ++thumbN; showEmpty(true);
     }
   };
 
@@ -276,6 +314,7 @@ export function mountVideo(main: HTMLElement): () => void {
       const x0 = Math.round(a * canvas.width), x1 = Math.round(b * canvas.width); return [...x.getImageData(x0, 0, x1 - x0, canvas.height).data]; }; const eq = (p: number[], q: number[]) => p.length === q.length && p.every((v, j) => v === q[j]);
       const cv = band(null); return { sameAsOut: eq(cv, band(frames[i])), sameAsSrc: originals[i] ? eq(cv, band(originals[i])) : false }; },
     resume: () => setPlaying(true), frame: () => k, playing: () => playing,
+    thumbs: () => thumbsDrawn, preset: () => activePreset, state: () => state(),
     compare: (on: boolean, at = 0.5) => { setSplit(at); return setCompare(on); }, originals: () => originals.length,
     /* średnia jasność klatki podglądu i (0–255) i jej rozmiar, do testów zgodności podglądu z filmem */
     luma: (i: number) => { const b = frames[i]; if (!b) return null; const c = new OffscreenCanvas(b.width, b.height); const x = c.getContext('2d')!; x.drawImage(b, 0, 0); const d = x.getImageData(0, 0, b.width, b.height).data; let s = 0; for (let j = 0; j < d.length; j += 4) s += 0.2126 * d[j] + 0.7152 * d[j + 1] + 0.0722 * d[j + 2]; return { mean: s / (d.length / 4), w: b.width, h: b.height }; },

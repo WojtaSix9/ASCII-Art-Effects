@@ -175,6 +175,17 @@ async function handle(req: Req, id = 0): Promise<{ data: unknown; transfer?: Tra
       const out = await Promise.all(video.frames.map((f) => createImageBitmap(new ImageData(new Uint8ClampedArray(f.data), f.w, f.h))));
       return { data: out, transfer: out };
     }
+    case 'videoThumbs': {
+      if (!video) throw new Error('no video'); const src = video.frames[Math.min(Math.max(0, req.index), video.frames.length - 1)]; const out: ImageBitmap[] = [];
+      try {
+        for (const st of req.states) {
+          await new Promise((r) => setTimeout(r, 0)); if (cancelled.has(id)) throw new Error(CANCELLED);
+          await ensure(rampText(st)); const r = render(src, st, { scale: 1, glyphs, text: textR }); const s = Math.min(r.img.w, r.img.h);
+          out.push(await createImageBitmap(new ImageData(new Uint8ClampedArray(r.img.data), r.img.w, r.img.h), (r.img.w - s) >> 1, (r.img.h - s) >> 1, s, s, { resizeWidth: req.size, resizeHeight: req.size, resizeQuality: 'high' }));
+        }
+      } catch (e) { out.forEach((b) => b.close()); throw e; } finally { cancelled.delete(id); }
+      return { data: out, transfer: out };
+    }
     case 'videoExport': {
       if (!video) throw new Error('no video'); const v = video; const n = v.frames.length, fps = v.info.fps;
       const w = Math.round(v.info.w * req.scale), h = Math.round(v.info.h * req.scale);

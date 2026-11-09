@@ -497,6 +497,24 @@ kbd { font-family: var(--font-mono); font-size: 13px; color: var(--text); backgr
 .page-video { max-width: 1600px; }
 .vapp { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: calc(100svh - 32px); min-height: 520px; margin: 24px 0; border: 1px solid var(--line); }
 .vapp:has(> [data-form][hidden]) { grid-template-columns: minmax(0, 1fr); height: 60svh; min-height: 320px; }   /* przed wczytaniem: samo pole wyboru */
+.vleft { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+/* pasek presetów pod sceną: miniatury 96 px (płótno 192 px), przewijany w poziomie, przyciski ‹ › */
+.vpresets { border-top: 1px solid var(--line); background: var(--bg); padding: 10px 12px 12px; min-width: 0; }
+.vpresets[hidden] { display: none; }
+.vpresets__head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.vpresets__head .ed-hint { margin: 0; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.vpresets__title { margin: 0; font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text); }
+.vpresets__nav { display: flex; gap: 4px; }
+.vpresets__nav .vdock__btn { border: 1px solid var(--ed-sep-strong); background: none; }
+.vpresets__nav .vdock__btn:disabled { opacity: 0.35; cursor: default; }
+.vpresets__row { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; padding-bottom: 2px; }
+.vpreset { flex: none; width: 96px; display: flex; flex-direction: column; padding: 0; text-align: left; cursor: pointer; scroll-snap-align: start;
+  font: inherit; color: var(--text-2); background: var(--ed-field); border: 1px solid var(--ed-sep-strong); transition: border-color 150ms, color 150ms; }
+.vpreset canvas { display: block; width: 100%; aspect-ratio: 1; background: #000; opacity: 0; transition: opacity 300ms; }
+.vpreset canvas.is-ready { opacity: 1; }
+.vpreset span { padding: 5px 6px 6px; font: 500 10px/1.25 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+.vpreset:hover { border-color: var(--text); color: var(--text); }
+.vpreset[aria-pressed="true"] { border-color: var(--text); color: #000; background: var(--text); }
 .vstage { position: relative; display: grid; place-items: center; min-height: 0; overflow: hidden; background: #000; container-type: size; transition: background 150ms; }
 .vstage--over { background: #101014; outline: 1px solid var(--text); outline-offset: -1px; }
 .vstage__empty { display: grid; justify-items: center; gap: 12px; text-align: center; color: var(--text-2); }

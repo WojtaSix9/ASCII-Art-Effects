@@ -23,6 +23,8 @@ export type Req =
   | { type: 'videoPreview'; state: RenderState }
   /** Porównanie przed/po: klatki źródłowe filmu (dłuższy bok 480 px) jako ImageBitmap. */
   | { type: 'videoOriginals' }
+  /** Pasek presetów: klatka `index` filmu w każdym ze stanów, kwadratowa miniatura (środek kadru) size × size px. */
+  | { type: 'videoThumbs'; states: RenderState[]; index: number; size: number }
   /** Eksport filmu w efekcie: skala względem klatek źródłowych, GIF albo MP4 (bez dźwięku). */
   | { type: 'videoExport'; state: RenderState; scale: number; format: 'gif' | 'mp4'; codec?: 'avc' | 'vp9' }
   | { type: 'render'; state: RenderState; scale?: number; phase?: number }   // phase: faza pętli animacji (etap 2)

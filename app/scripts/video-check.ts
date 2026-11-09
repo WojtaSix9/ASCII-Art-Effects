@@ -7,7 +7,8 @@ import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
-import { POSTFX } from '../../engine/src/index.ts';
+import { POSTFX, EFFECTS, COLOR_PARAMS } from '../../engine/src/index.ts';
+import { VIDEO_PRESETS } from '../src/video/presets.ts';
 
 const res: [string, boolean, string?][] = []; const t = (n: string, ok: boolean, info?: unknown) => res.push([n, ok, info === undefined ? undefined : JSON.stringify(info)]);
 
@@ -22,6 +23,22 @@ for (const f of files) {
     head.includes('github.com/bas3line/ascii') && head.includes('8fd792e') && head.includes('MIT') && head.includes('LICENSES/ascii.rest-MIT.txt') && head.includes('nothing else changed')
     && m.category === 'scenes' && frames.every((x: string) => x.split('\n').length === m.rows && x.split('\n').every((l) => l.length === m.cols)) && color.every((c) => c < m.palette.length) && new Set(frames).size > 1,
     { name: m.name, cols: m.cols, rows: m.rows });
+}
+
+/* presety: tylko efekty rodziny ASCII; każdy parametr istnieje w definicji silnika i ma dozwoloną wartość (opcja listy, zakres, kolor #rrggbb) */
+{
+  const FAMILY = ['characters', 'block-chars', 'braille', 'dots', 'mixed', 'asciiStudio', 'cross', 'diamond', 'lines', 'diagonal'];
+  const okVal = (d: any, v: unknown) => d.kind === 'select' ? d.options.some((o: any) => o.value === v) : d.kind === 'range' || d.kind === 'seed' ? typeof v === 'number' && v >= d.min && v <= d.max
+    : d.kind === 'color' ? /^#[0-9a-f]{6}$/i.test(String(v)) : d.kind === 'toggle' ? typeof v === 'boolean' : typeof v === 'string';
+  const bad: string[] = [];
+  for (const p of VIDEO_PRESETS) {
+    const e = EFFECTS.find((x) => x.id === p.state.style.id); if (!e || !FAMILY.includes(e.id)) { bad.push(`${p.id}: efekt ${p.state.style.id}`); continue; }
+    for (const [k, v] of Object.entries(p.state.style.params ?? {})) { const d = e.params.find((x) => x.id === k); if (!d || !okVal(d, v)) bad.push(`${p.id}: ${e.id}.${k}=${v}`); }
+    for (const [k, v] of Object.entries(p.state.color ?? {})) { const d = COLOR_PARAMS.find((x) => x.id === k); if (!d || !okVal(d, v)) bad.push(`${p.id}: color.${k}=${v}`); }
+    for (const [f, vals] of Object.entries(p.state.postFx ?? {})) { const fx = POSTFX.find((x) => x.id === f); if (!fx) { bad.push(`${p.id}: postFx ${f}`); continue; }
+      for (const [k, v] of Object.entries(vals as object)) { const d = fx.params.find((x) => x.id === k); if (!d || !okVal(d, v)) bad.push(`${p.id}: ${f}.${k}=${v}`); } }
+  }
+  t(`presety (${VIDEO_PRESETS.length}): efekty z rodziny ASCII, identyfikatory unikalne, parametry efektu, Color i Post FX istnieją i mają dozwolone wartości`, bad.length === 0 && new Set(VIDEO_PRESETS.map((p) => p.id)).size === VIDEO_PRESETS.length, bad);
 }
 
 // ---------- filmy testowe (ffmpeg, lavfi) ----------
@@ -93,8 +110,27 @@ try {
     t('pełny ekran: przycisk włącza go dla sceny i wyłącza', on && off, { on, off }); }
   else t('pełny ekran: przeglądarka bez Fullscreen API → przycisk ukryty', await page.isHidden('[data-full]'));
 
-  /* eksport GIF 720 px: 720 × 405, 120 klatek, bez dźwięku (GIF go nie ma) */
   const dl = async (fmt: string, side: string) => { await page.selectOption('[data-format]', fmt); await page.selectOption('select[name="side"]', side); const [d] = await Promise.all([page.waitForEvent('download', { timeout: 300_000 }), page.click('[data-download]')]); return { name: d.suggestedFilename(), path: (await d.path())! }; };
+  /* pasek presetów: 12 miniatur (środkowa klatka filmu) narysowanych i niepustych; „Terminal” → Characters, zielony tusz, Scan Lines i Bloom,
+     podgląd przeliczony; ręczna zmiana (kafelek) zdejmuje zaznaczenie presetu */
+  await page.waitForFunction((n) => (window as any).__videoTest.thumbs() === n, VIDEO_PRESETS.length, { timeout: 60_000 });
+  const th = await page.$$eval('[data-preset] canvas', (cs) => cs.map((c) => { const d = (c as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, (c as HTMLCanvasElement).width, (c as HTMLCanvasElement).height).data; let m = 0; for (let i = 0; i < d.length; i += 4) m = Math.max(m, d[i], d[i + 1], d[i + 2]); return m; }));
+  t(`presety: ${VIDEO_PRESETS.length} miniatur narysowanych, każda z obrazem (jasność maks. > 0)`, th.length === VIDEO_PRESETS.length && th.every((m) => m > 0), th);
+  const beforeP = await page.evaluate(() => (window as any).__videoTest.luma(105).mean);
+  await page.click('[data-preset="terminal"]'); await page.waitForTimeout(400); await page.waitForFunction(() => (window as any).__videoTest.idle() && document.querySelector('[data-bar]')!.hasAttribute('hidden'), null, { timeout: 60_000 }); await page.waitForTimeout(300);
+  const pr = await page.evaluate(() => { const T = (window as any).__videoTest; const st = T.state(); return { preset: T.preset(), pressed: document.querySelector('[data-preset="terminal"]')!.getAttribute('aria-pressed'), effect: st.style.id, ink: st.style.params.inkColor,
+    inkUi: (document.querySelector('[data-params] [data-p="inkColor"]') as HTMLInputElement)?.value, fx: Object.keys(st.postFx ?? {}).sort().join(), fxUi: [...document.querySelectorAll('[data-fx-on]:checked')].map((c) => (c as HTMLElement).dataset.fxOn).sort().join(), luma: T.luma(105).mean }; });
+  t('preset „Terminal”: zaznaczony, Characters z tuszem #3dff7a (stan i panel), Post FX Bloom + Scan Lines (stan i przełączniki), podgląd przeliczony', pr.preset === 'terminal' && pr.pressed === 'true' && pr.effect === 'characters' && pr.ink === '#3dff7a' && pr.inkUi === '#3dff7a' && pr.fx === 'bloom,scanLines' && pr.fxUi === 'bloom,scanLines' && Math.abs(pr.luma - beforeP) > 0.5, { ...pr, beforeP });
+  /* zapis po presecie: GIF 480 px, klatka 7 s — przewaga zieleni (tusz #3dff7a) nad czerwienią, z dekodera ffmpeg */
+  const gpre = await dl('gif', '480'); const rgb = execFileSync('ffmpeg', ['-v', 'error', '-i', gpre.path, '-vf', 'select=eq(n\\,105)', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']);
+  let gr = 0, rr = 0; for (let i = 0; i < rgb.length; i += 3) { rr += rgb[i]; gr += rgb[i + 1]; }
+  t('zapis po presecie „Terminal”: w klatce 7 s zielony kanał wyraźnie przeważa nad czerwonym (tusz #3dff7a)', gr > 2 * rr, { r: rr / (rgb.length / 3), g: gr / (rgb.length / 3) });
+  await page.click('[data-preset="classic"]'); await page.waitForTimeout(100);
+  await page.click('[data-effect-id="braille"]'); const un = await page.evaluate(() => ({ preset: (window as any).__videoTest.preset(), pressed: document.querySelectorAll('[data-preset][aria-pressed="true"]').length }));
+  t('ręczna zmiana po presecie (Klasyczny, potem kafelek Braille) zdejmuje zaznaczenie presetu', un.preset === null && un.pressed === 0, un);
+  await page.waitForTimeout(400); await page.waitForFunction(() => (window as any).__videoTest.idle() && document.querySelector('[data-bar]')!.hasAttribute('hidden'), null, { timeout: 60_000 });
+
+  /* eksport GIF 720 px: 720 × 405, 120 klatek, bez dźwięku (GIF go nie ma) */
   const gif = await dl('gif', '720'); const gp = probe(gif.path);
   t('GIF 720 px: plik czarny-bialy-10s-braille.gif, 720 × 405, 120 klatek', gif.name === 'czarny-bialy-10s-braille.gif' && gp.length === 1 && gp[0].width === 720 && gp[0].height === 405 && +gp[0].nb_read_frames === 120, { name: gif.name, gp });
 
